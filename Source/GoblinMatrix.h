@@ -118,6 +118,11 @@ namespace Goblin {
     Matrix4 matrixPerspectiveRHD3D(float fovY, float aspect, float zn, float zf);
     Matrix4 matrixPerspectiveLHD3D(float fovY, float aspect, float zn, float zf);
 
+    Matrix4 matrixOrthoRHGL(float w, float h, float zn, float zf);
+    Matrix4 matrixOrthoLHGL(float w, float h, float zn, float zf);
+    Matrix4 matrixOrthoRHD3D(float w, float h, float zn, float zf);
+    Matrix4 matrixOrthoLHD3D(float w, float h, float zn, float zf);
+
     Matrix4 matrixLookAtLH(const Vector3& eye, const Vector3& target, const Vector3& up);
     Matrix4 matrixLookAtRH(const Vector3& eye, const Vector3& target, const Vector3& up);
 }

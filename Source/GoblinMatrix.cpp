@@ -5,8 +5,8 @@
 #include <cmath>
 
 namespace Goblin {
-    const float MATRIX_INVERSE_EPSILON = 1e-14;
-    const float MATRIX_EPSILON = 1e-5;
+    const float MATRIX_INVERSE_EPSILON = 1e-14f;
+    const float MATRIX_EPSILON = 1e-5f;
     const Matrix3 Matrix3::Identity = Matrix3(1.0f, 0.0f, 0.0f,
                                               0.0f, 1.0f, 0.0f,
                                               0.0f, 0.0f, 1.0f);
@@ -645,6 +645,46 @@ namespace Goblin {
         result[2][2] = zf / (zf - zn);
         result[2][3] = -zn * zf / (zf - zn),
         result[3][2] = 1.0f;
+        return result;
+    }
+
+    Matrix4 matrixOrthoRHGL(float w, float h, float zn, float zf) {
+        Matrix4 result = Matrix4::Zero;
+        result[0][0] = 2.0f / w;
+        result[1][1] = 2.0f / h;
+        result[2][2] = 2.0f / (zn - zf);
+        result[2][3] = (zf + zn) / (zn -zf);
+        result[3][3] = 1.0f;
+        return result;
+    }
+
+    Matrix4 matrixOrthoLHGL(float w, float h, float zn, float zf) {
+        Matrix4 result = Matrix4::Zero;
+        result[0][0] = 2.0f / w;
+        result[1][1] = 2.0f / h;
+        result[2][2] = 2.0f / (zf - zn);
+        result[2][3] = (zf + zn) / (zn -zf);
+        result[3][3] = 1.0f;
+        return result;
+    }
+
+    Matrix4 matrixOrthoRHD3D(float w, float h, float zn, float zf) {
+        Matrix4 result = Matrix4::Zero;
+        result[0][0] = 2.0f / w;
+        result[1][1] = 2.0f / h;
+        result[2][2] = 1.0f / (zn - zf);
+        result[2][3] = zn / (zn -zf);
+        result[3][3] = 1.0f;
+        return result;
+    }
+
+    Matrix4 matrixOrthoLHD3D(float w, float h, float zn, float zf) {
+        Matrix4 result = Matrix4::Zero;
+        result[0][0] = 2.0f / w;
+        result[1][1] = 2.0f / h;
+        result[2][2] = 1.0f / (zf - zn);
+        result[2][3] = zn / (zn -zf);
+        result[3][3] = 1.0f;
         return result;
     }
 

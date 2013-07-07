@@ -85,6 +85,8 @@ namespace Goblin {
         const float* ptr() const {
             return &x;
         }
+
+        void normalize();
     };
 
     inline float dot(const Vector2& lhs, const Vector2& rhs) {
@@ -122,6 +124,7 @@ namespace Goblin {
         Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
 
         Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
+
         Vector3 operator+(const Vector3& rhs) const {
             return Vector3(x + rhs.x, y + rhs.y, z + rhs.z);
         }
@@ -193,6 +196,8 @@ namespace Goblin {
         const float* ptr() const {
             return &x;
         }
+
+        void normalize();
     };
 
     inline float dot(const Vector3& lhs, const Vector3& rhs) {
@@ -239,7 +244,7 @@ namespace Goblin {
 
         Vector4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
         
-        Vector4(const Vector4& v, float w) : x(v.x), y(v.y), z(v.z), w(w) {}
+        Vector4(const Vector3& v, float w) : x(v.x), y(v.y), z(v.z), w(w) {}
 
         Vector4 operator+(const Vector4& rhs) const {
             return Vector4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w);
@@ -316,6 +321,8 @@ namespace Goblin {
         const float* ptr() const {
             return &x;
         }
+
+        void normalize();
     };
 
     // return a z divide 3d vector based on the input 4d vector
