@@ -12,7 +12,7 @@ namespace Goblin {
         static const Matrix3 Identity;
         static const Matrix3 Zero;
     public:
-        Matrix3() {}
+        Matrix3();
         Matrix3(float f[9]);
         Matrix3(float m00, float m01, float m02,
                 float m10, float m11, float m12,
@@ -29,20 +29,10 @@ namespace Goblin {
         Matrix3 operator/(float f) const;
         Matrix3& operator/=(float f);
         Matrix3 operator-() const; 
-        
         bool operator==(const Matrix3& rhs) const;
         bool operator!=(const Matrix3& rhs) const;
-
-        const float* operator[](int i) const {
-            assert(i >= 0 && i < 3);
-            return m[i];
-        }
-
-        float* operator[](int i) {
-            assert(i >= 0 && i < 3);
-            return m[i];
-        }
-
+        const float* operator[](int i) const;
+        float* operator[](int i) ;
         Matrix3 transpose() const;
         Matrix3& transposeSelf();
 
@@ -56,12 +46,24 @@ namespace Goblin {
     bool inverse(Matrix3* inv, const Matrix3& m);
     bool isIdentity(const Matrix3& m);
 
+    inline Matrix3::Matrix3() {}
+
+    inline const float* Matrix3::operator[](int i) const {
+        assert(i >= 0 && i < 3);
+        return m[i];
+    }
+
+    inline float* Matrix3::operator[](int i) {
+        assert(i >= 0 && i < 3);
+        return m[i];
+    }
+
     class Matrix4 {
     public:
         static const Matrix4 Identity;
         static const Matrix4 Zero;
     public:
-        Matrix4() {}
+        Matrix4();
         Matrix4(float f[16]);
         Matrix4(float m00, float m01, float m02, float m03,
                 float m10, float m11, float m12, float m13,
@@ -79,20 +81,10 @@ namespace Goblin {
         Matrix4 operator/(float f) const;
         Matrix4& operator/=(float f);
         Matrix4 operator-() const;
-
         bool operator==(const Matrix4& rhs) const;
         bool operator!=(const Matrix4& rhs) const;
-
-        const float* operator[](int i) const {
-            assert(i >= 0 && i < 4);
-            return m[i];
-        }
-
-        float* operator[](int i) {
-            assert(i >= 0 && i < 4);
-            return m[i];
-        }
-
+        const float* operator[](int i) const;
+        float* operator[](int i);
         Matrix4 transpose() const;
         Matrix4& transposeSelf();
 
@@ -125,6 +117,18 @@ namespace Goblin {
 
     Matrix4 matrixLookAtLH(const Vector3& eye, const Vector3& target, const Vector3& up);
     Matrix4 matrixLookAtRH(const Vector3& eye, const Vector3& target, const Vector3& up);
+
+    inline Matrix4::Matrix4() {}
+
+    inline const float* Matrix4::operator[](int i) const {
+        assert(i >= 0 && i < 4);
+        return m[i];
+    }
+
+    inline float* Matrix4::operator[](int i) {
+        assert(i >= 0 && i < 4);
+        return m[i];
+    }
 }
 
 #endif //GOBLIN_MATRIX_H
