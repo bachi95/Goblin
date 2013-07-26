@@ -30,6 +30,7 @@ namespace Goblin {
         bool operator!=(const Vector2& rhs) const;
         const float* ptr() const;
         void normalize();
+        float squaredLength() const;
     };
 
     inline Vector2::Vector2() : x(0.0f), y(0.0f) {}
@@ -107,12 +108,16 @@ namespace Goblin {
         return &x;
     }
 
+    inline float Vector2::squaredLength() const {
+        return x * x + y * y;
+    }
+
     inline float dot(const Vector2& lhs, const Vector2& rhs) {
         return lhs.x * rhs.x + lhs.y * rhs.y;
     }
 
     inline float squaredLength(const Vector2& v) {
-        return v.x * v.x + v.y * v.y;
+        return v.squaredLength();
     }
 
     inline float length(const Vector2& v) {
@@ -157,6 +162,7 @@ namespace Goblin {
         bool operator!=(const Vector3& rhs) const;
         const float* ptr() const;
         void normalize();
+        float squaredLength() const;
     };
 
     inline Vector3::Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
@@ -235,6 +241,10 @@ namespace Goblin {
         return &x;
     }
 
+    inline float Vector3::squaredLength() const {
+        return x * x + y * y + z * z;
+    }
+
     inline float dot(const Vector3& lhs, const Vector3& rhs) {
         return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
     }
@@ -247,7 +257,7 @@ namespace Goblin {
     }
 
     inline float squaredLength(const Vector3& v) {
-        return v.x * v.x + v.y * v.y + v.z * v.z;
+        return v.squaredLength();
     }
 
     inline float length(const Vector3& v) {
@@ -294,6 +304,7 @@ namespace Goblin {
         bool operator!=(const Vector4& rhs) const;
         const float* ptr() const;
         void normalize();
+        float squaredLength() const;
     };
 
     inline Vector4::Vector4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
@@ -380,6 +391,10 @@ namespace Goblin {
         return &x;
     }
 
+    inline float Vector4::squaredLength() const {
+        return x * x + y * y + z * z + w * w;
+    }
+
     // return a z divide 3d vector based on the input 4d vector
     inline Vector3 project(const Vector4& v) {
         float invw = v.w == 0.0f ? 1.0f : 1.0f / v.w;
@@ -391,7 +406,7 @@ namespace Goblin {
     }
 
     inline float squaredLength(const Vector4& v) {
-        return v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;
+        return v.squaredLength();
     }
 
     inline float length(const Vector4& v) {
