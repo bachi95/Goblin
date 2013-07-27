@@ -513,9 +513,8 @@ namespace Goblin {
     } 
 
     Matrix4 matrixRotationX(float angle) {
-        float t = radians(angle);
-        float sinT = sin(t); 
-        float cosT = cos(t);
+        float sinT = sin(angle); 
+        float cosT = cos(angle);
         return Matrix4(1.0f,  0.0f,  0.0f, 0.0f,
                        0.0f,  cosT, -sinT, 0.0f,
                        0.0f,  sinT,  cosT, 0.0f,
@@ -523,9 +522,8 @@ namespace Goblin {
     }
 
     Matrix4 matrixRotationY(float angle) {
-        float t = radians(angle);
-        float sinT = sin(t);
-        float cosT = cos(t);
+        float sinT = sin(angle);
+        float cosT = cos(angle);
         return Matrix4( cosT, 0.0f, sinT, 0.0f,
                         0.0f, 1.0f, 0.0f, 0.0f,
                        -sinT, 0.0f, cosT, 0.0f,
@@ -533,9 +531,8 @@ namespace Goblin {
     }
 
     Matrix4 matrixRotationZ(float angle) {
-        float t = radians(angle);
-        float sinT = sin(t);
-        float cosT = cos(t);
+        float sinT = sin(angle);
+        float cosT = cos(angle);
         return Matrix4(cosT, -sinT, 0.0f, 0.0f,
                        sinT,  cosT, 0.0f, 0.0f,
                        0.0f,  0.0f, 1.0f, 0.0f,
@@ -559,9 +556,8 @@ namespace Goblin {
         float Ax = A.x;
         float Ay = A.y;
         float Az = A.z;
-        float t = radians(angle);
-        float s = sin(t);
-        float c = cos(t);
+        float s = sin(angle);
+        float c = cos(angle);
         return Matrix4(     c + (1.0f - c) * Ax * Ax, 
                        (1.0f - c) * Ax * Ay - s * Az,
                        (1.0f - c) * Ax * Az + s * Ay,
@@ -597,7 +593,7 @@ namespace Goblin {
     // -z'Pz = -(f + n) / (f - n) * Pz - 2nf / (f - n)
     // the rest of them are similar( RH D3D, LH GL, LH D3D)
     Matrix4 matrixPerspectiveRHGL(float fovY, float aspect, float zn, float zf) {
-        float yScale = 1.0f / tan(radians(fovY) / 2.0f);
+        float yScale = 1.0f / tan(fovY / 2.0f);
         float xScale = yScale / aspect;
         
         Matrix4 result = Matrix4::Zero;
@@ -610,7 +606,7 @@ namespace Goblin {
     }
 
     Matrix4 matrixPerspectiveLHGL(float fovY, float aspect, float zn, float zf) {
-        float yScale = 1.0f / tan(radians(fovY) / 2.0f);
+        float yScale = 1.0f / tan(fovY / 2.0f);
         float xScale = yScale / aspect;
 
         Matrix4 result = Matrix4::Zero;
@@ -623,7 +619,7 @@ namespace Goblin {
     }
 
     Matrix4 matrixPerspectiveRHD3D(float fovY, float aspect, float zn, float zf) {
-        float yScale = 1.0f / tan(radians(fovY) / 2.0f);
+        float yScale = 1.0f / tan(fovY / 2.0f);
         float xScale = yScale / aspect;
 
         Matrix4 result = Matrix4::Zero;
@@ -636,7 +632,7 @@ namespace Goblin {
     }
 
     Matrix4 matrixPerspectiveLHD3D(float fovY, float aspect, float zn, float zf) {
-        float yScale = 1.0f / tan(radians(fovY) / 2.0f);
+        float yScale = 1.0f / tan(fovY / 2.0f);
         float xScale = yScale / aspect;
 
         Matrix4 result = Matrix4::Zero;
