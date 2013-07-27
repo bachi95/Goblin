@@ -5,14 +5,17 @@
 
 namespace Goblin {
 
+    class Matrix3;
     class Quaternion {
     public:
         Quaternion();
         Quaternion(float w, float x, float y, float z);
         Quaternion(float w, const Vector3& v);
-        Quaternion(const Vector3& axis, float radians);
+        Quaternion(const Vector3& axis, float angle);
+        Quaternion(const Matrix3& R);
         Quaternion conjugate() const;
         float norm() const;
+        Matrix3 toMatrix() const;
         Quaternion operator*(const Quaternion& rhs) const;
         Vector3 operator*(const Vector3& p) const;
         bool operator==(const Quaternion& rhs) const; 
