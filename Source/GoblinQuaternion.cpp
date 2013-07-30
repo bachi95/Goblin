@@ -49,7 +49,7 @@ namespace Goblin {
         w = q[3];
     }
 
-    Matrix3 Quaternion::toMatrix() const {
+    Matrix4 Quaternion::toMatrix() const {
         float x2 = 2.0f * v.x;
         float y2 = 2.0f * v.y;
         float z2 = 2.0f * v.z;
@@ -63,9 +63,10 @@ namespace Goblin {
         float zz2 = z2 * v.z;
         float zw2 = z2 * w;
 
-        return Matrix3(1 - yy2 - zz2,    xy2 - zw2,    xz2 + yw2,
-                           xy2 + zw2, 1 -xx2 - zz2,    yz2 - xw2,
-                           xz2 - yw2,    yz2 + xw2, 1 -xx2 - yy2);
+        return Matrix4(1 - yy2 - zz2,    xy2 - zw2,    xz2 + yw2, 0.0f,
+                           xy2 + zw2, 1 -xx2 - zz2,    yz2 - xw2, 0.0f,
+                           xz2 - yw2,    yz2 + xw2, 1 -xx2 - yy2, 0.0f,
+                                0.0f,         0.0f,         0.0f, 1.0f);
     }
 
     // the NVIDIA optimized version of qpq^-1

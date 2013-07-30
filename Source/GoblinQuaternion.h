@@ -4,8 +4,8 @@
 #include "GoblinVector.h"
 
 namespace Goblin {
-
     class Matrix3;
+    class Matrix4;
     class Quaternion {
     public:
         Quaternion();
@@ -15,7 +15,7 @@ namespace Goblin {
         Quaternion(const Matrix3& R);
         Quaternion conjugate() const;
         float norm() const;
-        Matrix3 toMatrix() const;
+        Matrix4 toMatrix() const;
         Quaternion operator*(const Quaternion& rhs) const;
         Vector3 operator*(const Vector3& p) const;
         bool operator==(const Quaternion& rhs) const; 
