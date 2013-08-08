@@ -1,29 +1,31 @@
+#include "GoblinObjMesh.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cstdio>
-#include <map>
+//#include <map>
+#include <boost/unordered_map.hpp>
 
-#include "GoblinObjMesh.h"
 namespace Goblin {
 
     struct TriIndex {
         int vertex;
         int normal;
         int texCoord;
-
-        bool operator<(const TriIndex& rhs) const {
-            if(vertex == rhs.vertex) {
-                if(normal == rhs.normal) {
-                    return texCoord < rhs.texCoord;
-                } else {
-                    return normal < rhs.normal;
-                }
-            } else {
-                return vertex < rhs.vertex;
-            }
+        bool operator==(const TriIndex& rhs) const {
+            return vertex == rhs.vertex &&
+                normal == rhs.normal &&
+                texCoord == rhs.texCoord;
         }
     };
+
+    std::size_t hash_value(const TriIndex& t) {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, t.vertex);
+        boost::hash_combine(seed, t.normal);
+        boost::hash_combine(seed, t.texCoord);
+        return seed;
+    }
 
     struct Face {
         TriIndex index[3];
@@ -36,29 +38,21 @@ namespace Goblin {
         VERTEX_UV_NORMAL = 1 << 3
     };
 
-    bool ObjMesh::load2(const std::string& filename) {
-        std::ifstream file = std::ifstream(filename.c_str());
-        if(!file.is_open()) {
-            std::cerr << "Error can't open obj file: " 
-                << filename << " for mesh loading" << std::endl;
-            return false;
-        }
+    ObjMesh::ObjMesh(const std::string& filename) :
+        mFilename(filename){}
 
-        std::string line;
-        std::string token;
-        int lineNum = 0;
-        while(std::getline(file, line)) {
-            lineNum++;
-        }
-        std::cout << "done with reading, start assembling" << std::endl;
-        return true;
+    ObjMesh::~ObjMesh() {
     }
 
-    bool ObjMesh::load(const std::string& filename) {
-        std::ifstream file = std::ifstream(filename.c_str());
+    bool ObjMesh::init() {
+        return load();
+    }
+
+    bool ObjMesh::load() {
+        std::ifstream file = std::ifstream(mFilename.c_str());
         if(!file.is_open()) {
             std::cerr << "Error can't open obj file: " 
-                << filename << " for mesh loading" << std::endl;
+                << mFilename << " for mesh loading" << std::endl;
             return false;
         }
 
@@ -66,11 +60,9 @@ namespace Goblin {
         typedef std::vector<Vector3> NormalList;
         typedef std::vector<Vector2> UVList;
         typedef std::vector<Face> FaceList;
-
-        static const char* scanVertex = "%d";
-        static const char* scanVertexUV = "%d/%d";
-        static const char* scanVertexNormal = "%d//%d";
-        static const char* scanVertexUVNormal = "%d/%d/%d";
+        //typedef std::map<TriIndex, unsigned int> VertexMap;
+        typedef boost::unordered_map<TriIndex, unsigned int> VertexMap;
+        VertexMap vMap;
 
         VertexList vertexList;
         NormalList normalList;
@@ -157,27 +149,31 @@ namespace Goblin {
                 // now scan in the face
                 TriIndex triIndex[4];
                 for(size_t i = 0; i < faceTokensNum; ++i) {
+                    const char* token = faceTokens[i].c_str();
                     switch(format) {
                     case VERTEX_ONLY:
-                        sscanf(faceTokens[i].c_str(), scanVertex, 
-                            &triIndex[i].vertex);
+                        triIndex[i].vertex = atoi(token);
                         triIndex[i].normal = 0;
                         triIndex[i].texCoord = 0;
                         break;
                     case VERTEX_UV:
-                        sscanf(faceTokens[i].c_str(), scanVertexUV,
-                            &triIndex[i].vertex, &triIndex[i].texCoord);
+                        triIndex[i].vertex = atoi(token);
+                        token += strcspn(token, "/") + 1;
+                        triIndex[i].texCoord = atoi(token);
                         triIndex[i].normal = 0;
                         break;
                     case VERTEX_NORMAL:
-                        sscanf(faceTokens[i].c_str(), scanVertexNormal,
-                            &triIndex[i].vertex, &triIndex[i].normal);
+                        triIndex[i].vertex = atoi(token);
+                        token += strcspn(token, "/") + 2;
+                        triIndex[i].normal = atoi(token);
                         triIndex[i].texCoord = 0;
                         break;
                     case VERTEX_UV_NORMAL:
-                        sscanf(faceTokens[i].c_str(), scanVertexUVNormal,
-                            &triIndex[i].vertex, &triIndex[i].texCoord,
-                            &triIndex[i].normal);
+                        triIndex[i].vertex = atoi(token);
+                        token += strcspn(token, "/") + 1;
+                        triIndex[i].texCoord = atoi(token);
+                        token += strcspn(token, "/") + 1;
+                        triIndex[i].normal = atoi(token);
                         break;
                     default:
                         std::cerr << "unrecognize face format on line " 
@@ -223,11 +219,8 @@ namespace Goblin {
         }
         std::cout << "done with reading, start assembling" << std::endl;
         vertices.clear();
-        vertices.reserve(vertexList.size());
         triangles.clear();
-        triangles.reserve(faceList.size());
-        typedef std::map<TriIndex, unsigned int> VertexMap;
-        VertexMap vMap;
+
         unsigned int vIndexCounter = 0;
         for(size_t i = 0; i < faceList.size(); ++i) {
             const Face& face = faceList[i];
@@ -253,7 +246,7 @@ namespace Goblin {
             triangles.push_back(triangle);
         }
 
-        std::cout << "Successfully loaded mesh '" << filename << "'.\n";
+        std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";
         return true;
     }
 }

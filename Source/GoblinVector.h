@@ -33,7 +33,7 @@ namespace Goblin {
         float squaredLength() const;
     };
 
-    inline Vector2::Vector2() : x(0.0f), y(0.0f) {}
+    inline Vector2::Vector2() {}
 
     inline Vector2::Vector2(float x, float y) : x(x), y(y) {}
 
@@ -165,7 +165,7 @@ namespace Goblin {
         float squaredLength() const;
     };
 
-    inline Vector3::Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
+    inline Vector3::Vector3() {}
 
     inline Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
@@ -307,7 +307,7 @@ namespace Goblin {
         float squaredLength() const;
     };
 
-    inline Vector4::Vector4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
+    inline Vector4::Vector4() {}
 
     inline Vector4::Vector4(float x, float y, float z, float w) : 
         x(x), y(y), z(z), w(w) {}

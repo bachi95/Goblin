@@ -1,19 +1,23 @@
 #ifndef GOBLIN_OBJ_MESH
 #define GOBLIN_OBJ_MESH
 
+#include "GoblinGeometry.h"
+#include "GoblinVertex.h"
+
 #include <string>
 #include <vector>
-#include "GoblinVertex.h"
 
 namespace Goblin {
     struct MeshTriangle {
         unsigned int v[3];
     };
 
-    class ObjMesh {
+    class ObjMesh : public Geometry {
     public:
-        bool load2(const std::string& filename);
-        bool load(const std::string& filename);
+        ObjMesh(const std::string& filename);
+        ~ObjMesh();
+        bool init();
+        bool load();
 
     public:
         typedef std::vector<Vertex> VertexList;
@@ -21,6 +25,8 @@ namespace Goblin {
 
         VertexList vertices;
         TriangleList triangles;
+    private:
+        std::string mFilename;
     };
 }
 

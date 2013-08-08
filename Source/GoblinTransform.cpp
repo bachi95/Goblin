@@ -5,7 +5,7 @@ namespace Goblin {
 
     Transform::Transform():
         mCachedMatrix(Matrix4::Identity), mCachedInverse(Matrix4::Identity),
-        mPosition(Vector3::Zero), mOrientation(Vector3::UnitX, 0.0f),
+        mPosition(Vector3::Zero), mOrientation(Vector3::UnitY, 0.0f),
         mScale(Vector3(1.0f, 1.0f, 1.0f)), mIsUpdated(true) {}
 
         Transform::Transform(const Vector3& position, 
