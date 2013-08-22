@@ -218,8 +218,8 @@ namespace Goblin {
             }
         }
         std::cout << "done with reading, start assembling" << std::endl;
-        vertices.clear();
-        triangles.clear();
+        mVertices.clear();
+        mTriangles.clear();
 
         unsigned int vIndexCounter = 0;
         for(size_t i = 0; i < faceList.size(); ++i) {
@@ -237,13 +237,13 @@ namespace Goblin {
                     v.normal = nIndex == -1 ? Vector3::Zero : normalList[nIndex];
                     int tIndex = face.index[j].texCoord;
                     v.texC = tIndex == -1 ? Vector2::Zero : uvList[tIndex];
-                    vertices.push_back(v);
+                    mVertices.push_back(v);
                     vIndexCounter++;
                 }
                 // (vIndex, nIndex, tIndex) map to the final triangle index
                 triangle.v[j] = rv.first->second;
             }
-            triangles.push_back(triangle);
+            mTriangles.push_back(triangle);
         }
 
         std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";

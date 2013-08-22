@@ -11,7 +11,9 @@ namespace Goblin {
         Transform::Transform(const Vector3& position, 
             const Quaternion& orientation,
             const Vector3& scale): mPosition(position),
-            mOrientation(orientation), mScale(scale) {
+            mOrientation(orientation), mScale(scale),
+            mIsUpdated(false) {
+            update();
         }
 
         void Transform::setPosition(const Vector3& position) {
@@ -92,7 +94,7 @@ namespace Goblin {
             mCachedMatrix[1][3] = mPosition.y;
             mCachedMatrix[2][3] = mPosition.z;
             
-            inverse(&mCachedInverse, mCachedMatrix); 
+            inverse(&mCachedInverse, mCachedMatrix);
             mIsUpdated = true;
         }
 }
