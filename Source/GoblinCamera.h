@@ -3,6 +3,7 @@
 
 #include "GoblinMatrix.h"
 #include "GoblinVector.h"
+#include "GoblinQuaternion.h"
 
 namespace Goblin {
     class Camera {
@@ -10,7 +11,11 @@ namespace Goblin {
         Camera();
         ~Camera();
 
-        Vector3& position();
+        void setPosition(const Vector3& position);
+        const Vector3& getPosition() const;
+        void setOrientation(const Quaternion& orientation);
+        const Quaternion& getOrientation() const;
+
         Matrix4 view() const;
         Matrix4 proj() const;
 
@@ -26,10 +31,27 @@ namespace Goblin {
         Vector3 mRight;
         Vector3 mUp;
         Vector3 mLook;
+        Quaternion mOrientation;
 
         Matrix4 mView;
         Matrix4 mProj;
     };
+
+    inline void Camera::setPosition(const Vector3& position) {
+        mPosition = position;
+    }
+
+    inline const Vector3& Camera::getPosition() const {
+        return mPosition;
+    }
+
+    inline void Camera::setOrientation(const Quaternion& orientation) {
+        mOrientation = orientation;
+    }
+
+    inline const Quaternion& Camera::getOrientation() const {
+        return mOrientation;
+    }
 }
 
 #endif //GOBLIN_CAMERA_H

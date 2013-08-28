@@ -15,10 +15,6 @@ namespace Goblin{
 
     Camera::~Camera() {}
 
-    Vector3& Camera::position() { 
-        return mPosition;
-    }
-
     Matrix4 Camera::view() const { return mView; }
 
     Matrix4 Camera::proj() const { return mProj; }
