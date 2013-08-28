@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>
 //#include <map>
 #include <boost/unordered_map.hpp>
 
@@ -49,7 +50,7 @@ namespace Goblin {
     }
 
     bool ObjMesh::load() {
-        std::ifstream file = std::ifstream(mFilename.c_str());
+        std::ifstream file(mFilename.c_str());
         if(!file.is_open()) {
             std::cerr << "Error can't open obj file: " 
                 << mFilename << " for mesh loading" << std::endl;
