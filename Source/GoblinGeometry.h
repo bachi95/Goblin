@@ -1,6 +1,8 @@
 #ifndef GOBLIN_GEOMETRY_H
 #define GOBLIN_GEOMETRY_H
 
+#include <cstdio>
+
 namespace Goblin {
     class Geometry {
     public:
