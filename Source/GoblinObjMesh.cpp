@@ -218,7 +218,6 @@ namespace Goblin {
                 }
             }
         }
-        std::cout << "done with reading, start assembling" << std::endl;
         mVertices.clear();
         mTriangles.clear();
 
@@ -246,7 +245,6 @@ namespace Goblin {
             }
             mTriangles.push_back(triangle);
         }
-
         std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";
         return true;
     }

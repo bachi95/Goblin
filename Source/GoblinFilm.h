@@ -29,7 +29,7 @@ namespace Goblin {
             float weight;
             float pad[3];
         };
-        Pixel* pixels;
+        Pixel* mPixels;
     };
 
     inline int Film::getXResolution() { return mXRes; }

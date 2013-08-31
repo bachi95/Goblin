@@ -1,7 +1,17 @@
 #include "GoblinCamera.h"
+#include "GoblinFilm.h"
 #include "GoblinUtils.h"
-#include "GoblinQuaternion.h"
+
 namespace Goblin{
+
+    Camera::Camera(const Vector3& position, const Quaternion& orientation,
+        float fov, float zn, float zf, Film* film):
+        mPosition(position), mOrientation(orientation),
+        mFOV(fov), mZNear(zn), mZFar(zf), mFilm(film) {
+        float xRes = static_cast<float>(film->getXResolution());
+        float yRes = static_cast<float>(film->getYResolution());
+        mAspectRatio = xRes / yRes; 
+    }
 
     Camera::Camera() {
         mPosition = Vector3(0.0f, 0.0f, 0.0f);
@@ -13,7 +23,12 @@ namespace Goblin{
         mProj = Matrix4::Identity;
     }
 
-    Camera::~Camera() {}
+    Camera::~Camera() {
+        if(mFilm != NULL) {
+            delete mFilm;
+            mFilm = NULL;
+        }
+    }
 
     Matrix4 Camera::view() const { return mView; }
 

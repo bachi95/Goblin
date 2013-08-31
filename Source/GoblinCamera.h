@@ -6,9 +6,12 @@
 #include "GoblinQuaternion.h"
 
 namespace Goblin {
+    class Film;
     class Camera {
     public:
         Camera();
+        Camera(const Vector3& position, const Quaternion& orientation,
+            float fov, float zn, float zf, Film* film);
         ~Camera();
 
         void setPosition(const Vector3& position);
@@ -31,10 +34,16 @@ namespace Goblin {
         Vector3 mRight;
         Vector3 mUp;
         Vector3 mLook;
+
+        float mZNear;
+        float mZFar;
+        float mFOV;
+        float mAspectRatio;
         Quaternion mOrientation;
 
         Matrix4 mView;
         Matrix4 mProj;
+        Film* mFilm;
     };
 
     inline void Camera::setPosition(const Vector3& position) {

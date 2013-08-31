@@ -21,12 +21,13 @@ namespace Goblin {
         mYCount = std::max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
         mYEnd = mYStart + mYCount - 1;
 
-        pixels = new Pixel[mXCount * mYCount];
+        mPixels = new Pixel[mXCount * mYCount];
     } 
     
     Film::~Film() {
-        if(pixels != NULL) {
-            delete[] pixels;
+        if(mPixels != NULL) {
+            delete[] mPixels;
+            mPixels = NULL;
         }
     }
 
@@ -39,8 +40,8 @@ namespace Goblin {
         //TODO atomic add when this come to multi thread
         //TODO filter table resolve for more delicate weight
         int index = y * mXRes +x;
-        pixels[index].color += L;
-        pixels[index].weight += 1.0f; 
+        mPixels[index].color += L;
+        mPixels[index].weight += 1.0f; 
     } 
 
     void Film::writeImage() {
