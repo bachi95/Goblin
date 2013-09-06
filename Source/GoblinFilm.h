@@ -4,17 +4,17 @@
 #include "GoblinColor.h"
 #include <string>
 namespace Goblin {
+    class CameraSample;
     class Film {
     public:
         Film(int xRes, int yRes, const float crop[4], 
             const std::string& filename);
         ~Film(); 
 
-        int getXResolution();
-        int getYResolution();
+        int getXResolution() const;
+        int getYResolution() const;
 
-        //TODO replace x y with a Sample struct
-        void addSample(int x, int y, const Color& L);
+        void addSample(const CameraSample& sample, const Color& L);
         void writeImage();
 
     private:
@@ -32,8 +32,8 @@ namespace Goblin {
         Pixel* mPixels;
     };
 
-    inline int Film::getXResolution() { return mXRes; }
-    inline int Film::getYResolution() { return mYRes; }
+    inline int Film::getXResolution() const { return mXRes; }
+    inline int Film::getYResolution() const { return mYRes; }
 }
 
 #endif //GOBLIN_FILM_H

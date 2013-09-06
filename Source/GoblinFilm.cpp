@@ -1,6 +1,6 @@
 #include "GoblinFilm.h"
 #include "GoblinUtils.h"
-
+#include "GoblinSampler.h"
 #include <cstring>
 #include <algorithm>
 
@@ -31,7 +31,12 @@ namespace Goblin {
         }
     }
 
-    void Film::addSample(int x, int y, const Color& L) {
+    void Film::addSample(const CameraSample& sample, const Color& L) {
+        // TODO this is definitely the wrong way......
+        // should have more sophiscated rounding
+        int x = static_cast<int>(sample.imageX);
+        int y = static_cast<int>(sample.imageY);
+
         if(x < mXStart || x > mXEnd || y < mYStart || y < mYEnd) {
             std::cerr<< "(" << x << ", " << y <<")" <<
                 "out of the film crop window" << std::endl;

@@ -7,6 +7,8 @@
 
 namespace Goblin {
     class Film;
+    class CameraSample;
+    class Ray;
     class Camera {
     public:
         Camera();
@@ -18,6 +20,9 @@ namespace Goblin {
         const Vector3& getPosition() const;
         void setOrientation(const Quaternion& orientation);
         const Quaternion& getOrientation() const;
+
+        Film* getFilm();
+        float generateRay(const CameraSample& sample, Ray* ray);
 
         Matrix4 view() const;
         Matrix4 proj() const;
@@ -60,6 +65,10 @@ namespace Goblin {
 
     inline const Quaternion& Camera::getOrientation() const {
         return mOrientation;
+    }
+
+    inline Film* Camera::getFilm(){
+        return mFilm;
     }
 }
 

@@ -9,6 +9,10 @@ namespace Goblin {
         return mModels;
     }
 
+    const CameraPtr Scene::getCamera() const {
+        return mCamera;
+    }
+
     void Scene::setCamera(CameraPtr camera) {
         mCamera = camera;
     }

@@ -15,6 +15,7 @@ namespace Goblin {
         void addModel(ModelPtr model);
         const ModelList& getModels() const;
 
+        const CameraPtr getCamera() const; 
         void setCamera(CameraPtr camera);
     private:
         ModelList mModels;
