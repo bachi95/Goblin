@@ -4,9 +4,7 @@
 #include "GoblinVector.h"
 namespace Goblin
 {
-    //TODO replace D3D to generic one
-    struct Vertex
-    {
+    struct Vertex {
         Vertex() {}
         Vertex(float x, float y, float z, float nx, float ny, float nz,
             float u, float v): 
