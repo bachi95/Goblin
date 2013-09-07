@@ -8,6 +8,8 @@ namespace Goblin {
     class Matrix4;
     class Quaternion {
     public:
+        static const Quaternion Identity;
+    public:
         Quaternion();
         Quaternion(float w, float x, float y, float z);
         Quaternion(float w, const Vector3& v);

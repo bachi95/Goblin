@@ -24,35 +24,48 @@ namespace Goblin {
         Film* getFilm();
         float generateRay(const CameraSample& sample, Ray* ray);
 
+        bool isUpdated() const;
+        void update();
+
+        const Matrix4& getViewMatrix();
+        const Matrix4& getWorldMatrix();
+        const Matrix4& getProjectionMatrix();
+
+        // this should retire soon
         Matrix4 view() const;
         Matrix4 proj() const;
-
         void setLens(float fovY, float aspect, float nearm, float far);
+        void rebuildView();
         void strafe(float d);
         void walk(float d);
         void pitch(float angle);
         void rotateY(float angle);
 
-        void rebuildView();
+        void rotate(const Vector3& axis, float angle);
+
     private:
         Vector3 mPosition;
-        Vector3 mRight;
-        Vector3 mUp;
-        Vector3 mLook;
-
+        Quaternion mOrientation;
         float mZNear;
         float mZFar;
         float mFOV;
         float mAspectRatio;
-        Quaternion mOrientation;
+        Film* mFilm;
 
+        Matrix4 mWorld;
         Matrix4 mView;
         Matrix4 mProj;
-        Film* mFilm;
+
+        bool mIsUpdated;
+
+        Vector3 mRight;
+        Vector3 mUp;
+        Vector3 mLook;
     };
 
     inline void Camera::setPosition(const Vector3& position) {
         mPosition = position;
+        mIsUpdated = false;
     }
 
     inline const Vector3& Camera::getPosition() const {
@@ -61,6 +74,7 @@ namespace Goblin {
 
     inline void Camera::setOrientation(const Quaternion& orientation) {
         mOrientation = orientation;
+        mIsUpdated = false;
     }
 
     inline const Quaternion& Camera::getOrientation() const {
@@ -69,6 +83,10 @@ namespace Goblin {
 
     inline Film* Camera::getFilm(){
         return mFilm;
+    }
+
+    inline bool Camera::isUpdated() const {
+        return mIsUpdated;
     }
 }
 

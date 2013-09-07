@@ -116,7 +116,7 @@ namespace Goblin {
         std::vector<float> rv = parseFloatArray(pt, key);
         if(rv.size() != 4) {
             std::cerr << "invalid value for Quaternion " << key << std::endl;
-            return Quaternion(1, 0, 0, 0);
+            return Quaternion::Identity;
         }
         return Quaternion(rv[0], rv[1], rv[2], rv[3]);
     }
@@ -156,7 +156,7 @@ namespace Goblin {
         Film* film = parseFilm(pt);
 
         Vector3 position =  Vector3::Zero;
-        Quaternion orientation = Quaternion(1, 0, 0, 0);
+        Quaternion orientation = Quaternion::Identity;
         float zn = 0.0f;
         float zf = 1000.0f;
         float fov = 60.0f;

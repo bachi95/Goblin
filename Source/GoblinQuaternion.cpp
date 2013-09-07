@@ -3,6 +3,9 @@
 
 #include <cmath>
 namespace Goblin {
+
+    const Quaternion Quaternion::Identity = Quaternion(1.0f, 0.0f, 0.0f, 0.0f);
+
     Quaternion::Quaternion(const Vector3& axis, float angle) {
         float t = angle * 0.5f;
         Vector3 unitAxis = normalize(axis);
