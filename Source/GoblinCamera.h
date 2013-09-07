@@ -31,17 +31,20 @@ namespace Goblin {
         const Matrix4& getWorldMatrix();
         const Matrix4& getProjectionMatrix();
 
-        // this should retire soon
-        Matrix4 view() const;
-        Matrix4 proj() const;
-        void setLens(float fovY, float aspect, float nearm, float far);
-        void rebuildView();
-        void strafe(float d);
-        void walk(float d);
+        const Vector3 getLook() const;
+        const Vector3 getUp() const;
+        const Vector3 getRight() const;
+
+        void roll(float angle);
         void pitch(float angle);
+        void yaw(float angle);
+
+        void rotateX(float angel);
         void rotateY(float angle);
+        void rotateZ(float angle);
 
         void rotate(const Vector3& axis, float angle);
+        void translate(const Vector3& d);
 
     private:
         Vector3 mPosition;
@@ -57,10 +60,6 @@ namespace Goblin {
         Matrix4 mProj;
 
         bool mIsUpdated;
-
-        Vector3 mRight;
-        Vector3 mUp;
-        Vector3 mLook;
     };
 
     inline void Camera::setPosition(const Vector3& position) {

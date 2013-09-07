@@ -1,4 +1,5 @@
 #include "GoblinTransform.h"
+#include "GoblinRay.h"
 #include <iostream>
 
 namespace Goblin {
@@ -57,6 +58,40 @@ namespace Goblin {
             return mScale;
         }
 
+        void Transform::roll(float angle) {
+            rotate(mOrientation * Vector3::UnitZ, angle);
+        }
+
+        void Transform::pitch(float angle) {
+            rotate(mOrientation * Vector3::UnitX, angle);
+        }
+
+        void Transform::yaw(float angle) {
+            rotate(mOrientation * Vector3::UnitY, angle);
+        }
+
+        void Transform::rotateX(float angle) {
+            rotate(Vector3::UnitX, angle);
+        }
+
+        void Transform::rotateY(float angle) {
+            rotate(Vector3::UnitY, angle);
+        }
+
+        void Transform::rotateZ(float angle) {
+            rotate(Vector3::UnitZ, angle);
+        }
+
+        void Transform::rotate(const Vector3& axis, float angle) {
+            mOrientation = normalize(Quaternion(axis, angle) * mOrientation);
+            mIsUpdated = false;
+        }
+
+        void Transform::translate(const Vector3& d) {
+            mPosition += d;
+            mIsUpdated = false;
+        }
+
         Vector3 Transform::onPoint(const Vector3& p) const {
             const Matrix4& M = mCachedMatrix;
             return Vector3(
@@ -79,6 +114,10 @@ namespace Goblin {
                 M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z,
                 M[1][0] * v.x + M[1][1] * v.y + M[1][2] * v.z,
                 M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
+        }
+
+        Ray Transform::onRay(const Ray& r) const {
+            return Ray(onPoint(r.o), onVector(r.d), r.mint, r.maxt, r.depth);
         }
 
         bool Transform::isUpdated() const {

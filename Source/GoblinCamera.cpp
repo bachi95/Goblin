@@ -22,11 +22,7 @@ namespace Goblin{
         mPosition = Vector3(0.0f, 0.0f, 0.0f);
         mOrientation = Quaternion::Identity;
 
-        mRight = Vector3(1.0f, 0.0f, 0.0f);
-        mUp = Vector3(0.0f, 1.0f, 0.0f);
-        mLook = Vector3(0.0f, 0.0f, 1.0f);
-
-        mProj = matrixPerspectiveLHD3D(PI * 0.25f, 1.3333f, 0.0001f, 1000.0f);
+        mProj = matrixPerspectiveLHD3D(PI * 0.25f, 1.3333f, 0.5f, 1000.0f);
         mFilm = NULL;
         update();
     }
@@ -56,18 +52,10 @@ namespace Goblin{
         ray->maxt = INFINITY;
         ray->depth = 0;
 
-        //TODO transform the view space ray to world space
+        // view space to world space
         ray->o = mPosition;
         ray->d = mOrientation * ray->d; 
         return 1.0f;
-    }
-
-    Matrix4 Camera::view() const { 
-        return mView; 
-    }
-
-    Matrix4 Camera::proj() const { 
-        return mProj; 
     }
 
     const Matrix4& Camera::getWorldMatrix() {
@@ -87,39 +75,41 @@ namespace Goblin{
     const Matrix4& Camera::getProjectionMatrix() {
         return mProj;
     }
-    
 
-    void Camera::setLens(float fovY, float aspect, float zNear, float zFar) {
-        mProj = matrixPerspectiveLHD3D(fovY, aspect, zNear, zFar);
+    const Vector3 Camera::getLook() const {
+        return mOrientation * Vector3::UnitZ;
     }
 
-    void Camera::strafe(float d) { 
-        mPosition += d * mRight; 
-        mIsUpdated = false;
+    const Vector3 Camera::getUp() const {
+        return mOrientation * Vector3::UnitY;
     }
 
-    void Camera::walk(float d) { 
-        mPosition += d * mLook; 
-        mIsUpdated = false;
+    const Vector3 Camera::getRight() const {
+        return mOrientation * Vector3::UnitX;
+    }
+
+    void Camera::roll(float angle) {
+        rotate(mOrientation * Vector3::UnitZ, angle);
     }
 
     void Camera::pitch(float angle) {
-        Quaternion R = Quaternion(mRight, angle);
-        mUp = R * mUp;
-        mLook = R * mLook;
+        rotate(mOrientation * Vector3::UnitX, angle);
+    }
 
-        Vector3 right = mOrientation * Vector3::UnitX;
-        rotate(right, angle);
-        mIsUpdated = false;
+    void Camera::yaw(float angle) {
+        rotate(mOrientation * Vector3::UnitY, angle);
+    }
+
+    void Camera::rotateX(float angle) {
+        rotate(Vector3::UnitX, angle);
     }
 
     void Camera::rotateY(float angle) {
-        Quaternion R = Quaternion(Vector3::UnitY, angle);
-        mRight = R * mRight;
-        mUp = R * mUp;
-        mLook = R * mLook;
         rotate(Vector3::UnitY, angle);
-        mIsUpdated = false;
+    }
+
+    void Camera::rotateZ(float angle) {
+        rotate(Vector3::UnitZ, angle);
     }
     
     void Camera::rotate(const Vector3& axis,float angle) {
@@ -127,21 +117,9 @@ namespace Goblin{
         mIsUpdated = false;
     } 
 
-    void Camera::rebuildView() {
-        mLook.normalize();
-
-        mUp = normalize(cross(mLook, mRight));
-        mRight = normalize(cross(mUp, mLook));
-
-        float x = -dot(mPosition, mRight);
-        float y = -dot(mPosition, mUp);
-        float z = -dot(mPosition, mLook);
-
-        mView = Matrix4(
-            mRight.x, mRight.y, mRight.z,    x,
-               mUp.x,    mUp.y,    mUp.z,    y,
-             mLook.x,  mLook.y,  mLook.z,    z,
-                0.0f,     0.0f,     0.0f, 1.0f);
+    void Camera::translate(const Vector3& d) {
+        mPosition += d;
+        mIsUpdated = false;
     }
     
     void Camera::update() {

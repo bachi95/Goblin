@@ -6,7 +6,7 @@
 #include "GoblinQuaternion.h"
 
 namespace Goblin {
-
+    class Ray;
     class Transform {
     public:
         Transform();
@@ -22,10 +22,21 @@ namespace Goblin {
         const Matrix4& getMatrix();
         const Matrix4& getInverse();
 
+        void roll(float angle);
+        void pitch(float angle);
+        void yaw(float angle);
+
+        void rotateX(float angle);
+        void rotateY(float angle);
+        void rotateZ(float angle);
+
+        void rotate(const Vector3& axis, float angle);
+        void translate(const Vector3& d);
+
         Vector3 onPoint(const Vector3& p) const;
         Vector3 onNormal(const Vector3& n) const;
         Vector3 onVector(const Vector3& v) const;
-        //Ray onRay(const Ray& ray) const;
+        Ray onRay(const Ray& ray) const;
 
         bool isUpdated() const;
         void update();
