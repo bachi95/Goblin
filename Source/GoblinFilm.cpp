@@ -21,7 +21,7 @@ namespace Goblin {
         mYCount = std::max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
         mYEnd = mYStart + mYCount - 1;
 
-        mPixels = new Pixel[mXCount * mYCount];
+        mPixels = new Pixel[mXRes * mYRes];
     } 
     
     Film::~Film() {
@@ -38,8 +38,8 @@ namespace Goblin {
         int y = static_cast<int>(sample.imageY);
 
         if(x < mXStart || x > mXEnd || y < mYStart || y < mYEnd) {
-            std::cerr<< "(" << x << ", " << y <<")" <<
-                "out of the film crop window" << std::endl;
+//            std::cerr<< "(" << x << ", " << y <<")" <<
+//                "out of the film crop window" << std::endl;
             return;
         }
         //TODO atomic add when this come to multi thread

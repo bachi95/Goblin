@@ -13,9 +13,9 @@ namespace Goblin {
         Film* film = camera->getFilm();
         int xRes = film->getXResolution();
         int yRes = film->getYResolution();
-        for(int i = 0; i < yRes; ++i) {
-            for(int j = 0; j < xRes; ++j) {
-                CameraSample sample((float)i, (float)j);
+        for(int y = 0; y < yRes; ++y) {
+            for(int x = 0; x < xRes; ++x) {
+                CameraSample sample((float)x, (float)y);
                 Ray ray;
                 float w = camera->generateRay(sample, &ray);
                 Color L = w * Li(scene, ray);

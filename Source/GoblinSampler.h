@@ -13,4 +13,4 @@ namespace Goblin {
         imageX(x), imageY(y) {}
 }
 
-#endif GOBLIN_SAMPLER_H
+#endif //GOBLIN_SAMPLER_H
