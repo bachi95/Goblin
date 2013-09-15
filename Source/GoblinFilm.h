@@ -13,6 +13,10 @@ namespace Goblin {
 
         int getXResolution() const;
         int getYResolution() const;
+        int getXStart() const;
+        int getYStart() const;
+        int getXEnd() const;
+        int getYEnd() const;
 
         void addSample(const CameraSample& sample, const Color& L);
         void writeImage();
@@ -34,6 +38,10 @@ namespace Goblin {
 
     inline int Film::getXResolution() const { return mXRes; }
     inline int Film::getYResolution() const { return mYRes; }
+    inline int Film::getXStart() const { return mXStart; }
+    inline int Film::getXEnd() const { return mXEnd; }
+    inline int Film::getYStart() const { return mYStart; }
+    inline int Film::getYEnd() const { return mYEnd; }
 }
 
 #endif //GOBLIN_FILM_H

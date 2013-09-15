@@ -7,19 +7,46 @@
 #include "GoblinSampler.h"
 
 namespace Goblin {
+
+    Renderer::Renderer():mSamples(NULL), mSampler(NULL) {}
+
+    Renderer::~Renderer() {
+        if(mSamples) {
+            delete [] mSamples;
+            mSamples = NULL;
+        }
+        if(mSampler) {
+            delete [] mSampler;
+            mSampler = NULL;
+        }
+    }
+
     void Renderer::render(Scene* scene) {
         const CameraPtr camera = scene->getCamera();
-        //TODO replace this naive X*Y ray shooting with sampler
+        // TODO sampler should instantiated based on the scene description
+        // instead of this kind of combo getter + hardcode 1, 1
         Film* film = camera->getFilm();
         int xRes = film->getXResolution();
         int yRes = film->getYResolution();
-        for(int y = 0; y < yRes; ++y) {
-            for(int x = 0; x < xRes; ++x) {
-                CameraSample sample((float)x, (float)y);
+        int xStart = film->getXStart();
+        int yStart = film->getYStart();
+        int xEnd = film->getXEnd();
+        int yEnd = film->getYEnd();
+        if(mSampler != NULL) {
+            delete mSampler;
+        }
+        if(mSamples != NULL) {
+            delete [] mSamples;
+        }
+        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 1, 1);
+        mSamples = new CameraSample[mSampler->maxSamplesPerRequest()];
+        int sampleNum = 0;
+        while((sampleNum = mSampler->requestSamples(mSamples)) > 0) {
+            for(int i = 0; i < sampleNum; ++i) {
                 Ray ray;
-                float w = camera->generateRay(sample, &ray);
+                float w = camera->generateRay(mSamples[i], &ray);
                 Color L = w * Li(scene, ray);
-                film->addSample(sample, L);
+                film->addSample(mSamples[i], L);
             }
         }
     }
