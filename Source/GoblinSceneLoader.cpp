@@ -1,6 +1,7 @@
 #include "GoblinSceneLoader.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
+#include "GoblinSphere.h"
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
 #include "GoblinUtils.h"
@@ -22,7 +23,7 @@ namespace Goblin {
     using std::string;
 
     typedef std::map<string, GeometryPtr> GeometryMap;
-
+    // camera related keywords
     static const char* CAMERA = "camera";
     static const char* FOV = "fov";
     static const char* NEAR_PLANE = "near_plane";
@@ -30,17 +31,22 @@ namespace Goblin {
     static const char* FILM = "film";
     static const char* RESOLUTION = "resolution";
     static const char* CROP = "crop";
-
+    // geometry related keywords
     static const char* GEOMETRY = "geometry";
-    static const char* MODEL = "model";
     static const char* NAME = "name";
     static const char* TYPE = "type";
-    static const char* MATERIAL = "material";
     static const char* MESH = "mesh";
+    static const char* SPHERE = "sphere";
+    static const char* ORIGIN = "origin";
+    static const char* RADIUS = "radius";
+    static const char* FILENAME = "file";
+    // model related keywords
+    static const char* MODEL = "model";
     static const char* POSITION = "position";
     static const char* ORIENTATION = "orientation";
     static const char* SCALE = "scale";
-    static const char* FILENAME = "file";
+    // material related keywords;
+    static const char* MATERIAL = "material";
 
     static bool getChild(const ptree& pt, const char* key, ptree* child) {
         try {
@@ -183,9 +189,17 @@ namespace Goblin {
     void parseGeometry(const ptree& pt, GeometryMap* geometryMap) {
         std::cout <<"\ngeometry" << std::endl;
         string geometryType = parseString(pt, TYPE);
+
         string name = parseString(pt, NAME);
-        string file = parseString(pt, FILENAME);
-        GeometryPtr geometry(new ObjMesh(file));
+        GeometryPtr geometry;
+        if(geometryType == MESH) {
+            string file = parseString(pt, FILENAME);
+            geometry = GeometryPtr(new ObjMesh(file));
+        } else {
+            Vector3 origin = parseVector3(pt, ORIGIN);
+            float radius = parseFloat(pt, RADIUS);
+            geometry = GeometryPtr(new Sphere(origin, radius));
+        }
         geometry->init();
         std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
         std::cout << "face num: " << geometry->getFaceNum() << std::endl;

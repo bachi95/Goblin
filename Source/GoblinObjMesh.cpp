@@ -45,8 +45,8 @@ namespace Goblin {
     ObjMesh::~ObjMesh() {
     }
 
-    bool ObjMesh::init() {
-        return load();
+    void ObjMesh::init() {
+        load();
     }
 
     bool ObjMesh::load() {
