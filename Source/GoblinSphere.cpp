@@ -3,15 +3,10 @@
 
 using namespace Goblin;
 
-Sphere::Sphere(const Vector3& o, float r, 
-    size_t numSlices, 
-    size_t numStacks):
-    mOrigin(o),
+Sphere::Sphere(float r, size_t numSlices, size_t numStacks):
     mRadius(r), 
     mNumSlices(numSlices), 
-    mNumStacks(numStacks) {
-
-}
+    mNumStacks(numStacks) { }
 
 void Sphere::init() {
     buildStacks();
@@ -41,14 +36,13 @@ void Sphere::buildStacks() {
             v.texC.x = theta / (2.0f * PI);
             v.texC.y = phi / PI;
 
-            v.position += mOrigin;
             mVertices.push_back(v);
         }
     }
 
-    mVertices.push_back(Vertex(mOrigin.x, mOrigin.y - mRadius, mOrigin.z, 
+    mVertices.push_back(Vertex(0.0f, -mRadius, 0.0f, 
         1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f));
-    mVertices.push_back(Vertex(mOrigin.x, mOrigin.y + mRadius, mOrigin.z,
+    mVertices.push_back(Vertex(0.0f, mRadius, 0.0f,
         1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f));
     size_t northPoleIndex = mVertices.size() - 1;
     size_t southPoleIndex = mVertices.size() - 2;
@@ -89,14 +83,3 @@ void Sphere::buildStacks() {
         mTriangles.push_back(triangle);
     }
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -1,10 +1,11 @@
 #ifndef GOBLIN_RENDERER_H
 #define GOBLIN_RENDERER_H
 
+#include "GoblinScene.h"
+
 namespace Goblin {
     class CameraSample;
     class Color;
-    class Scene;
     class Ray;
     class Sampler;
     class Renderer {
@@ -12,8 +13,8 @@ namespace Goblin {
         Renderer();
         ~Renderer();
 
-        void render(Scene* scene);
-        Color Li(Scene* scene, const Ray& ray);
+        void render(ScenePtr scene);
+        Color Li(ScenePtr scene, const Ray& ray);
     private:
         CameraSample* mSamples;
         Sampler* mSampler;

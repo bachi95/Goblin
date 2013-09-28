@@ -1,19 +1,15 @@
 #include "GoblinScene.h"
 
 namespace Goblin {
-    void Scene::addModel(ModelPtr model) {
-        mModels.push_back(model);
-    }
 
-    const ModelList& Scene::getModels() const {
-        return mModels;
-    }
+    Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera):
+        mAggregate(root), mCamera(camera) {}
 
     const CameraPtr Scene::getCamera() const {
         return mCamera;
     }
 
-    void Scene::setCamera(CameraPtr camera) {
-        mCamera = camera;
+    void Scene::collectRenderList(RenderList& rList) {
+        mAggregate->collectRenderList(rList);
     }
 }

@@ -23,6 +23,7 @@ namespace Goblin {
     using std::string;
 
     typedef std::map<string, GeometryPtr> GeometryMap;
+    typedef std::map<string, PrimitivePtr> PrimitiveMap;
     // camera related keywords
     static const char* CAMERA = "camera";
     static const char* FOV = "fov";
@@ -37,11 +38,12 @@ namespace Goblin {
     static const char* TYPE = "type";
     static const char* MESH = "mesh";
     static const char* SPHERE = "sphere";
-    static const char* ORIGIN = "origin";
     static const char* RADIUS = "radius";
     static const char* FILENAME = "file";
     // model related keywords
     static const char* MODEL = "model";
+    // instance related keywords
+    static const char* INSTANCE = "instance";
     static const char* POSITION = "position";
     static const char* ORIENTATION = "orientation";
     static const char* SCALE = "scale";
@@ -163,7 +165,7 @@ namespace Goblin {
 
         Vector3 position =  Vector3::Zero;
         Quaternion orientation = Quaternion::Identity;
-        float zn = 0.0f;
+        float zn = 0.1f;
         float zf = 1000.0f;
         float fov = 60.0f;
 
@@ -196,9 +198,8 @@ namespace Goblin {
             string file = parseString(pt, FILENAME);
             geometry = GeometryPtr(new ObjMesh(file));
         } else {
-            Vector3 origin = parseVector3(pt, ORIGIN);
             float radius = parseFloat(pt, RADIUS);
-            geometry = GeometryPtr(new Sphere(origin, radius));
+            geometry = GeometryPtr(new Sphere(radius));
         }
         geometry->init();
         std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
@@ -207,13 +208,32 @@ namespace Goblin {
         geometryMap->insert(pair); 
     }
 
-    ModelPtr parseModel(const ptree& pt, GeometryMap* geometryMap) {
+    void parseModel(const ptree& pt, GeometryMap* geometryMap, 
+        PrimitiveMap* modelMap) {
         std::cout << "\nmodel" << std::endl;
+        string name = parseString(pt, NAME);
         string geoName = parseString(pt, GEOMETRY);
         GeometryPtr geometry;
         GeometryMap::iterator it = geometryMap->find(geoName);
         if(it == geometryMap->end()) {
-            std::cerr << "geometry " << geoName << " not defined!" << std::endl;
+            std::cerr << "geometry " << geoName << " not defined!\n";
+            return;
+        }
+        PrimitivePtr model(new Model(it->second));
+        std::pair<string, PrimitivePtr> pair(name, model);
+        modelMap->insert(pair);
+    }
+
+    void parseInstance(const ptree& pt, PrimitiveMap* modelMap, 
+        PrimitiveList* instances) {
+
+        std::cout << "\ninstance" << std::endl;
+        string primitiveName = parseString(pt, MODEL);
+        PrimitivePtr primitive;
+        PrimitiveMap::iterator it = modelMap->find(primitiveName);
+        if(it == modelMap->end()) {
+            std::cerr << "model " << primitiveName << " not defined!\n";
+            return;
         }
 
         Vector3 position = parseVector3(pt, POSITION);
@@ -223,11 +243,13 @@ namespace Goblin {
         Vector3 scale = parseVector3(pt, SCALE);
         std::cout << "-scale: " << scale << std::endl;
         Transform toWorld(position, orientation, scale);
-        return ModelPtr(new Model(toWorld, it->second));
+
+        PrimitivePtr instance(new InstancedPrimitive(toWorld, it->second));
+        instances->push_back(instance);
     }
 
-
-    bool SceneLoader::load(const string& filename, Scene* scene) {
+    ScenePtr SceneLoader::load(const string& filename) {
+        ScenePtr scene;
         ptree pt;
         try {
             read_json(filename, pt);
@@ -235,24 +257,28 @@ namespace Goblin {
         catch(boost::property_tree::json_parser::json_parser_error e) {
             std::cerr <<"error reading scene file " << filename << std::endl;
             std::cerr <<e.what() << std::endl;
-            return false;
+            return scene;
         }
 
         GeometryMap geometryMap;
+        // model name may map to the direct model, or its proxy aggregate
+        PrimitiveMap modelMap;
+        PrimitiveList instances;
 
         CameraPtr camera = parseCamera(pt);
-        scene->setCamera(camera);
 
         for(ptree::const_iterator it = pt.begin(); it != pt.end(); it++) {
             std::string key(it->first);
             if(key == MODEL) {
-                ModelPtr modelPtr = parseModel(it->second, &geometryMap);
-                scene->addModel(modelPtr);
+                parseModel(it->second, &geometryMap, &modelMap);
             } else if(key == GEOMETRY) {
                 parseGeometry(it->second, &geometryMap);
+            } else if(key == INSTANCE) {
+                parseInstance(it->second, &modelMap, &instances);
             }
         }
-        
-        return true;
+
+        PrimitivePtr aggregate(new Aggregate(instances));
+        return ScenePtr(new Scene(aggregate, camera));
     }
 }

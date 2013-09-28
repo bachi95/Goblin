@@ -7,8 +7,7 @@
 namespace Goblin {
     class SceneLoader {
     public:
-        bool load(const std::string& filename, Scene* scene);
-
+        ScenePtr load(const std::string& filename);
     };
 }
 

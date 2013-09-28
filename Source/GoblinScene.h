@@ -1,26 +1,25 @@
 #ifndef GOBLIN_SCENE_H
 #define GOBLIN_SCENE_H
 
+#include "GoblinPrimitive.h"
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
 namespace Goblin {
     class Camera;
     typedef boost::shared_ptr<Camera> CameraPtr;
-    class Model;
-    typedef boost::shared_ptr<Model> ModelPtr;
-    typedef std::vector<ModelPtr> ModelList;
+
     class Scene {
     public:
-        void addModel(ModelPtr model);
-        const ModelList& getModels() const;
-
+        Scene(const PrimitivePtr& root, const CameraPtr& camera);
         const CameraPtr getCamera() const; 
-        void setCamera(CameraPtr camera);
+        void collectRenderList(RenderList& rList);
     private:
-        ModelList mModels;
+        PrimitivePtr mAggregate;
         CameraPtr mCamera;
     };
+
+    typedef boost::shared_ptr<Scene> ScenePtr;
 }
 
 #endif //GOBLIN_SCENE_H

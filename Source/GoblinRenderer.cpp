@@ -21,7 +21,7 @@ namespace Goblin {
         }
     }
 
-    void Renderer::render(Scene* scene) {
+    void Renderer::render(ScenePtr scene) {
         const CameraPtr camera = scene->getCamera();
         // TODO sampler should instantiated based on the scene description
         // instead of this kind of combo getter + hardcode 1, 1
@@ -51,9 +51,8 @@ namespace Goblin {
         }
     }
 
-    Color Renderer::Li(Scene* scene, const Ray& ray) {
+    Color Renderer::Li(ScenePtr scene, const Ray& ray) {
         Color Li = Color::Black;
-
         return Li;
     }
 }
