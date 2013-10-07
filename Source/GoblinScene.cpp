@@ -9,6 +9,10 @@ namespace Goblin {
         return mCamera;
     }
 
+    bool Scene::intersect(const Ray& ray) {
+        return mAggregate->intersect(ray);
+    }
+
     void Scene::collectRenderList(RenderList& rList) {
         mAggregate->collectRenderList(rList);
     }

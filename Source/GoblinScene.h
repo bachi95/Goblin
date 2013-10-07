@@ -8,12 +8,14 @@
 namespace Goblin {
     class Camera;
     typedef boost::shared_ptr<Camera> CameraPtr;
+    class Ray;
 
     class Scene {
     public:
         Scene(const PrimitivePtr& root, const CameraPtr& camera);
         const CameraPtr getCamera() const; 
         void collectRenderList(RenderList& rList);
+        bool intersect(const Ray& ray);
     private:
         PrimitivePtr mAggregate;
         CameraPtr mCamera;

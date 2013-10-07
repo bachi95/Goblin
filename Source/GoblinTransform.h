@@ -33,10 +33,15 @@ namespace Goblin {
         void rotate(const Vector3& axis, float angle);
         void translate(const Vector3& d);
 
-        Vector3 onPoint(const Vector3& p) const;
-        Vector3 onNormal(const Vector3& n) const;
-        Vector3 onVector(const Vector3& v) const;
-        Ray onRay(const Ray& ray) const;
+        Vector3 onPoint(const Vector3& p);
+        Vector3 onNormal(const Vector3& n);
+        Vector3 onVector(const Vector3& v);
+        Ray onRay(const Ray& ray);
+
+        Vector3 invertPoint(const Vector3& p);
+        Vector3 invertNormal(const Vector3& n);
+        Vector3 invertVector(const Vector3& v);
+        Ray invertRay(const Ray& ray);
 
         bool isUpdated() const;
         void update();

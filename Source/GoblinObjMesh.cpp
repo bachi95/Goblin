@@ -248,4 +248,8 @@ namespace Goblin {
         std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";
         return true;
     }
+
+    bool ObjMesh::intersect(const Ray& ray) {
+        return false;
+    }
 }

@@ -8,6 +8,7 @@ namespace Goblin {
         Sphere(float r, size_t numSlices = 30, size_t numStacks = 30);
         ~Sphere() {};
         void init();
+        bool intersect(const Ray& ray);
     private:
         void buildStacks();
 

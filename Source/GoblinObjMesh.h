@@ -11,6 +11,7 @@ namespace Goblin {
         ObjMesh(const std::string& filename);
         ~ObjMesh();
         void init();
+        bool intersect(const Ray& ray);
         bool load();
 
     private:

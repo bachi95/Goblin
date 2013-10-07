@@ -49,10 +49,14 @@ namespace Goblin {
                 film->addSample(mSamples[i], L);
             }
         }
+        film->writeImage();
     }
 
     Color Renderer::Li(ScenePtr scene, const Ray& ray) {
         Color Li = Color::Black;
+        if(scene->intersect(ray)) {
+            Li = Color::Blue;
+        }
         return Li;
     }
 }

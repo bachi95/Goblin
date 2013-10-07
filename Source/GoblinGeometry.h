@@ -5,6 +5,8 @@
 #include <vector>
 
 namespace Goblin {
+    class Ray;
+
     struct MeshTriangle {
         unsigned int v[3];
     };
@@ -14,6 +16,7 @@ namespace Goblin {
         Geometry();
         virtual ~Geometry() {};
         virtual void init() = 0;
+        virtual bool intersect(const Ray& ray) = 0;
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;
         const void* getVertexPtr() const;

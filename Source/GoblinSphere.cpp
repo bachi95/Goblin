@@ -1,5 +1,6 @@
 #include "GoblinSphere.h"
 #include "GoblinUtils.h"
+#include "GoblinRay.h"
 
 using namespace Goblin;
 
@@ -10,6 +11,24 @@ Sphere::Sphere(float r, size_t numSlices, size_t numStacks):
 
 void Sphere::init() {
     buildStacks();
+}
+
+bool Sphere::intersect(const Ray& ray) {
+    float A = squaredLength(ray.d);
+    float B = 2.0f * dot(ray.d, ray.o);
+    float C = squaredLength(ray.o) - mRadius * mRadius;
+    float tNear, tFar;
+    if(!quadratic(A, B, C, &tNear, &tFar)) {
+        return false;
+    }
+    float tHit = tNear;
+    if(tHit < ray.mint) {
+        tHit = tFar;
+        if(tHit > ray.maxt) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void Sphere::buildStacks() {

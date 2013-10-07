@@ -92,32 +92,61 @@ namespace Goblin {
             mIsUpdated = false;
         }
 
-        Vector3 Transform::onPoint(const Vector3& p) const {
-            const Matrix4& M = mCachedMatrix;
+        Vector3 Transform::onPoint(const Vector3& p) {
+            const Matrix4& M = getMatrix();
             return Vector3(
                 M[0][0] * p.x + M[0][1] * p.y + M[0][2] * p.z + M[0][3],
                 M[1][0] * p.x + M[1][1] * p.y + M[1][2] * p.z + M[1][3],
                 M[2][0] * p.x + M[2][1] * p.y + M[2][2] * p.z + M[2][3]);
         }
 
-        Vector3 Transform::onNormal(const Vector3& n) const {
-            const Matrix4& invT = mCachedInverse.transpose();
+        Vector3 Transform::onNormal(const Vector3& n) {
+            const Matrix4& invT = getInverse().transpose();
             return Vector3(
                 invT[0][0] * n.x + invT[0][1] * n.y + invT[0][2] * n.z,
                 invT[1][0] * n.x + invT[1][1] * n.y + invT[1][2] * n.z,
                 invT[2][0] * n.x + invT[2][1] * n.y + invT[2][2] * n.z);
         }
 
-        Vector3 Transform::onVector(const Vector3& v) const {
-            const Matrix4& M = mCachedMatrix;
+        Vector3 Transform::onVector(const Vector3& v) {
+            const Matrix4& M = getMatrix();
             return Vector3(
                 M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z,
                 M[1][0] * v.x + M[1][1] * v.y + M[1][2] * v.z,
                 M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
         }
 
-        Ray Transform::onRay(const Ray& r) const {
+        Ray Transform::onRay(const Ray& r) {
             return Ray(onPoint(r.o), onVector(r.d), r.mint, r.maxt, r.depth);
+        }
+
+        Vector3 Transform::invertPoint(const Vector3& p) {
+            const Matrix4& M = getInverse();
+            return Vector3(
+                M[0][0] * p.x + M[0][1] * p.y + M[0][2] * p.z + M[0][3],
+                M[1][0] * p.x + M[1][1] * p.y + M[1][2] * p.z + M[1][3],
+                M[2][0] * p.x + M[2][1] * p.y + M[2][2] * p.z + M[2][3]);
+        }
+
+        Vector3 Transform::invertNormal(const Vector3& n) {
+            const Matrix4& invT = getMatrix().transpose();
+            return Vector3(
+                invT[0][0] * n.x + invT[0][1] * n.y + invT[0][2] * n.z,
+                invT[1][0] * n.x + invT[1][1] * n.y + invT[1][2] * n.z,
+                invT[2][0] * n.x + invT[2][1] * n.y + invT[2][2] * n.z);
+        }
+
+        Vector3 Transform::invertVector(const Vector3& v) {
+            const Matrix4& M = getInverse();
+            return Vector3(
+                M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z,
+                M[1][0] * v.x + M[1][1] * v.y + M[1][2] * v.z,
+                M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
+        }
+
+        Ray Transform::invertRay(const Ray& r) {
+            return Ray(invertPoint(r.o), invertVector(r.d), 
+                r.mint, r.maxt, r.depth);
         }
 
         bool Transform::isUpdated() const {

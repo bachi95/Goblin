@@ -41,6 +41,10 @@ namespace Goblin {
     inline float degrees(float radians) {
 	    return (radians / PI) * 180.0f;
     }
+
+    // utils for quadratic equation, solution stored in t1 and t2
+    // if it return true
+    bool quadratic(float A, float B, float C, float* t1, float* t2);
 }
 
 #endif // GOBLIN_UTILS_H

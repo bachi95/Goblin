@@ -8,6 +8,7 @@
 #include <boost/shared_ptr.hpp>
 
 namespace Goblin {
+    class Ray;
     /* temp notes:
     three kinds of primitive: instance, model, aggregate
     model = geometry + material
@@ -38,7 +39,7 @@ namespace Goblin {
 
     class Primitive {
     public:
-        bool intersect() { return false; }
+        virtual bool intersect(const Ray& ray) = 0;
 
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
@@ -54,7 +55,7 @@ namespace Goblin {
         InstancedPrimitive(const Vector3& position, 
             const Quaternion& orientation,
             const Vector3& scale, const PrimitivePtr& primitive);
-
+        bool intersect(const Ray& ray);
         const Vector3& getPosition() const;
         const Quaternion& getOrientation() const;
         const Vector3& getScale() const;
@@ -72,7 +73,7 @@ namespace Goblin {
         Aggregate(const PrimitiveList& primitives):
             mPrimitives(primitives) {
         }
-
+        bool intersect(const Ray& ray);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
     private:

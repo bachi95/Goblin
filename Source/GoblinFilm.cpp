@@ -1,6 +1,7 @@
 #include "GoblinFilm.h"
 #include "GoblinUtils.h"
 #include "GoblinSampler.h"
+#include "GoblinImageIO.h"
 #include <cstring>
 #include <algorithm>
 
@@ -37,9 +38,9 @@ namespace Goblin {
         int x = static_cast<int>(sample.imageX);
         int y = static_cast<int>(sample.imageY);
 
-        if(x < mXStart || x > mXEnd || y < mYStart || y < mYEnd) {
-//            std::cerr<< "(" << x << ", " << y <<")" <<
-//                "out of the film crop window" << std::endl;
+        if(x < mXStart || x > mXEnd || y < mYStart || y > mYEnd) {
+            //std::cerr<< "(" << x << ", " << y <<")" <<
+            //    "out of the film crop window" << std::endl;
             return;
         }
         //TODO atomic add when this come to multi thread
@@ -50,6 +51,15 @@ namespace Goblin {
     } 
 
     void Film::writeImage() {
+        Color* colors = new Color[mXRes * mYRes];
+        for(int y = 0; y < mYRes; ++y) {
+            for(int x = 0; x < mXRes; ++x) {
+                int index = mXRes * y + x;
+                colors[index] = mPixels[index].color / mPixels[index].weight;
+            }
+        }
+        Goblin::writeImage(mFilename, colors, mXRes, mYRes);
+        delete [] colors;
     }
 
 }

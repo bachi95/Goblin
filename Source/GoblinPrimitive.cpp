@@ -1,4 +1,5 @@
 #include "GoblinPrimitive.h"
+#include "GoblinRay.h"
 
 namespace Goblin {
     InstancedPrimitive::InstancedPrimitive(const Transform& toWorld, 
@@ -9,6 +10,11 @@ namespace Goblin {
         const Quaternion& orientation,
         const Vector3& scale, const PrimitivePtr& primitive):
         mToWorld(position, orientation, scale), mPrimitive(primitive) {}
+
+    bool InstancedPrimitive::intersect(const Ray& ray) {
+        Ray r = mToWorld.invertRay(ray);
+        return mPrimitive->intersect(r);
+    }
 
     const Vector3& InstancedPrimitive::getPosition() const {
         return mToWorld.getPosition();
@@ -36,6 +42,15 @@ namespace Goblin {
         for(size_t i = 0; i < mPrimitives.size(); ++i) {
             mPrimitives[i]->collectRenderList(rList, m);
         }
+    }
+
+    bool Aggregate::intersect(const Ray& ray) {
+        for(size_t i = 0; i < mPrimitives.size(); ++i) {
+            if(mPrimitives[i]->intersect(ray)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
