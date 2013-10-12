@@ -70,7 +70,7 @@ void Sphere::buildStacks() {
 
     for(size_t i = 0; i < mNumStacks - 2; ++i) {
         for(size_t j = 0; j < mNumSlices; ++j) {
-            MeshTriangle triangle;
+            TriangleIndex triangle;
             triangle.v[0] = i * numRingVertices + j;
             triangle.v[1] = i * numRingVertices + j + 1;
             triangle.v[2] = (i + 1) * numRingVertices + j;
@@ -85,7 +85,7 @@ void Sphere::buildStacks() {
 
     //top ring is in the rear block of vertices
     for(size_t i = 0; i < mNumSlices; ++i) {
-        MeshTriangle triangle;
+        TriangleIndex triangle;
         triangle.v[0] = northPoleIndex;
         triangle.v[1] = i + 1;
         triangle.v[2] = i;
@@ -95,7 +95,7 @@ void Sphere::buildStacks() {
     // | top ring . middle rings . bottom ring. south pole, north pole |
     size_t baseIndex = (numRings - 1) * numRingVertices;
     for(size_t i = 0; i < mNumSlices; ++i) {
-        MeshTriangle triangle;
+        TriangleIndex triangle;
         triangle.v[0] = southPoleIndex;
         triangle.v[1] = baseIndex + i;
         triangle.v[2] = baseIndex + i + 1;

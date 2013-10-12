@@ -3,29 +3,37 @@
 #include "GoblinVertex.h"
 #include <cstdio>
 #include <vector>
+#include <exception>
+#include <boost/shared_ptr.hpp>
 
 namespace Goblin {
     class Ray;
 
-    struct MeshTriangle {
+    struct TriangleIndex {
         unsigned int v[3];
     };
+
+    class Geometry;
+    typedef boost::shared_ptr<Geometry> GeometryPtr;
+    typedef std::vector<GeometryPtr> GeometryList;
 
     class Geometry {
     public:
         Geometry();
         virtual ~Geometry() {};
-        virtual void init() = 0;
+        virtual void init();
+        virtual bool intersectable() const;
         virtual bool intersect(const Ray& ray) = 0;
+        virtual void refine(GeometryList& refinedGeometries);
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;
-        const void* getVertexPtr() const;
-        const void* getFacePtr() const;
+        const void* getVertexPtr(size_t index = 0) const;
+        const void* getFacePtr(size_t index = 0) const;
         const size_t getId() const;
 
     public:
         typedef std::vector<Vertex> VertexList;
-        typedef std::vector<MeshTriangle> TriangleList;
+        typedef std::vector<TriangleIndex> TriangleList;
 
     protected:
         static size_t nextGeometryId;
@@ -35,6 +43,15 @@ namespace Goblin {
         TriangleList mTriangles;
     };
 
+    inline void Geometry::init() {}
+
+    inline bool Geometry::intersectable() const { return true; }
+
+    inline void Geometry::refine(GeometryList& refinedGeometries) {
+        std::cerr << "unimplemented Geometry::refine" << std::endl;
+        throw std::exception();
+    }
+
     inline const size_t Geometry::getVertexNum() const { 
         return mVertices.size();
     }
@@ -43,12 +60,12 @@ namespace Goblin {
         return mTriangles.size();
     }
 
-    inline const void* Geometry::getVertexPtr() const {
-        return &mVertices[0];
+    inline const void* Geometry::getVertexPtr(size_t index) const {
+        return &mVertices[index];
     }
 
-    inline const void* Geometry::getFacePtr() const {
-        return &mTriangles[0];
+    inline const void* Geometry::getFacePtr(size_t index) const {
+        return &mTriangles[index];
     }
 }
 

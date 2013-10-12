@@ -37,16 +37,28 @@ namespace Goblin {
         mPrimitive->collectRenderList(rList, m * mToWorld.getMatrix());
     }
 
+    Aggregate::Aggregate(const PrimitiveList& primitives):
+        mInputPrimitives(primitives) {
+        for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
+            PrimitivePtr primitive = mInputPrimitives[i];
+            if(primitive->intersectable()) {
+                mRefinedPrimitives.push_back(mInputPrimitives[i]);
+            } else {
+                primitive->refine(mRefinedPrimitives);
+            }
+        }
+    }
+    
     void Aggregate::collectRenderList(RenderList& rList, 
         const Matrix4& m) {
-        for(size_t i = 0; i < mPrimitives.size(); ++i) {
-            mPrimitives[i]->collectRenderList(rList, m);
+        for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
+            mInputPrimitives[i]->collectRenderList(rList, m);
         }
     }
 
     bool Aggregate::intersect(const Ray& ray) {
-        for(size_t i = 0; i < mPrimitives.size(); ++i) {
-            if(mPrimitives[i]->intersect(ray)) {
+        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            if(mRefinedPrimitives[i]->intersect(ray)) {
                 return true;
             }
         }

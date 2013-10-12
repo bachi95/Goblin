@@ -189,10 +189,11 @@ namespace Goblin {
     }
 
     void parseGeometry(const ptree& pt, GeometryMap* geometryMap) {
-        std::cout <<"\ngeometry" << std::endl;
         string geometryType = parseString(pt, TYPE);
 
         string name = parseString(pt, NAME);
+
+        std::cout <<"\ngeometry " << name << std::endl;
         GeometryPtr geometry;
         if(geometryType == MESH) {
             string file = parseString(pt, FILENAME);
@@ -210,24 +211,34 @@ namespace Goblin {
 
     void parseModel(const ptree& pt, GeometryMap* geometryMap, 
         PrimitiveMap* modelMap) {
-        std::cout << "\nmodel" << std::endl;
         string name = parseString(pt, NAME);
+
+        std::cout << "\nmodel " << name << std::endl;
         string geoName = parseString(pt, GEOMETRY);
-        GeometryPtr geometry;
         GeometryMap::iterator it = geometryMap->find(geoName);
         if(it == geometryMap->end()) {
             std::cerr << "geometry " << geoName << " not defined!\n";
             return;
         }
         PrimitivePtr model(new Model(it->second));
-        std::pair<string, PrimitivePtr> pair(name, model);
-        modelMap->insert(pair);
+
+        if(!model->intersectable()) {
+            std::vector<PrimitivePtr> primitives;
+            primitives.push_back(model);
+            PrimitivePtr aggregate(new Aggregate(primitives));
+            std::pair<string, PrimitivePtr> pair(name, aggregate);
+            modelMap->insert(pair);
+        } else {
+            std::pair<string, PrimitivePtr> pair(name, model);
+            modelMap->insert(pair);
+        }
     }
 
     void parseInstance(const ptree& pt, PrimitiveMap* modelMap, 
         PrimitiveList* instances) {
+        string name = parseString(pt, NAME);
+        std::cout << "\ninstance " << name <<std::endl;
 
-        std::cout << "\ninstance" << std::endl;
         string primitiveName = parseString(pt, MODEL);
         PrimitivePtr primitive;
         PrimitiveMap::iterator it = modelMap->find(primitiveName);

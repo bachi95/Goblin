@@ -5,6 +5,7 @@
 #include "GoblinGeometry.h"
 
 #include <vector>
+#include <exception>
 #include <boost/shared_ptr.hpp>
 
 namespace Goblin {
@@ -23,7 +24,6 @@ namespace Goblin {
     aggregate::intersect -> whatever kind of the space travesel
         ex: kd tree/ BVH or simply naive loop through
     */
-    typedef boost::shared_ptr<Geometry> GeometryPtr;
 
     // temporary workaround for hardware rendering sigh
     // collect a list of renderable from the scene by
@@ -37,16 +37,25 @@ namespace Goblin {
 
     typedef std::vector<Renderable> RenderList;
 
+    class Primitive;
+    typedef boost::shared_ptr<Primitive> PrimitivePtr;
+    typedef std::vector<PrimitivePtr> PrimitiveList;
+
     class Primitive {
     public:
+        virtual bool intersectable() const;
+        virtual void refine(PrimitiveList& refinedPrimitives);
         virtual bool intersect(const Ray& ray) = 0;
-
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
     };
 
-    typedef boost::shared_ptr<Primitive> PrimitivePtr;
-    typedef std::vector<PrimitivePtr> PrimitiveList;
+
+    inline bool Primitive::intersectable() const { return true; }
+    inline void Primitive::refine(PrimitiveList& refinedPrimitives) {
+        std::cerr << "unimplemented Primitive::refine" << std::endl; 
+        throw std::exception();
+    }
 
     class InstancedPrimitive : public Primitive{
     public:
@@ -70,14 +79,13 @@ namespace Goblin {
 
     class Aggregate : public Primitive {
     public:
-        Aggregate(const PrimitiveList& primitives):
-            mPrimitives(primitives) {
-        }
+        Aggregate(const PrimitiveList& primitives);
         bool intersect(const Ray& ray);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
     private:
-        PrimitiveList mPrimitives;
+        PrimitiveList mInputPrimitives;
+        PrimitiveList mRefinedPrimitives;
     };
 }
 

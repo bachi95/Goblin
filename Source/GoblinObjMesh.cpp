@@ -1,5 +1,5 @@
 #include "GoblinObjMesh.h"
-
+#include "GoblinTriangle.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -224,7 +224,7 @@ namespace Goblin {
         unsigned int vIndexCounter = 0;
         for(size_t i = 0; i < faceList.size(); ++i) {
             const Face& face = faceList[i];
-            MeshTriangle triangle;
+            TriangleIndex triangle;
             for(size_t j = 0; j < 3; ++j) {
                 std::pair<VertexMap::iterator, bool> rv = 
                     vMap.insert(std::make_pair(face.index[j], vIndexCounter)); 
@@ -251,5 +251,12 @@ namespace Goblin {
 
     bool ObjMesh::intersect(const Ray& ray) {
         return false;
+    }
+
+    void ObjMesh::refine(GeometryList& refinedGeometries) {
+        for(size_t i = 0; i < mTriangles.size(); ++i) {
+            GeometryPtr triangle(new Triangle(this, i));
+            refinedGeometries.push_back(triangle);
+        } 
     }
 }
