@@ -31,6 +31,29 @@ bool Sphere::intersect(const Ray& ray) {
     return true;
 }
 
+bool Sphere::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+    float A = squaredLength(ray.d);
+    float B = 2.0f * dot(ray.d, ray.o);
+    float C = squaredLength(ray.o) - mRadius * mRadius;
+    float tNear, tFar;
+    if(!quadratic(A, B, C, &tNear, &tFar)) {
+        return false;
+    }
+    float tHit = tNear;
+    if(tHit < ray.mint) {
+        tHit = tFar;
+        if(tHit > ray.maxt) {
+            return false;
+        }
+    }
+    ray.maxt = tHit;
+    *epsilon = 1e-3f * tHit;
+    intersection->position = ray(tHit);
+    intersection->normal = normalize(intersection->position);
+    return true;
+}
+
 void Sphere::buildStacks() {
     float phiStep = PI / mNumStacks;
     float thetaStep = 2.0f * PI / mNumSlices;

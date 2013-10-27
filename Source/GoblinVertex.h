@@ -20,6 +20,17 @@ namespace Goblin
         Vector3 normal;
         Vector2 texC;
     };
+
+    struct VertexPNT {
+        VertexPNT() {}
+        VertexPNT(float x, float y, float z, float nx, float ny, float nz,
+            float u, float v): 
+            position(x, y, z), normal(nx, ny, nz), texC(u, v) {}
+
+        Vector3 position;
+        Vector3 normal;
+        Vector2 texC;
+    };
 }
 
 #endif // GOBLIN_VERTEX_H

@@ -16,6 +16,18 @@ namespace Goblin {
         return mPrimitive->intersect(r);
     }
 
+    bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+        Ray r = mToWorld.invertRay(ray);
+        bool hit = mPrimitive->intersect(r, epsilon, intersection);
+        if(hit) {
+            intersection->position = mToWorld.onPoint(intersection->position);
+            intersection->normal = mToWorld.onNormal(intersection->normal);
+            intersection->normal.normalize();
+        }
+        return hit;
+    }
+
     const Vector3& InstancedPrimitive::getPosition() const {
         return mToWorld.getPosition();
     }
@@ -63,6 +75,18 @@ namespace Goblin {
             }
         }
         return false;
+    }
+
+    bool Aggregate::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+        bool hit = false;
+        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            if(mRefinedPrimitives[i]->intersect(ray, epsilon, 
+                intersection)) {
+                hit = true;
+            }
+        }
+        return hit;
     }
 
 }

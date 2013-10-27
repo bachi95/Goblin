@@ -54,8 +54,16 @@ namespace Goblin {
 
     Color Renderer::Li(ScenePtr scene, const Ray& ray) {
         Color Li = Color::Black;
-        if(scene->intersect(ray)) {
-            Li = Color::Blue;
+        float epsilon;
+        Intersection intersection;
+        if(scene->intersect(ray, &epsilon, &intersection)) {
+            const std::vector<LightPtr>& lights = scene->getLights();
+            for(size_t i = 0; i < lights.size(); ++i) {
+                Vector3 wi;
+                Color L = lights[i]->Li(intersection.position, &epsilon, &wi);
+                Li += L * clamp(dot(intersection.normal, wi), 0, 1);
+            }
+
         }
         return Li;
     }

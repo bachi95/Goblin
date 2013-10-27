@@ -10,10 +10,11 @@ namespace Goblin {
         Ray();
         Ray(const Vector3& origin, const Vector3& dir, 
             float start, float end = INFINITY, int depth = 0);
+        Vector3 operator()(float t) const;
     public:
         Vector3 o;
         Vector3 d;
-        float mint, maxt;
+        mutable float mint, maxt;
         int depth;
     };
     
@@ -23,6 +24,10 @@ namespace Goblin {
     inline Ray::Ray(const Vector3& origin, const Vector3& dir, 
         float start, float end, int depth): o(origin), d(dir), 
         mint(start), maxt(end), depth(depth) {}
+
+    inline Vector3 Ray::operator()(float t) const {
+        return o + t * d;
+    }
 
 }
 

@@ -9,6 +9,8 @@ namespace Goblin {
     public:
         Triangle(ObjMesh* parentMesh, size_t index);
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
     private:
         ObjMesh* mParentMesh;
         size_t mIndex;

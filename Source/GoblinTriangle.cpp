@@ -82,4 +82,51 @@ namespace Goblin {
 
         return true;
     }
+
+    bool Triangle::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+        TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
+        unsigned int i0 = ti->v[0];
+        unsigned int i1 = ti->v[1];
+        unsigned int i2 = ti->v[2];
+        Vector3& v0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
+        Vector3& v1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
+        Vector3& v2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+
+        Vector3 e1 = v1 - v0;
+        Vector3 e2 = v2 - v0;
+        Vector3 s1 = cross(ray.d, e2);
+        float divisor = dot(s1, e1);
+        if(divisor == 0.0f) {
+            return false;
+        }
+        float invDivisor = 1.0f / divisor;
+
+        Vector3 s = ray.o - v0;
+        float b1 = dot(s, s1) * invDivisor;
+        if(b1 < 0.0f || b1 > 1.0f) {
+            return false;
+        }
+
+        Vector3 s2 = cross(s, e1);
+        float b2 = dot(ray.d, s2) * invDivisor;
+        if(b2 < 0.0f || b1 + b2 > 1.0f) {
+            return false;
+        }
+
+        float t = dot(e2, s2) * invDivisor;
+        if(t < ray.mint || t > ray.maxt) {
+            return false;
+        }
+
+        ray.maxt = t;
+        *epsilon = 1e-3f * t;
+        intersection->position = ray(t);
+        Vector3& n0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->normal;
+        Vector3& n1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->normal;
+        Vector3& n2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->normal;
+        intersection->normal = (1.0f - b1 - b2) * n0 + b1 * n1 + b2 * n2;
+        intersection->normal.normalize();
+        return true;
+    }
 }

@@ -43,9 +43,12 @@ namespace Goblin {
 
     class Primitive {
     public:
+        virtual ~Primitive() {}
         virtual bool intersectable() const;
         virtual void refine(PrimitiveList& refinedPrimitives);
         virtual bool intersect(const Ray& ray) = 0;
+        virtual bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection) = 0;
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
     };
@@ -65,6 +68,8 @@ namespace Goblin {
             const Quaternion& orientation,
             const Vector3& scale, const PrimitivePtr& primitive);
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
         const Vector3& getPosition() const;
         const Quaternion& getOrientation() const;
         const Vector3& getScale() const;
@@ -81,6 +86,8 @@ namespace Goblin {
     public:
         Aggregate(const PrimitiveList& primitives);
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
     private:

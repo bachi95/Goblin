@@ -13,6 +13,8 @@ namespace Goblin {
         void init();
         bool intersectable() const;
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
         void refine(GeometryList& refinedGeometries);
         bool load();
 

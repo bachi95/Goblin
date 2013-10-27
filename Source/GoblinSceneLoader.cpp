@@ -4,21 +4,16 @@
 #include "GoblinSphere.h"
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
+#include "GoblinLight.h"
 #include "GoblinUtils.h"
+#include "GoblinPropertyTree.h"
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
 #include <cassert>
 #include <iostream>
 #include <string>
 #include <map>
 
 namespace Goblin {
-    using boost::property_tree::ptree;
-    using boost::lexical_cast;
     using std::vector;
     using std::string;
 
@@ -47,54 +42,18 @@ namespace Goblin {
     static const char* POSITION = "position";
     static const char* ORIENTATION = "orientation";
     static const char* SCALE = "scale";
+    // light related keywords
+    static const char* LIGHT = "light";
+    static const char* POINT = "point";
+    static const char* DIRECTIONAL = "directional";
+    static const char* INTENSITY = "intensity";
+    static const char* RADIANCE = "radiance";
+    static const char* DIRECTION = "direction";
     // material related keywords;
     static const char* MATERIAL = "material";
 
-    static bool getChild(const ptree& pt, const char* key, ptree* child) {
-        try {
-            *child = pt.get_child(key);
-            return true;
-        }
-        catch (boost::property_tree::ptree_bad_path) {
-            return false;
-        }
-    }
-
-    static float parseFloat(const ptree& pt, const char* key, 
-            float fallback = 0.0f) {
-        try {
-            return pt.get<float>(key);
-        }
-        catch (boost::property_tree::ptree_bad_path) {
-            std::cerr << "value non exist for key " << key << std::endl;
-            return fallback;
-        }
-    }
-
-    static string parseString(const ptree& pt, const char* key,
-            const char* fallback = "") {
-        try {
-            return pt.get<std::string>(key);
-        }
-        catch (boost::property_tree::ptree_bad_path) {
-            std::cerr << "value non exist for key " << key << std::endl;
-            return fallback;
-        }
-    }
-
-    static vector<float> parseFloatArray(const ptree& pt, const char* key) {
-        vector<float> rv;
-        ptree c;
-        if(getChild(pt, key, &c)) {
-            for(ptree::const_iterator it = c.begin(); it != c.end(); it++) {
-                rv.push_back(lexical_cast<float>(it->second.data()));
-            }
-        }
-        return rv;
-    }
-
-    static Vector2 parseVector2(const ptree& pt, const char* key) {
-        std::vector<float> rv = parseFloatArray(pt, key);
+    static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
+        std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 2) {
             std::cerr << "invalid value for Vector2 " << key << std::endl;
             return Vector2::Zero;
@@ -102,8 +61,8 @@ namespace Goblin {
         return Vector2(rv[0], rv[1]);
     }
 
-    static Vector3 parseVector3(const ptree& pt, const char* key) {
-        std::vector<float> rv = parseFloatArray(pt, key);
+    static Vector3 parseVector3(const PropertyTree& pt, const char* key) {
+        std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 3) {
             std::cerr << "invalid value for Vector3 " << key << std::endl;
             return Vector3::Zero;
@@ -111,8 +70,8 @@ namespace Goblin {
         return Vector3(rv[0], rv[1], rv[2]);
     }
 
-    static Vector4 parseVector4(const ptree& pt, const char* key) {
-        std::vector<float> rv = parseFloatArray(pt, key);
+    static Vector4 parseVector4(const PropertyTree& pt, const char* key) {
+        std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 4) {
             std::cerr << "invalid value for Vector4 " << key << std::endl;
             return Vector4::Zero;
@@ -120,8 +79,17 @@ namespace Goblin {
         return Vector4(rv[0], rv[1], rv[2], rv[3]);
     }
 
-    static Quaternion parseQuaternion(const ptree& pt, const char* key) {
-        std::vector<float> rv = parseFloatArray(pt, key);
+    static Color parseColor(const PropertyTree& pt, const char* key) {
+        std::vector<float> rv = pt.parseFloatArray(key);
+        if(rv.size() != 3) {
+            std::cerr << "invalid value for Color " << key << std::endl;
+            return Color::White;
+        }
+        return Color(rv[0], rv[1], rv[2], 1.0f);
+    }
+
+    static Quaternion parseQuaternion(const PropertyTree& pt, const char* key) {
+        std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 4) {
             std::cerr << "invalid value for Quaternion " << key << std::endl;
             return Quaternion::Identity;
@@ -129,14 +97,14 @@ namespace Goblin {
         return Quaternion(rv[0], rv[1], rv[2], rv[3]);
     }
 
-    Film* parseFilm(const ptree& pt) {
+    Film* parseFilm(const PropertyTree& pt) {
         int xRes = 640;
         int yRes = 480;
         float crop[4] = {0.0f, 1.0f, 0.0f, 1.0f};
         string filename = "ray.png";
 
-        ptree filmTree;
-        if(getChild(pt, FILM, &filmTree)) {
+        PropertyTree filmTree;
+        if(pt.getChild(FILM, &filmTree)) {
             Vector2 res = parseVector2(filmTree, RESOLUTION);
             if(res != Vector2::Zero) {
                 xRes = static_cast<int>(res.x);
@@ -148,7 +116,7 @@ namespace Goblin {
                     crop[i] = windowCrop[i];
                 }
             }
-            filename = parseString(filmTree, FILENAME, filename.c_str());
+            filename = filmTree.parseString(FILENAME, filename.c_str());
         }
 
         std::cout << "\nfilm" << std::endl;
@@ -160,7 +128,7 @@ namespace Goblin {
         return new Film(xRes, yRes, crop, filename);
     }
 
-    CameraPtr parseCamera(const ptree& pt) {
+    CameraPtr parseCamera(const PropertyTree& pt) {
         Film* film = parseFilm(pt);
 
         Vector3 position =  Vector3::Zero;
@@ -169,13 +137,13 @@ namespace Goblin {
         float zf = 1000.0f;
         float fov = 60.0f;
 
-        ptree cameraTree;
-        if(getChild(pt, CAMERA, &cameraTree)) {
+        PropertyTree cameraTree;
+        if(pt.getChild(CAMERA, &cameraTree)) {
             position = parseVector3(cameraTree, POSITION);
             orientation = parseQuaternion(cameraTree, ORIENTATION);
-            fov = parseFloat(cameraTree, FOV, fov);
-            zn = parseFloat(cameraTree, NEAR_PLANE, zn);
-            zf = parseFloat(cameraTree, FAR_PLANE, zf);
+            fov = cameraTree.parseFloat(FOV, fov);
+            zn = cameraTree.parseFloat(NEAR_PLANE, zn);
+            zf = cameraTree.parseFloat(FAR_PLANE, zf);
         }
 
         std::cout << "\ncamera" << std::endl;
@@ -188,18 +156,18 @@ namespace Goblin {
             zn, zf, film));
     }
 
-    void parseGeometry(const ptree& pt, GeometryMap* geometryMap) {
-        string geometryType = parseString(pt, TYPE);
+    void parseGeometry(const PropertyTree& pt, GeometryMap* geometryMap) {
+        string geometryType = pt.parseString(TYPE);
 
-        string name = parseString(pt, NAME);
+        string name = pt.parseString(NAME);
 
         std::cout <<"\ngeometry " << name << std::endl;
         GeometryPtr geometry;
         if(geometryType == MESH) {
-            string file = parseString(pt, FILENAME);
+            string file = pt.parseString(FILENAME);
             geometry = GeometryPtr(new ObjMesh(file));
         } else {
-            float radius = parseFloat(pt, RADIUS);
+            float radius = pt.parseFloat(RADIUS);
             geometry = GeometryPtr(new Sphere(radius));
         }
         geometry->init();
@@ -207,14 +175,15 @@ namespace Goblin {
         std::cout << "face num: " << geometry->getFaceNum() << std::endl;
         std::pair<string, GeometryPtr> pair(name, geometry);
         geometryMap->insert(pair); 
+
     }
 
-    void parseModel(const ptree& pt, GeometryMap* geometryMap, 
+    void parseModel(const PropertyTree& pt, GeometryMap* geometryMap, 
         PrimitiveMap* modelMap) {
-        string name = parseString(pt, NAME);
+        string name = pt.parseString(NAME);
 
         std::cout << "\nmodel " << name << std::endl;
-        string geoName = parseString(pt, GEOMETRY);
+        string geoName = pt.parseString(GEOMETRY);
         GeometryMap::iterator it = geometryMap->find(geoName);
         if(it == geometryMap->end()) {
             std::cerr << "geometry " << geoName << " not defined!\n";
@@ -234,12 +203,12 @@ namespace Goblin {
         }
     }
 
-    void parseInstance(const ptree& pt, PrimitiveMap* modelMap, 
+    void parseInstance(const PropertyTree& pt, PrimitiveMap* modelMap, 
         PrimitiveList* instances) {
-        string name = parseString(pt, NAME);
+        string name = pt.parseString(NAME);
         std::cout << "\ninstance " << name <<std::endl;
 
-        string primitiveName = parseString(pt, MODEL);
+        string primitiveName = pt.parseString(MODEL);
         PrimitivePtr primitive;
         PrimitiveMap::iterator it = modelMap->find(primitiveName);
         if(it == modelMap->end()) {
@@ -259,26 +228,48 @@ namespace Goblin {
         instances->push_back(instance);
     }
 
+    void parseLight(const PropertyTree& pt, LightList* lights) {
+        string lightType = pt.parseString(TYPE);
+
+        string name = pt.parseString(NAME);
+
+        std::cout <<"\nlight " << name << std::endl;
+        LightPtr light;
+        if(lightType == POINT) {
+            Color intensity = parseColor(pt, INTENSITY);
+            Vector3 position = parseVector3(pt, POSITION);
+            std::cout << "-intensity: " << intensity << std::endl;
+            std::cout << "-position: " << position << std::endl;
+            light = LightPtr(new PointLight(intensity, position));
+        } else if(lightType == DIRECTIONAL) {
+            Color radiance = parseColor(pt, RADIANCE);
+            Vector3 direction = parseVector3(pt, DIRECTION);
+            std::cout << "-radiance: " << radiance << std::endl;
+            std::cout << "-direction: " << direction << std::endl;
+            light = LightPtr(new DirectionalLight(radiance, direction));
+        } else {
+            std::cerr << "unrecognized light type " << lightType << std::endl;
+        }
+
+        if(light) {
+            lights->push_back(light);
+        }
+    }
+
     ScenePtr SceneLoader::load(const string& filename) {
         ScenePtr scene;
-        ptree pt;
-        try {
-            read_json(filename, pt);
-        }
-        catch(boost::property_tree::json_parser::json_parser_error e) {
-            std::cerr <<"error reading scene file " << filename << std::endl;
-            std::cerr <<e.what() << std::endl;
-            return scene;
-        }
+        PropertyTree pt(filename);
 
         GeometryMap geometryMap;
         // model name may map to the direct model, or its proxy aggregate
         PrimitiveMap modelMap;
         PrimitiveList instances;
-
         CameraPtr camera = parseCamera(pt);
+        LightList lights;
 
-        for(ptree::const_iterator it = pt.begin(); it != pt.end(); it++) {
+        const PtreeList& nodes = pt.getChildren(); 
+        for(PtreeList::const_iterator it = nodes.begin(); 
+            it != nodes.end(); it++) {
             std::string key(it->first);
             if(key == MODEL) {
                 parseModel(it->second, &geometryMap, &modelMap);
@@ -286,10 +277,12 @@ namespace Goblin {
                 parseGeometry(it->second, &geometryMap);
             } else if(key == INSTANCE) {
                 parseInstance(it->second, &modelMap, &instances);
+            } else if(key == LIGHT) {
+                parseLight(it->second, &lights);
             }
         }
 
         PrimitivePtr aggregate(new Aggregate(instances));
-        return ScenePtr(new Scene(aggregate, camera));
+        return ScenePtr(new Scene(aggregate, camera, lights));
     }
 }

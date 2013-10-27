@@ -41,44 +41,41 @@ namespace Goblin {
         r(r), g(g), b(b), a(a) {}
 
     inline Color Color::operator+(const Color& rhs) const {
-        return Color(r + rhs.r, g + rhs.g, b + rhs.b, a + rhs.a);
+        return Color(r + rhs.r, g + rhs.g, b + rhs.b, a);
     }
 
     inline Color& Color::operator+=(const Color& rhs) {
         r += rhs.r; 
         g += rhs.g;
         b += rhs.b;
-        a += rhs.a;
         return *this;
     }
 
     inline Color Color::operator-(const Color& rhs) const {
-        return Color(r - rhs.r, g - rhs.g, b - rhs.b, a - rhs.a);
+        return Color(r - rhs.r, g - rhs.g, b - rhs.b, a);
     }
 
     inline Color& Color::operator-=(const Color& rhs) {
         r -= rhs.r;
         g -= rhs.g;
         b -= rhs.b;
-        a -= rhs.a;
         return *this;
     }
 
     inline Color Color::operator*(float s) const {
-        return Color(r * s, g * s, b * s, a * s);
+        return Color(r * s, g * s, b * s, a);
     }
 
     inline Color& Color::operator*=(float s) {
         r *= s;
         g *= s;
         b *= s;
-        a *= s;
         return *this;
     }
 
     inline Color Color::operator/(float s) const {
         float inv = 1.0f / s;
-        return Color(r * inv, g * inv, b * inv, a * inv);
+        return Color(r * inv, g * inv, b * inv, a);
     }
 
     inline Color& Color::operator/=(float s) {
@@ -86,12 +83,11 @@ namespace Goblin {
         r *= inv;
         g *= inv;
         b *= inv;
-        a *= inv;
         return *this;
     }
 
     inline Color Color::operator-() const {
-        return Color(-r, -g, -b, -a);
+        return Color(-r, -g, -b, a);
     }
 
     inline bool Color::operator==(const Color& rhs) const {

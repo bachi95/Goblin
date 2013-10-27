@@ -13,6 +13,11 @@ namespace Goblin {
         unsigned int v[3];
     };
 
+    struct Intersection {
+        Vector3 position;
+        Vector3 normal;
+    };
+
     class Geometry;
     typedef boost::shared_ptr<Geometry> GeometryPtr;
     typedef std::vector<GeometryPtr> GeometryList;
@@ -20,10 +25,12 @@ namespace Goblin {
     class Geometry {
     public:
         Geometry();
-        virtual ~Geometry() {};
+        virtual ~Geometry() {}
         virtual void init();
         virtual bool intersectable() const;
         virtual bool intersect(const Ray& ray) = 0;
+        virtual bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection) = 0;
         virtual void refine(GeometryList& refinedGeometries);
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;

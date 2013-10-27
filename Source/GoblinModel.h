@@ -8,6 +8,8 @@ namespace Goblin {
         Model(const GeometryPtr& geometry);
         bool intersectable() const;
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
         void refine(PrimitiveList& refinedPrimitives);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);

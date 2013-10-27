@@ -9,6 +9,8 @@ namespace Goblin {
         ~Sphere() {};
         void init();
         bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, float* epsilon, 
+            Intersection* intersection);
     private:
         void buildStacks();
 

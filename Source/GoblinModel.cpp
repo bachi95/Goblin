@@ -7,6 +7,11 @@ namespace Goblin {
         return mGeometry->intersect(ray);
     }
 
+    bool Model::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+        return mGeometry->intersect(ray, epsilon, intersection);
+    }
+
     void Model::refine(PrimitiveList& refinedPrimitives) {
         GeometryList refinedGeometries;
         mGeometry->refine(refinedGeometries);

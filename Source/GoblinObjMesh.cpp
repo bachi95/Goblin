@@ -253,6 +253,11 @@ namespace Goblin {
         return false;
     }
 
+    bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection) {
+        return false;
+    }
+
     void ObjMesh::refine(GeometryList& refinedGeometries) {
         for(size_t i = 0; i < mTriangles.size(); ++i) {
             GeometryPtr triangle(new Triangle(this, i));
