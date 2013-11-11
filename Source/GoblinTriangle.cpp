@@ -1,6 +1,7 @@
 #include "GoblinTriangle.h"
 #include "GoblinObjMesh.h"
 #include "GoblinRay.h"
+#include "GoblinBBox.h"
 
 namespace Goblin {
     Triangle::Triangle(ObjMesh* parentMesh, size_t index):
@@ -128,5 +129,21 @@ namespace Goblin {
         intersection->normal = (1.0f - b1 - b2) * n0 + b1 * n1 + b2 * n2;
         intersection->normal.normalize();
         return true;
+    }
+
+    BBox Triangle::getObjectBound() {
+        TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
+        unsigned int i0 = ti->v[0];
+        unsigned int i1 = ti->v[1];
+        unsigned int i2 = ti->v[2];
+        Vector3& v0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
+        Vector3& v1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
+        Vector3& v2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+
+        BBox rv;
+        rv.expand(v0);
+        rv.expand(v1);
+        rv.expand(v2);
+        return rv;
     }
 }

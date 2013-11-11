@@ -75,16 +75,17 @@ namespace Goblin {
         bool hasTexCoord = false;
 
         std::string line;
-        std::string token;
         int lineNum = 0;
         while(std::getline(file, line)) {
             lineNum++;
             std::stringstream stream(line);
+            std::string token;
             stream >> token;
             if(token == "v") {
                 Vector3 position;
                 stream >> position.x >> position.y >> position.z;
                 if(stream.fail()) {
+                    std::cout << line << std::endl;
                     std::cerr << "position syntax error on line " 
                         << lineNum << std::endl;
                     return false;
@@ -94,6 +95,7 @@ namespace Goblin {
                 Vector3 normal;
                 stream >> normal.x >> normal.y >> normal.z;
                 if(stream.fail()) {
+                    std::cout << line << std::endl;
                     std::cerr << "normal syntax error on line " 
                         << lineNum << std::endl;
                     return false;
@@ -182,12 +184,7 @@ namespace Goblin {
                         break;
                     }
                 }
-                // obj face indexing starts on 1 instead of 0
-                for(size_t i = 0; i < faceTokensNum; ++i) {
-                    triIndex[i].vertex--;
-                    triIndex[i].normal--;
-                    triIndex[i].texCoord--;
-                }
+
                 Face f1 = {{triIndex[0], triIndex[1], triIndex[2]}};
                 faceList.push_back(f1);
                 if(faceTokensNum == 4) {
@@ -204,11 +201,25 @@ namespace Goblin {
         int texCoordNum = uvList.size();
         
         for(size_t i = 0; i < faceList.size(); ++i) {
-            const Face& face = faceList[i];
+            Face& face = faceList[i];
             for(size_t j = 0; j < 3; ++j) {
-                int vIndex = face.index[j].vertex;
-                int nIndex = face.index[j].normal;
-                int tIndex = face.index[j].texCoord;
+                int& vIndex = face.index[j].vertex;
+                int& nIndex = face.index[j].normal;
+                int& tIndex = face.index[j].texCoord;
+                // some obj do backward index like what python do
+                if(vIndex < 0) {
+                    vIndex += verticesNum + 1;
+                }
+                if(nIndex < 0) {
+                    nIndex += normalNum + 1;
+                }
+                if(tIndex < 0) {
+                    tIndex += texCoordNum + 1;
+                }
+                // obj face indexing starts on 1 instead of 0
+                vIndex--;
+                nIndex--;
+                tIndex--;
                 if(vIndex < 0 || vIndex >= verticesNum ||
                     nIndex < -1 || nIndex >= normalNum ||
                     tIndex < -1 || tIndex >= texCoordNum) {
@@ -218,8 +229,8 @@ namespace Goblin {
                 }
             }
         }
-        mVertices.clear();
-        mTriangles.clear();
+        mVertices.reserve(faceList.size() * 2);
+        mTriangles.reserve(faceList.size());
 
         unsigned int vIndexCounter = 0;
         for(size_t i = 0; i < faceList.size(); ++i) {
@@ -238,6 +249,7 @@ namespace Goblin {
                     int tIndex = face.index[j].texCoord;
                     v.texC = tIndex == -1 ? Vector2::Zero : uvList[tIndex];
                     mVertices.push_back(v);
+                    mBBox.expand(v.position);
                     vIndexCounter++;
                 }
                 // (vIndex, nIndex, tIndex) map to the final triangle index
@@ -256,6 +268,10 @@ namespace Goblin {
     bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection) {
         return false;
+    }
+
+    BBox ObjMesh::getObjectBound() {
+        return mBBox;
     }
 
     void ObjMesh::refine(GeometryList& refinedGeometries) {

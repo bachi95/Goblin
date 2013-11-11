@@ -1,12 +1,15 @@
 #ifndef GOBLIN_GEOMETRY_H
 #define GOBLIN_GEOMETRY_H
 #include "GoblinVertex.h"
+#include "GoblinBBox.h"
+
 #include <cstdio>
 #include <vector>
 #include <exception>
 #include <boost/shared_ptr.hpp>
 
 namespace Goblin {
+    class BBox;
     class Ray;
 
     struct TriangleIndex {
@@ -31,6 +34,7 @@ namespace Goblin {
         virtual bool intersect(const Ray& ray) = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection) = 0;
+        virtual BBox getObjectBound() = 0;
         virtual void refine(GeometryList& refinedGeometries);
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;

@@ -3,7 +3,6 @@
 #include "GoblinSampler.h"
 #include "GoblinImageIO.h"
 #include <cstring>
-#include <algorithm>
 
 #include <iostream>
 
@@ -15,11 +14,11 @@ namespace Goblin {
         memcpy(mCrop, crop, 4 * sizeof(float));
 
         mXStart = ceilInt(mXRes * mCrop[0]);
-        mXCount = std::max(1, ceilInt(mXRes * mCrop[1])- mXStart);
+        mXCount = max(1, ceilInt(mXRes * mCrop[1])- mXStart);
         mXEnd = mXStart + mXCount - 1;
 
         mYStart = ceilInt(mYRes * mCrop[2]); 
-        mYCount = std::max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
+        mYCount = max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
         mYEnd = mYStart + mYCount - 1;
 
         mPixels = new Pixel[mXRes * mYRes];

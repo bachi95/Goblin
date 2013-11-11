@@ -8,6 +8,8 @@
 #include "GoblinUtils.h"
 #include "GoblinPropertyTree.h"
 
+#include "GoblinBBox.h"
+
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -173,6 +175,9 @@ namespace Goblin {
         geometry->init();
         std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
         std::cout << "face num: " << geometry->getFaceNum() << std::endl;
+        BBox bbox = geometry->getObjectBound();
+        std::cout << "BBox min: " << bbox.pMin << std::endl;
+        std::cout << "BBox max: " << bbox.pMax << std::endl;
         std::pair<string, GeometryPtr> pair(name, geometry);
         geometryMap->insert(pair); 
 
@@ -223,8 +228,11 @@ namespace Goblin {
         Vector3 scale = parseVector3(pt, SCALE);
         std::cout << "-scale: " << scale << std::endl;
         Transform toWorld(position, orientation, scale);
-
         PrimitivePtr instance(new InstancedPrimitive(toWorld, it->second));
+        BBox bbox = instance->getAABB();
+        std::cout << "BBox min: " << bbox.pMin << std::endl;
+        std::cout << "BBox max: " << bbox.pMax << std::endl;
+
         instances->push_back(instance);
     }
 

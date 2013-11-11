@@ -10,6 +10,7 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection);
+        BBox getAABB() const;
         void refine(PrimitiveList& refinedPrimitives);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);

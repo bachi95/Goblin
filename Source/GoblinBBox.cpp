@@ -1,0 +1,49 @@
+#include "GoblinBBox.h"
+#include "GoblinRay.h"
+
+namespace Goblin {
+    BBox BBox::expand(const Vector3& p) {
+        pMin = Vector3(min(pMin.x, p.x), min(pMin.y, p.y), min(pMin.z, p.z));
+        pMax = Vector3(max(pMax.x, p.x), max(pMax.y, p.y), max(pMax.z, p.z));
+        return *this;
+    }
+
+    BBox BBox::expand(const BBox& b) {
+        pMin = Vector3(
+            min(pMin.x, b.pMin.x), 
+            min(pMin.y, b.pMin.y), 
+            min(pMin.z, b.pMin.z));
+        pMax = Vector3(
+            max(pMax.x, b.pMax.x),
+            max(pMax.y, b.pMax.y),
+            max(pMax.z, b.pMax.z));
+        return *this;
+    }
+
+    BBox BBox::expand(float f) {
+        Vector3 delta(f, f, f);
+        pMin -= delta;
+        pMax += delta;
+        return *this;
+    }
+
+    bool BBox::intersect(const Ray& ray) {
+        float t0 = ray.mint;
+        float t1 = ray.maxt;
+        for(size_t i = 0; i < 3; ++i) {
+            float invDir = 1.0f / ray.d[i];
+            float tNear = (pMin[i] - ray.o[i]) * invDir;
+            float tFar = (pMax[i] - ray.o[i]) * invDir;
+            // ray might travel in/away
+            if(tNear > tFar) {
+                swap(tNear, tFar);
+            }
+            t0 = (tNear > t0) ? tNear : t0;
+            t1 = (tFar < t1) ? tFar : t1;
+            if(t0 > t1) {
+                return false;
+            }
+        }
+        return true;
+    }
+}

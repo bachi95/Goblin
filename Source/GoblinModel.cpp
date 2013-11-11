@@ -1,4 +1,5 @@
 #include "GoblinModel.h"
+#include "GoblinBBox.h"
 
 namespace Goblin {
     Model::Model(const GeometryPtr& geometry) : mGeometry(geometry) {}
@@ -10,6 +11,10 @@ namespace Goblin {
     bool Model::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection) {
         return mGeometry->intersect(ray, epsilon, intersection);
+    }
+
+    BBox Model::getAABB() const {
+        return mGeometry->getObjectBound();
     }
 
     void Model::refine(PrimitiveList& refinedPrimitives) {

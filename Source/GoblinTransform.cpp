@@ -1,5 +1,6 @@
 #include "GoblinTransform.h"
 #include "GoblinRay.h"
+#include "GoblinBBox.h"
 #include <iostream>
 
 namespace Goblin {
@@ -40,14 +41,14 @@ namespace Goblin {
             return mOrientation;
         }
 
-        const Matrix4& Transform::getMatrix() {
+        const Matrix4& Transform::getMatrix() const {
             if(!isUpdated()) {
                 update();
             }
             return mCachedMatrix;
         }
 
-        const Matrix4& Transform::getInverse() {
+        const Matrix4& Transform::getInverse() const {
             if(!isUpdated()) {
                 update();
             }
@@ -92,7 +93,7 @@ namespace Goblin {
             mIsUpdated = false;
         }
 
-        Vector3 Transform::onPoint(const Vector3& p) {
+        Vector3 Transform::onPoint(const Vector3& p) const {
             const Matrix4& M = getMatrix();
             return Vector3(
                 M[0][0] * p.x + M[0][1] * p.y + M[0][2] * p.z + M[0][3],
@@ -100,7 +101,7 @@ namespace Goblin {
                 M[2][0] * p.x + M[2][1] * p.y + M[2][2] * p.z + M[2][3]);
         }
 
-        Vector3 Transform::onNormal(const Vector3& n) {
+        Vector3 Transform::onNormal(const Vector3& n) const {
             const Matrix4& invT = getInverse().transpose();
             return Vector3(
                 invT[0][0] * n.x + invT[0][1] * n.y + invT[0][2] * n.z,
@@ -108,7 +109,7 @@ namespace Goblin {
                 invT[2][0] * n.x + invT[2][1] * n.y + invT[2][2] * n.z);
         }
 
-        Vector3 Transform::onVector(const Vector3& v) {
+        Vector3 Transform::onVector(const Vector3& v) const {
             const Matrix4& M = getMatrix();
             return Vector3(
                 M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z,
@@ -116,11 +117,23 @@ namespace Goblin {
                 M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
         }
 
-        Ray Transform::onRay(const Ray& r) {
+        Ray Transform::onRay(const Ray& r) const {
             return Ray(onPoint(r.o), onVector(r.d), r.mint, r.maxt, r.depth);
         }
 
-        Vector3 Transform::invertPoint(const Vector3& p) {
+        BBox Transform::onBBox(const BBox& b) const {
+            BBox rv(onPoint(b.pMin));
+            rv.expand(onPoint(Vector3(b.pMax.x, b.pMin.y, b.pMin.z)));
+            rv.expand(onPoint(Vector3(b.pMin.x, b.pMax.y, b.pMin.z)));
+            rv.expand(onPoint(Vector3(b.pMin.x, b.pMin.y, b.pMax.z)));
+            rv.expand(onPoint(Vector3(b.pMax.x, b.pMax.y, b.pMin.z)));
+            rv.expand(onPoint(Vector3(b.pMax.x, b.pMin.y, b.pMax.z)));
+            rv.expand(onPoint(Vector3(b.pMin.x, b.pMax.y, b.pMax.z)));
+            rv.expand(onPoint(b.pMax));
+            return rv;
+        }
+
+        Vector3 Transform::invertPoint(const Vector3& p) const {
             const Matrix4& M = getInverse();
             return Vector3(
                 M[0][0] * p.x + M[0][1] * p.y + M[0][2] * p.z + M[0][3],
@@ -128,7 +141,7 @@ namespace Goblin {
                 M[2][0] * p.x + M[2][1] * p.y + M[2][2] * p.z + M[2][3]);
         }
 
-        Vector3 Transform::invertNormal(const Vector3& n) {
+        Vector3 Transform::invertNormal(const Vector3& n) const {
             const Matrix4& invT = getMatrix().transpose();
             return Vector3(
                 invT[0][0] * n.x + invT[0][1] * n.y + invT[0][2] * n.z,
@@ -136,7 +149,7 @@ namespace Goblin {
                 invT[2][0] * n.x + invT[2][1] * n.y + invT[2][2] * n.z);
         }
 
-        Vector3 Transform::invertVector(const Vector3& v) {
+        Vector3 Transform::invertVector(const Vector3& v) const {
             const Matrix4& M = getInverse();
             return Vector3(
                 M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z,
@@ -144,16 +157,28 @@ namespace Goblin {
                 M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
         }
 
-        Ray Transform::invertRay(const Ray& r) {
+        Ray Transform::invertRay(const Ray& r) const {
             return Ray(invertPoint(r.o), invertVector(r.d), 
                 r.mint, r.maxt, r.depth);
+        }
+
+        BBox Transform::invertBBox(const BBox& b) const {
+            BBox rv(invertPoint(b.pMin));
+            rv.expand(invertPoint(Vector3(b.pMax.x, b.pMin.y, b.pMin.z)));
+            rv.expand(invertPoint(Vector3(b.pMin.x, b.pMax.y, b.pMin.z)));
+            rv.expand(invertPoint(Vector3(b.pMin.x, b.pMin.y, b.pMax.z)));
+            rv.expand(invertPoint(Vector3(b.pMax.x, b.pMax.y, b.pMin.z)));
+            rv.expand(invertPoint(Vector3(b.pMax.x, b.pMin.y, b.pMax.z)));
+            rv.expand(invertPoint(Vector3(b.pMin.x, b.pMax.y, b.pMax.z)));
+            rv.expand(invertPoint(b.pMax));
+            return rv;
         }
 
         bool Transform::isUpdated() const {
             return mIsUpdated;
         }
 
-        void Transform::update() {
+        void Transform::update() const {
             Matrix4 S = matrixScale(mScale);
             Matrix4 R = mOrientation.toMatrix();
 

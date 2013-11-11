@@ -8,7 +8,7 @@
 namespace Goblin {
     class PropertyTree;
     using boost::property_tree::ptree;
-    typedef std::vector<std::pair<std::string, PropertyTree>> PtreeList;
+    typedef std::vector<std::pair<std::string, PropertyTree> > PtreeList;
 
     class PropertyTree {
     public:

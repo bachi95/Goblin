@@ -2,6 +2,7 @@
 #define GOBLIN_OBJ_MESH
 
 #include "GoblinGeometry.h"
+#include "GoblinBBox.h"
 #include <string>
 
 namespace Goblin {
@@ -15,11 +16,13 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection);
+        BBox getObjectBound();
         void refine(GeometryList& refinedGeometries);
         bool load();
 
     private:
         std::string mFilename;
+        BBox mBBox;
     };
 
     inline bool ObjMesh::intersectable() const { return false; }

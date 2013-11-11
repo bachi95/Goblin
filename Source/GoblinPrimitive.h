@@ -3,6 +3,7 @@
 
 #include "GoblinTransform.h"
 #include "GoblinGeometry.h"
+#include "GoblinBBox.h"
 
 #include <vector>
 #include <exception>
@@ -49,6 +50,7 @@ namespace Goblin {
         virtual bool intersect(const Ray& ray) = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection) = 0;
+        virtual BBox getAABB() const = 0;
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
     };
@@ -70,11 +72,11 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection);
+        BBox getAABB() const;
         const Vector3& getPosition() const;
         const Quaternion& getOrientation() const;
         const Vector3& getScale() const;
         const Matrix4& getWorldMatrix();
-
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
     private:
@@ -90,9 +92,11 @@ namespace Goblin {
             Intersection* intersection);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
+        BBox getAABB() const;
     private:
         PrimitiveList mInputPrimitives;
         PrimitiveList mRefinedPrimitives;
+        BBox mAABB;
     };
 }
 

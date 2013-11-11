@@ -1,6 +1,7 @@
 #include "GoblinSphere.h"
 #include "GoblinUtils.h"
 #include "GoblinRay.h"
+#include "GoblinBBox.h"
 
 using namespace Goblin;
 
@@ -52,6 +53,11 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
     intersection->position = ray(tHit);
     intersection->normal = normalize(intersection->position);
     return true;
+}
+
+BBox Sphere::getObjectBound() {
+    return BBox(Vector3(mRadius, mRadius, mRadius), 
+        Vector3(-mRadius, -mRadius, -mRadius));
 }
 
 void Sphere::buildStacks() {

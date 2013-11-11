@@ -11,6 +11,8 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection);
+        BBox getObjectBound();
+
     private:
         void buildStacks();
 

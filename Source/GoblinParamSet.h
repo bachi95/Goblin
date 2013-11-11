@@ -51,12 +51,12 @@ namespace Goblin {
             const std::string& = "");
 
     private:
-        std::vector<ParamSetItem<int>> mInts;
-        std::vector<ParamSetItem<float>> mFloats;
-        std::vector<ParamSetItem<Vector3>> mVec3s;
-        std::vector<ParamSetItem<Vector4>> mVec4s;
-        std::vector<ParamSetItem<Color>> mColors;
-        std::vector<ParamSetItem<std::string>> mStrings;
+        std::vector<ParamSetItem<int> > mInts;
+        std::vector<ParamSetItem<float> > mFloats;
+        std::vector<ParamSetItem<Vector3> > mVec3s;
+        std::vector<ParamSetItem<Vector4> > mVec4s;
+        std::vector<ParamSetItem<Color> > mColors;
+        std::vector<ParamSetItem<std::string> > mStrings;
     };
 }
 #endif //GOBLIN_PARAM_SET_H

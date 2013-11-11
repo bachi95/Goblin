@@ -3,12 +3,17 @@
 
 #include <cfloat>
 #include <cmath>
+#include <algorithm>
 
 #ifndef INFINITY
 #define INFINITY FLT_MAX
 #endif // INFINITY
 
 namespace Goblin {
+    using std::min;
+    using std::max;
+    using std::swap;
+
     const float PI = 3.14159265358979323f;
     const float INV_PI = 0.31830988618379067154f;
     const float INV_TWOPI = 0.15915494309189533577f;

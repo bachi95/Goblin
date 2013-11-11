@@ -28,6 +28,10 @@ namespace Goblin {
         return hit;
     }
 
+    BBox InstancedPrimitive::getAABB() const {
+        return mToWorld.onBBox(mPrimitive->getAABB());
+    }
+
     const Vector3& InstancedPrimitive::getPosition() const {
         return mToWorld.getPosition();
     }
@@ -59,6 +63,10 @@ namespace Goblin {
                 primitive->refine(mRefinedPrimitives);
             }
         }
+
+        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            mAABB.expand(mRefinedPrimitives[i]->getAABB());
+        }
     }
     
     void Aggregate::collectRenderList(RenderList& rList, 
@@ -71,6 +79,7 @@ namespace Goblin {
     bool Aggregate::intersect(const Ray& ray) {
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             if(mRefinedPrimitives[i]->intersect(ray)) {
+            //if(mRefinedPrimitives[i]->getAABB().intersect(ray)) {
                 return true;
             }
         }
@@ -89,4 +98,7 @@ namespace Goblin {
         return hit;
     }
 
+    BBox Aggregate::getAABB() const {
+        return mAABB;
+    }
 }
