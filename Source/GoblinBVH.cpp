@@ -226,13 +226,48 @@ namespace Goblin {
         return nodeOffset;
     }
 
+    // optimized version bbox/ray intersection test by precomputing
+    // invDir and using dirIsNeg indexing to avoid swap tMin/tMax
+    // if the ray direction is negative
+    static inline bool intersect(const BBox& bbox, const Ray& ray,
+        const Vector3& invDir, const uint32_t dirIsNeg[3]) {
+        // intersect x tabs
+        float tMin = (bbox[dirIsNeg[0]].x - ray.o.x) * invDir.x;
+        float tMax = (bbox[1 - dirIsNeg[0]].x - ray.o.x) * invDir.x;
+        // intersect y tabs
+        float tYMin = (bbox[dirIsNeg[1]].y - ray.o.y) * invDir.y;
+        float tYMax = (bbox[1 - dirIsNeg[1]].y - ray.o.y) * invDir.y;
+        if(tYMax < tMin || tYMin > tMax) {
+            return false;
+        }
+        if(tYMin > tMin) {
+            tMin = tYMin;
+        }
+        if(tYMax < tMax) {
+            tMax = tYMax;
+        }
+        // intersect ztabs
+        float tZMin = (bbox[dirIsNeg[2]].z - ray.o.z) * invDir.z;
+        float tZMax = (bbox[1 - dirIsNeg[2]].z - ray.o.z) * invDir.z;
+        if(tZMax < tMin || tZMin > tMax) {
+            return false;
+        }
+        if(tZMin > tMin) {
+            tMin = tZMin;
+        }
+        if(tZMax < tMax) {
+            tMax = tZMax;
+        }
+
+        return (tMin < ray.maxt) && (tMax > ray.mint);
+    }
+
     bool BVH::intersect(const Ray& ray) {
         if(mBVHNodes.size() == 0) {
             return false;
         }
-        Vector3 origin = ray(ray.mint);
         Vector3 invDir(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
-        bool dirIsNeg[3] = {
+        uint32_t dirIsNeg[3] = {
             ray.d.x < 0.0f, 
             ray.d.y < 0.0f, 
             ray.d.z < 0.0f};
@@ -241,7 +276,7 @@ namespace Goblin {
         uint32_t todo[64];
         while(true) {
             CompactBVHNode& node = mBVHNodes[nodeNum];
-            if(node.bbox.intersect(ray)) {
+            if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
                 if(node.primitivesNum > 0) {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;
@@ -277,9 +312,8 @@ namespace Goblin {
         if(mBVHNodes.size() == 0) {
             return false;
         }
-        Vector3 origin = ray(ray.mint);
         Vector3 invDir(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
-        bool dirIsNeg[3] = {
+        uint32_t dirIsNeg[3] = {
             ray.d.x < 0.0f, 
             ray.d.y < 0.0f, 
             ray.d.z < 0.0f};
@@ -289,7 +323,7 @@ namespace Goblin {
         bool hit = false;
         while(true) {
             CompactBVHNode& node = mBVHNodes[nodeNum];
-            if(node.bbox.intersect(ray)) {
+            if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
                 if(node.primitivesNum > 0) {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;

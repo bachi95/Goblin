@@ -17,6 +17,9 @@ namespace Goblin {
         BBox expand(float f);
         bool intersect(const Ray& ray);
         int longestAxis();
+        const Vector3& operator[](int i) const;
+        Vector3& operator[](int i);
+
     public:
         Vector3 pMin;
         Vector3 pMax;
@@ -31,6 +34,16 @@ namespace Goblin {
     inline BBox::BBox(const Vector3& p1, const Vector3& p2):
         pMin(min(p1.x, p2.x), min(p1.y, p2.y), min(p1.z, p2.z)),
         pMax(max(p1.x, p2.x), max(p1.y, p2.y), max(p1.z, p2.z)) {}
+
+    inline const Vector3& BBox::operator[](int i) const {
+        assert(i == 0 || i == 1);
+        return (&pMin)[i];
+    }
+
+    inline Vector3& BBox::operator[](int i) {
+        assert(i == 0 || i == 1);
+        return (&pMin)[i];
+    }
 
 }
 
