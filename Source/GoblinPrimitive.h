@@ -93,7 +93,7 @@ namespace Goblin {
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
         BBox getAABB() const;
-    private:
+    protected:
         PrimitiveList mInputPrimitives;
         PrimitiveList mRefinedPrimitives;
         BBox mAABB;

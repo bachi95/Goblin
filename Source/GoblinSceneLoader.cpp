@@ -7,6 +7,7 @@
 #include "GoblinLight.h"
 #include "GoblinUtils.h"
 #include "GoblinPropertyTree.h"
+#include "GoblinBVH.h"
 
 #include "GoblinBBox.h"
 
@@ -199,7 +200,7 @@ namespace Goblin {
         if(!model->intersectable()) {
             std::vector<PrimitivePtr> primitives;
             primitives.push_back(model);
-            PrimitivePtr aggregate(new Aggregate(primitives));
+            PrimitivePtr aggregate(new BVH(primitives, 1, "equal_count"));
             std::pair<string, PrimitivePtr> pair(name, aggregate);
             modelMap->insert(pair);
         } else {
@@ -290,7 +291,7 @@ namespace Goblin {
             }
         }
 
-        PrimitivePtr aggregate(new Aggregate(instances));
+        PrimitivePtr aggregate(new BVH(instances, 1, "equal_count"));
         return ScenePtr(new Scene(aggregate, camera, lights));
     }
 }

@@ -63,7 +63,6 @@ namespace Goblin {
                 Color L = lights[i]->Li(intersection.position, &epsilon, &wi);
                 Li += L * clamp(dot(intersection.normal, wi), 0, 1);
             }
-
         }
         return Li;
     }

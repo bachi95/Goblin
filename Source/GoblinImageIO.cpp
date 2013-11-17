@@ -1,5 +1,6 @@
 #include "GoblinImageIO.h"
 #include "GoblinColor.h"
+#include "GoblinUtils.h"
 
 #include <iostream>
 #include <cstdio>
@@ -163,13 +164,13 @@ namespace Goblin {
             for(int x = 0; x < width; ++x) {
                 size_t index = y * width + x;
                 buffer[index * 4 + 0] = 
-                    static_cast<unsigned char>(colorBuffer[index].r * 255.0f);
+                    static_cast<unsigned char>(clamp(colorBuffer[index].r, 0, 1) * 255.0f);
                 buffer[index * 4 + 1] =
-                    static_cast<unsigned char>(colorBuffer[index].g * 255.0f);
+                    static_cast<unsigned char>(clamp(colorBuffer[index].g, 0, 1) * 255.0f);
                 buffer[index * 4 + 2] = 
-                    static_cast<unsigned char>(colorBuffer[index].b * 255.0f);
+                    static_cast<unsigned char>(clamp(colorBuffer[index].b, 0, 1) * 255.0f);
                 buffer[index * 4 + 3] = 
-                    static_cast<unsigned char>(colorBuffer[index].a * 255.0f);
+                    static_cast<unsigned char>(clamp(colorBuffer[index].a, 0, 1) * 255.0f);
             }
             rowPointers[y] = &buffer[y * width * 4];
         }

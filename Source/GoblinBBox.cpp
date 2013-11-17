@@ -46,4 +46,15 @@ namespace Goblin {
         }
         return true;
     }
+
+    int BBox::longestAxis() {
+        Vector3 delta = pMax - pMin;
+        if(delta.x > delta.y && delta.x > delta.z) {
+            return 0;
+        } else if(delta.y > delta.z) {
+            return 1;
+        } else {
+            return 2;
+        }
+    }
 }

@@ -16,7 +16,7 @@ namespace Goblin {
         BBox expand(const BBox& b);
         BBox expand(float f);
         bool intersect(const Ray& ray);
-
+        int longestAxis();
     public:
         Vector3 pMin;
         Vector3 pMax;
@@ -31,6 +31,7 @@ namespace Goblin {
     inline BBox::BBox(const Vector3& p1, const Vector3& p2):
         pMin(min(p1.x, p2.x), min(p1.y, p2.y), min(p1.z, p2.z)),
         pMax(max(p1.x, p2.x), max(p1.y, p2.y), max(p1.z, p2.z)) {}
+
 }
 
 #endif //GOBLIN_BBOX_H
