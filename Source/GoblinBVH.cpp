@@ -31,48 +31,10 @@ namespace Goblin {
         }
     };
 
-    struct BVHTreeNode {
-        BVHTreeNode() { children[0] = children[1] = NULL; }
-        ~BVHTreeNode() {
-            if(children[0] != NULL) {
-                delete children[0];
-                children[0] = NULL;
-            }
-            if(children[1] != NULL) {
-                delete children[0];
-                children[1] = NULL;
-            }        
-        }
-
-        void initLeaf(int first, int n, const BBox& b) {
-            firstPrimIndex = first;
-            primitivesNum = n;
-            bbox = b;
-        }
-
-        void initInterior(int axis, BVHTreeNode* c0, BVHTreeNode* c1) {
-            children[0] = c0;
-            children[1] = c1;
-            bbox = c0->bbox;
-            bbox.expand(c1->bbox);
-            splitAxis = axis;
-            primitivesNum = 0;
-        }
-
-        BVHTreeNode* children[2];
-        BBox bbox;
-        int primitivesNum;
-        // for interior node
-        int splitAxis;
-        // for leaf node
-        int firstPrimIndex;
-    };
-
     BVH::BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
         const std::string& splitMethod):
         Aggregate(primitives),
-        mMaxPrimitivesNum(maxPrimitivesNum),
-        mBVHRoot(NULL) {
+        mMaxPrimitivesNum(maxPrimitivesNum) {
         std::cout << "specified split method " << splitMethod << std::endl;
         if(splitMethod == "middle") {
             mSplitMethod = Middle;
@@ -91,54 +53,25 @@ namespace Goblin {
             BBox b = mRefinedPrimitives[i]->getAABB();
             buildInfoList.push_back(BVHPrimitiveInfo(b, i));
         } 
-        
-        //for(size_t i = 0; i < buildInfoList.size(); ++i) {
-        //    std::cout << 
-        //        buildInfoList[i].primitiveIndexNum <<
-        //        " c " <<buildInfoList[i].center <<
-        //        " pMin " <<buildInfoList[i].bbox.pMin <<
-        //        " pMax " <<buildInfoList[i].bbox.pMax << std::endl;
-        //}
+        //buildDataSummary(buildInfoList);
         PrimitiveList orderedPrims;
         orderedPrims.reserve(mRefinedPrimitives.size());
-        int totalNodes = 0;
-        mBVHRoot = buildBVHTree(buildInfoList, 0, buildInfoList.size(),
-            &totalNodes, orderedPrims);
-
-        //bool verified = true;
-        //for(size_t i = 0; i < buildInfoList.size(); ++i) {
-        //    int p = buildInfoList[i].primitiveIndexNum;
-        //    BBox o = orderedPrims[i]->getAABB();
-        //    BBox r = mRefinedPrimitives[p]->getAABB();
-        //    if(o.pMin != r.pMin || o.pMax != r.pMax) {
-        //        std::cout << "ERROR!! " << p << std::endl;
-        //        verified = false;
-        //    }
-        //}
-        //if(verified) {
-        //    std::cout << "ordered prims correctly DFS ordered\n";
-        //} else {
-        //    std::cout << "ERROR!! ordered prims not correctly ordered\n";
-        //}
-        mRefinedPrimitives.swap(orderedPrims);
-        mBVHNodes.reserve(totalNodes);
+        mBVHNodes.reserve(2 * mRefinedPrimitives.size() - 1);
         uint32_t offset = 0;
-        linearizeBVHTree(mBVHRoot, &offset);
+        buildLinearBVH(buildInfoList, 0, buildInfoList.size(),
+            &offset, orderedPrims);
+        mRefinedPrimitives.swap(orderedPrims);
         //compactSummary();
     }
 
-    BVH::~BVH() {
-        if(mBVHRoot != NULL) {
-            delete mBVHRoot;
-            mBVHRoot = NULL;
-        }
-        std::cout << "BVH deleted\n";
-    }
+    BVH::~BVH() {}
 
-    BVHTreeNode* BVH::buildBVHTree(std::vector<BVHPrimitiveInfo> &buildData,
-        int start, int end, int* totalNodes, PrimitiveList& orderedPrims) {
-        (*totalNodes)++;
-        BVHTreeNode* node = new BVHTreeNode();
+    uint32_t BVH::buildLinearBVH(std::vector<BVHPrimitiveInfo> &buildData,
+        int start, int end, uint32_t* offset, PrimitiveList& orderedPrims) {
+        mBVHNodes.push_back(CompactBVHNode());
+        uint32_t nodeOffset = (*offset)++;
+        CompactBVHNode& node = mBVHNodes[nodeOffset];
+
         BBox bbox;
         for(int i = start; i < end; ++i) {
             bbox.expand(buildData[i].bbox);
@@ -152,7 +85,7 @@ namespace Goblin {
                 int pIndex = buildData[i].primitiveIndexNum;
                 orderedPrims.push_back(mRefinedPrimitives[pIndex]);
             }
-            node->initLeaf(firstPrimIndex, primitivesNum, bbox);
+            node.initLeaf(bbox, firstPrimIndex, primitivesNum);
         } else {
             BBox centersUnion;
             for(int i = start; i < end; ++i) {
@@ -170,12 +103,11 @@ namespace Goblin {
                     int pIndex = buildData[i].primitiveIndexNum;
                     orderedPrims.push_back(mRefinedPrimitives[pIndex]);
                 }
-                node->initLeaf(firstPrimIndex, primitivesNum, bbox);
-
-                return node;
+                node.initLeaf(bbox, firstPrimIndex, primitivesNum);
+                return nodeOffset;
             }
             int mid = (start + end) / 2; 
-            //split interior node by specified split method
+            // split interior node by specified split method
             switch (mSplitMethod) {
             case Middle: {
                 float midPoint = 0.5f * (centersUnion.pMin[dim] +
@@ -183,7 +115,11 @@ namespace Goblin {
                 BVHPrimitiveInfo* midPtr = std::partition(&buildData[start], 
                     &buildData[end - 1] + 1, MidComparator(dim, midPoint));
                 mid = midPtr - &buildData[0];
-                break;
+                // can't split down further with middle method, let the 
+                // following split methods handle this case then
+                if(start!= mid && end != mid) {
+                    break;
+                }
             }
             case EqualCount: {
                 mid = (start + end) / 2;
@@ -196,32 +132,11 @@ namespace Goblin {
                 break;
             }
             //splitSummary(buildData, start, end, mid, dim);
-            BVHTreeNode* leftChild = buildBVHTree(buildData, 
-                start, mid, totalNodes, orderedPrims);
-            BVHTreeNode* rightChild = buildBVHTree(buildData, 
-                mid, end, totalNodes, orderedPrims);
-            node->initInterior(dim, leftChild, rightChild);
-        }
-        return node;
-    }
-
-    uint32_t BVH::linearizeBVHTree(BVHTreeNode* node, uint32_t* offset) {
-        mBVHNodes.push_back(CompactBVHNode());
-        uint32_t nodeOffset = (*offset)++;
-        CompactBVHNode& compactNode = mBVHNodes[nodeOffset];
-        compactNode.bbox = node->bbox;
-
-        if(node->primitivesNum > 0) {
-            // leaf node case
-            compactNode.firstPrimIndex = node->firstPrimIndex;
-            compactNode.primitivesNum = node->primitivesNum;
-        } else {
-            // interior node case
-            compactNode.axis = node->splitAxis;
-            compactNode.primitivesNum = 0;
-            linearizeBVHTree(node->children[0], offset);
-            compactNode.secondChildOffset = 
-                linearizeBVHTree(node->children[1], offset);
+            buildLinearBVH(buildData, 
+                start, mid, offset, orderedPrims);
+            uint32_t secondChildOffset = buildLinearBVH(buildData, 
+                mid, end, offset, orderedPrims);
+            node.initInteror(bbox, secondChildOffset, dim);
         }
         return nodeOffset;
     }
@@ -355,8 +270,20 @@ namespace Goblin {
         return hit;
     }
 
+    void BVH::buildDataSummary(
+            const std::vector<BVHPrimitiveInfo> &buildData) const {
+        std::cout << "--------------------------------\n";
+        for(size_t i = 0; i < buildData.size(); ++i) {
+            std::cout << 
+                buildData[i].primitiveIndexNum <<
+                " c " <<buildData[i].center <<
+                " pMin " <<buildData[i].bbox.pMin <<
+                " pMax " <<buildData[i].bbox.pMax << std::endl;
+        }
+    }
+
     void BVH::leafSummary(const std::vector<BVHPrimitiveInfo> &buildData,
-        int start, int end, int firstPrimIndex, int primitivesNum) {
+        int start, int end, int firstPrimIndex, int primitivesNum) const {
         std::cout << "--------------------------------\n";
         std::cout << "leaf push in :";
         for(int i = start; i < end; ++i) {
@@ -368,7 +295,7 @@ namespace Goblin {
     }
 
     void BVH::splitSummary(const std::vector<BVHPrimitiveInfo> &buildData, 
-        int start, int end, int mid, int dim) {
+        int start, int end, int mid, int dim) const {
         std::cout << "--------------------------------\n";
         std::cout << "split summary \n";
         std::cout << "split axes " << (char)('x' + dim) << std::endl;
@@ -387,7 +314,8 @@ namespace Goblin {
         std::cout << std::endl;
     }
 
-    void BVH::compactSummary() {
+    void BVH::compactSummary() const {
+        std::cout << "--------------------------------\n";
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             BBox b = mRefinedPrimitives[i]->getAABB();
             std::cout << i << 
@@ -397,7 +325,7 @@ namespace Goblin {
         }
 
         for(size_t i = 0; i < mBVHNodes.size(); ++ i) {
-            CompactBVHNode& node = mBVHNodes[i];
+            const CompactBVHNode& node = mBVHNodes[i];
             if(node.primitivesNum == 0) {
                 std::cout << i << " axis " << (int)node.axis <<
                     " secondChild " << node.secondChildOffset << std::endl;
