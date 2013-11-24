@@ -2,13 +2,13 @@
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinSphere.h"
+#include "GoblinMaterial.h"
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
 #include "GoblinLight.h"
 #include "GoblinUtils.h"
 #include "GoblinPropertyTree.h"
 #include "GoblinBVH.h"
-
 #include "GoblinBBox.h"
 
 #include <cassert>
@@ -22,6 +22,7 @@ namespace Goblin {
 
     typedef std::map<string, GeometryPtr> GeometryMap;
     typedef std::map<string, PrimitivePtr> PrimitiveMap;
+    typedef std::map<string, MaterialPtr> MaterialMap;
     // camera related keywords
     static const char* CAMERA = "camera";
     static const char* FOV = "fov";
@@ -54,6 +55,8 @@ namespace Goblin {
     static const char* DIRECTION = "direction";
     // material related keywords;
     static const char* MATERIAL = "material";
+    static const char* LAMBERT = "lambert";
+    static const char* DIFFUSE = "Kd";
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
         std::vector<float> rv = pt.parseFloatArray(key);
@@ -100,7 +103,7 @@ namespace Goblin {
         return Quaternion(rv[0], rv[1], rv[2], rv[3]);
     }
 
-    Film* parseFilm(const PropertyTree& pt) {
+    static Film* parseFilm(const PropertyTree& pt) {
         int xRes = 640;
         int yRes = 480;
         float crop[4] = {0.0f, 1.0f, 0.0f, 1.0f};
@@ -131,7 +134,7 @@ namespace Goblin {
         return new Film(xRes, yRes, crop, filename);
     }
 
-    CameraPtr parseCamera(const PropertyTree& pt) {
+    static CameraPtr parseCamera(const PropertyTree& pt) {
         Film* film = parseFilm(pt);
 
         Vector3 position =  Vector3::Zero;
@@ -159,7 +162,7 @@ namespace Goblin {
             zn, zf, film));
     }
 
-    void parseGeometry(const PropertyTree& pt, GeometryMap* geometryMap) {
+    static void parseGeometry(const PropertyTree& pt, GeometryMap* geometryMap) {
         string geometryType = pt.parseString(TYPE);
 
         string name = pt.parseString(NAME);
@@ -184,8 +187,8 @@ namespace Goblin {
 
     }
 
-    void parseModel(const PropertyTree& pt, GeometryMap* geometryMap, 
-        PrimitiveMap* modelMap) {
+    static void parseModel(const PropertyTree& pt, GeometryMap* geometryMap, 
+        MaterialMap* materialMap, PrimitiveMap* modelMap) {
         string name = pt.parseString(NAME);
 
         std::cout << "\nmodel " << name << std::endl;
@@ -195,7 +198,15 @@ namespace Goblin {
             std::cerr << "geometry " << geoName << " not defined!\n";
             return;
         }
-        PrimitivePtr model(new Model(it->second));
+
+        string materialName = pt.parseString(MATERIAL);
+        MaterialMap::iterator mtlIt = materialMap->find(materialName);
+        if(mtlIt == materialMap->end()) {
+            std::cerr << "material " << materialName << " not defined!\n";
+            return;
+        }
+
+        PrimitivePtr model(new Model(it->second, mtlIt->second));
 
         if(!model->intersectable()) {
             std::vector<PrimitivePtr> primitives;
@@ -209,7 +220,7 @@ namespace Goblin {
         }
     }
 
-    void parseInstance(const PropertyTree& pt, PrimitiveMap* modelMap, 
+    static void parseInstance(const PropertyTree& pt, PrimitiveMap* modelMap, 
         PrimitiveList* instances) {
         string name = pt.parseString(NAME);
         std::cout << "\ninstance " << name <<std::endl;
@@ -237,7 +248,7 @@ namespace Goblin {
         instances->push_back(instance);
     }
 
-    void parseLight(const PropertyTree& pt, LightList* lights) {
+    static void parseLight(const PropertyTree& pt, LightList* lights) {
         string lightType = pt.parseString(TYPE);
 
         string name = pt.parseString(NAME);
@@ -265,6 +276,26 @@ namespace Goblin {
         }
     }
 
+    static void parseMaterial(const PropertyTree& pt, 
+        MaterialMap* materialMap) {
+        string materialType = pt.parseString(TYPE);
+        string name = pt.parseString(NAME);
+
+        std::cout <<"\nmaterial " << name << std::endl;
+        MaterialPtr material;
+        if(materialType == LAMBERT) {
+            Color Kd = parseColor(pt, DIFFUSE);
+            std::cout << "-Kd: " << Kd << std::endl;
+            material = MaterialPtr(new LambertMaterial(Kd));
+        } else {
+            std::cerr << "undefined material type, use default lambert\n";
+            material = MaterialPtr(new LambertMaterial(Color::White));
+        }
+
+        std::pair<string, MaterialPtr> pair(name, material);
+        materialMap->insert(pair); 
+    }
+
     ScenePtr SceneLoader::load(const string& filename) {
         ScenePtr scene;
         PropertyTree pt(filename);
@@ -272,6 +303,7 @@ namespace Goblin {
         GeometryMap geometryMap;
         // model name may map to the direct model, or its proxy aggregate
         PrimitiveMap modelMap;
+        MaterialMap materialMap;
         PrimitiveList instances;
         CameraPtr camera = parseCamera(pt);
         LightList lights;
@@ -281,13 +313,15 @@ namespace Goblin {
             it != nodes.end(); it++) {
             std::string key(it->first);
             if(key == MODEL) {
-                parseModel(it->second, &geometryMap, &modelMap);
+                parseModel(it->second, &geometryMap, &materialMap, &modelMap);
             } else if(key == GEOMETRY) {
                 parseGeometry(it->second, &geometryMap);
             } else if(key == INSTANCE) {
                 parseInstance(it->second, &modelMap, &instances);
             } else if(key == LIGHT) {
                 parseLight(it->second, &lights);
+            } else if(key == MATERIAL) {
+                parseMaterial(it->second, &materialMap);
             }
         }
 

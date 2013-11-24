@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <boost/shared_ptr.hpp>
 
 // VS2008 doesn't have stdint.h
 #if (defined _MSC_VER && _MSC_VER < 1500)

@@ -4,10 +4,12 @@
 #include "GoblinColor.h"
 #include "GoblinVector.h"
 #include "GoblinParamSet.h"
+#include "GoblinUtils.h"
+
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 namespace Goblin {
+    class Ray;
 
     class Light {
     public:
@@ -16,8 +18,8 @@ namespace Goblin {
             Directional = 1,
         };
         virtual ~Light() {};
-        virtual Color Li(const Vector3& p, float* epsilon, 
-            Vector3* wi) const = 0;
+        virtual Color Li(const Vector3& p, float epsilon, 
+            Vector3* wi, Ray* shadowRay) const = 0;
         ParamSet& getParams();
     protected:
         ParamSet mParams;
@@ -33,7 +35,8 @@ namespace Goblin {
     class PointLight : public Light {
     public:
         PointLight(const Color& intensity, const Vector3& position);
-        Color Li(const Vector3& p, float* epsilon, Vector3* wi) const;
+        Color Li(const Vector3& p, float epsilon, Vector3* wi,
+            Ray* shadowRay) const;
         Color intensity;
         Vector3 position;
     };
@@ -41,7 +44,8 @@ namespace Goblin {
     class DirectionalLight : public Light {
     public:
         DirectionalLight(const Color& radiance, const Vector3& direction);
-        Color Li(const Vector3& p, float* epsilon, Vector3* wi) const;
+        Color Li(const Vector3& p, float epsilon, Vector3* wi,
+            Ray* shadowRay) const;
         Color radiance;
         Vector3 direction;
     };

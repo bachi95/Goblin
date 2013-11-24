@@ -5,7 +5,7 @@
 namespace Goblin {
     class Model : public Primitive {
     public:
-        Model(const GeometryPtr& geometry);
+        Model(const GeometryPtr& geometry, const MaterialPtr& material);
         bool intersectable() const;
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
@@ -14,13 +14,18 @@ namespace Goblin {
         void refine(PrimitiveList& refinedPrimitives);
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity);
+        const MaterialPtr& getMaterial() const;
     private:
         GeometryPtr mGeometry;
-        //and Material.....
+        MaterialPtr mMaterial;
     };
 
     inline bool Model::intersectable() const { 
         return mGeometry->intersectable(); 
+    }
+
+    inline const MaterialPtr& Model::getMaterial() const {
+        return mMaterial;
     }
 }
 

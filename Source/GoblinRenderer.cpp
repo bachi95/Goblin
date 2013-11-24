@@ -57,11 +57,18 @@ namespace Goblin {
         float epsilon;
         Intersection intersection;
         if(scene->intersect(ray, &epsilon, &intersection)) {
+            const MaterialPtr& material = 
+                intersection.primitive->getMaterial();
             const std::vector<LightPtr>& lights = scene->getLights();
             for(size_t i = 0; i < lights.size(); ++i) {
                 Vector3 wi;
-                Color L = lights[i]->Li(intersection.position, &epsilon, &wi);
-                Li += L * clamp(dot(intersection.normal, wi), 0, 1);
+                Ray shadowRay;
+                Color L = lights[i]->Li(intersection.position, epsilon, &wi, 
+                    &shadowRay);
+                Color f = material->bsdf(Vertex(), wi, -ray.d);
+                if(f != Color::Black && !scene->intersect(shadowRay)) {
+                    Li += f * L * clamp(dot(intersection.normal, wi), 0, 1);
+                }
             }
         }
         return Li;

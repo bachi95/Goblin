@@ -2,23 +2,31 @@
 #define GOBLIN_GEOMETRY_H
 #include "GoblinVertex.h"
 #include "GoblinBBox.h"
+#include "GoblinUtils.h"
 
 #include <cstdio>
 #include <vector>
 #include <exception>
-#include <boost/shared_ptr.hpp>
+
 
 namespace Goblin {
     class BBox;
     class Ray;
 
-    struct TriangleIndex {
-        unsigned int v[3];
-    };
-
+    //bad.....double reference between Geometry and Primitive
+    //TODO change the parameter in Intersect for geometry
+    // from Intersection to.... maybe Vertex.....
+    class Primitive;
     struct Intersection {
+        Intersection(): primitive(NULL) {}
+
         Vector3 position;
         Vector3 normal;
+        const Primitive* primitive;
+    };
+
+    struct TriangleIndex {
+        unsigned int v[3];
     };
 
     class Geometry;

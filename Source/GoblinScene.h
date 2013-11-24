@@ -3,8 +3,9 @@
 
 #include "GoblinPrimitive.h"
 #include "GoblinLight.h"
+#include "GoblinUtils.h"
+
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 namespace Goblin {
     class Camera;

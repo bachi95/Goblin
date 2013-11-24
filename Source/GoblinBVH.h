@@ -40,7 +40,8 @@ namespace Goblin {
         //the BVH we build is a flatten binary tree in DFS order, the node
         //is defined as a compact 32byte class for cache line friendly access
         uint32_t buildLinearBVH(std::vector<BVHPrimitiveInfo> &buildData,
-            int start, int end, uint32_t* offset, PrimitiveList& orderedPrims);
+            uint32_t start, uint32_t end, uint32_t* offset, 
+            PrimitiveList& orderedPrims);
 
         // these are all just temp debug logging, should find a better verify process
         void buildDataSummary(

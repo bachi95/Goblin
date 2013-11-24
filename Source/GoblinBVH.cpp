@@ -67,28 +67,29 @@ namespace Goblin {
     BVH::~BVH() {}
 
     uint32_t BVH::buildLinearBVH(std::vector<BVHPrimitiveInfo> &buildData,
-        int start, int end, uint32_t* offset, PrimitiveList& orderedPrims) {
+        uint32_t start, uint32_t end, uint32_t* offset, 
+        PrimitiveList& orderedPrims) {
         mBVHNodes.push_back(CompactBVHNode());
         uint32_t nodeOffset = (*offset)++;
         CompactBVHNode& node = mBVHNodes[nodeOffset];
 
         BBox bbox;
-        for(int i = start; i < end; ++i) {
+        for(uint32_t i = start; i < end; ++i) {
             bbox.expand(buildData[i].bbox);
         }
-        int primitivesNum = end - start;
+        uint32_t primitivesNum = end - start;
         // leaf node case
         if(primitivesNum == 1) {
             int firstPrimIndex = orderedPrims.size();
             //leafSummary(buildData, start, end, firstPrimIndex, primitivesNum);
-            for(int i = start; i < end; ++i) {
-                int pIndex = buildData[i].primitiveIndexNum;
+            for(uint32_t i = start; i < end; ++i) {
+                uint32_t pIndex = buildData[i].primitiveIndexNum;
                 orderedPrims.push_back(mRefinedPrimitives[pIndex]);
             }
             node.initLeaf(bbox, firstPrimIndex, primitivesNum);
         } else {
             BBox centersUnion;
-            for(int i = start; i < end; ++i) {
+            for(uint32_t i = start; i < end; ++i) {
                 centersUnion.expand(buildData[i].center);
             }
             // pick the axis with largest variant to split
@@ -96,11 +97,11 @@ namespace Goblin {
             // all primitives clutter in one point... should be a rare case
             // just make this a leaf node then
             if(centersUnion.pMin[dim] == centersUnion.pMax[dim]) {
-                int firstPrimIndex = orderedPrims.size();
+                uint32_t firstPrimIndex = orderedPrims.size();
                 //leafSummary(buildData, start, end, 
                 //    firstPrimIndex, primitivesNum);
-                for(int i = start; i < end; ++i) {
-                    int pIndex = buildData[i].primitiveIndexNum;
+                for(uint32_t i = start; i < end; ++i) {
+                    uint32_t pIndex = buildData[i].primitiveIndexNum;
                     orderedPrims.push_back(mRefinedPrimitives[pIndex]);
                 }
                 node.initLeaf(bbox, firstPrimIndex, primitivesNum);

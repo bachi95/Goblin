@@ -24,6 +24,7 @@ namespace Goblin {
             intersection->position = mToWorld.onPoint(intersection->position);
             intersection->normal = mToWorld.onNormal(intersection->normal);
             intersection->normal.normalize();
+            ray.maxt = r.maxt;
         }
         return hit;
     }

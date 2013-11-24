@@ -27,6 +27,8 @@ namespace Goblin {
         Color& operator-=(const Color& rhs);
         Color operator*(float s) const;
         Color& operator*=(float s);
+        Color operator*(const Color& rhs) const;
+        Color& operator*=(const Color& rhs);
         Color operator/(float s) const;
         Color& operator/=(float s);
         Color operator-() const;
@@ -70,6 +72,17 @@ namespace Goblin {
         r *= s;
         g *= s;
         b *= s;
+        return *this;
+    }
+
+    inline Color Color::operator*(const Color& rhs) const {
+        return Color(r * rhs.r, g * rhs.g , b * rhs.b, a);
+    }
+
+    inline Color& Color::operator*=(const Color& rhs) {
+        r *= rhs.r;
+        g *= rhs.g;
+        b *= rhs.b;
         return *this;
     }
 

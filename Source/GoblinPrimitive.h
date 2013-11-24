@@ -3,11 +3,12 @@
 
 #include "GoblinTransform.h"
 #include "GoblinGeometry.h"
+#include "GoblinMaterial.h"
 #include "GoblinBBox.h"
+#include "GoblinUtils.h"
 
 #include <vector>
 #include <exception>
-#include <boost/shared_ptr.hpp>
 
 namespace Goblin {
     class Ray;
@@ -38,6 +39,7 @@ namespace Goblin {
 
     typedef std::vector<Renderable> RenderList;
 
+    struct Intersection;
     class Primitive;
     typedef boost::shared_ptr<Primitive> PrimitivePtr;
     typedef std::vector<PrimitivePtr> PrimitiveList;
@@ -51,6 +53,7 @@ namespace Goblin {
         virtual bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection) = 0;
         virtual BBox getAABB() const = 0;
+        virtual const MaterialPtr& getMaterial() const;
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
     };
@@ -59,6 +62,13 @@ namespace Goblin {
     inline bool Primitive::intersectable() const { return true; }
     inline void Primitive::refine(PrimitiveList& refinedPrimitives) {
         std::cerr << "unimplemented Primitive::refine" << std::endl; 
+        throw std::exception();
+    }
+
+    // TODO meh......instance should have the right to do 
+    //material override, add it in later...
+    inline const MaterialPtr& Primitive::getMaterial() const {
+        std::cerr << "unimplemented Primitive::getMaterial" << std::endl; 
         throw std::exception();
     }
 
