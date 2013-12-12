@@ -8,7 +8,8 @@
 
 namespace Goblin {
 
-    Renderer::Renderer():mSamples(NULL), mSampler(NULL) {}
+    Renderer::Renderer(int maxRayDepth):
+        mSamples(NULL), mSampler(NULL), mMaxRayDepth(maxRayDepth) {}
 
     Renderer::~Renderer() {
         if(mSamples) {
@@ -49,10 +50,13 @@ namespace Goblin {
                 film->addSample(mSamples[i], L);
             }
         }
+        //for now leave this here as debug purpose......
+        //Ray ray(Vector3(0, 0, 0.0), Vector3(0, 0, 1), 0); 
+        //Color L = Li(scene, ray);
         film->writeImage();
     }
 
-    Color Renderer::Li(ScenePtr scene, const Ray& ray) {
+    Color Renderer::Li(ScenePtr scene, const Ray& ray) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
@@ -60,17 +64,66 @@ namespace Goblin {
             const MaterialPtr& material = 
                 intersection.primitive->getMaterial();
             const std::vector<LightPtr>& lights = scene->getLights();
+            // direct light contribution
             for(size_t i = 0; i < lights.size(); ++i) {
+                Vector3 wo = -ray.d;
                 Vector3 wi;
                 Ray shadowRay;
-                Color L = lights[i]->Li(intersection.position, epsilon, &wi, 
+                const Fragment& fragment = intersection.fragment;
+                Color L = lights[i]->Li(fragment.position, epsilon, &wi, 
                     &shadowRay);
-                Color f = material->bsdf(Vertex(), wi, -ray.d);
+                Color f = material->bsdf(fragment, wo, wi);
                 if(f != Color::Black && !scene->intersect(shadowRay)) {
-                    Li += f * L * clamp(dot(intersection.normal, wi), 0, 1);
+                    Li += f * L * absdot(fragment.normal, wi);
                 }
+            }
+            // reflection and refraction
+            if(ray.depth < mMaxRayDepth) {
+                Li += specularReflect(scene, ray, epsilon, intersection);
+                Li += specularRefract(scene, ray, epsilon, intersection);
             }
         }
         return Li;
     }
+
+    Color Renderer::specularReflect(const ScenePtr& scene, const Ray& ray, 
+        float epsilon, const Intersection& intersection) const {
+        Color L(Color::Black);
+        const Vector3& n = intersection.fragment.normal;
+        const Vector3& p = intersection.fragment.position;
+        const MaterialPtr& material = 
+            intersection.primitive->getMaterial();
+        Vector3 wo = -ray.d;
+        Vector3 wi;
+        Color f = material->sampleBSDF(intersection.fragment, 
+            wo, &wi, BSDFType(BSDFSpecular | BSDFReflection));
+        if(f != Color::Black && absdot(wi, n) != 0.0f) {
+            Ray reflectiveRay(p, wi, epsilon);
+            reflectiveRay.depth = ray.depth + 1;
+            Color Lr = Li(scene, reflectiveRay);
+            L += f * Lr * absdot(wi, n);
+        }
+        return L;
+    }
+
+    Color Renderer::specularRefract(const ScenePtr& scene, const Ray& ray, 
+        float epsilon, const Intersection& intersection) const {
+        Color L(Color::Black);
+        const Vector3& n = intersection.fragment.normal;
+        const Vector3& p = intersection.fragment.position;
+        const MaterialPtr& material = 
+            intersection.primitive->getMaterial();
+        Vector3 wo = -ray.d;
+        Vector3 wi;
+        Color f = material->sampleBSDF(intersection.fragment, 
+            wo, &wi, BSDFType(BSDFSpecular | BSDFTransmission));
+        if(f != Color::Black && absdot(wi, n) != 0.0f) {
+            Ray refractiveRay(p, wi, epsilon);
+            refractiveRay.depth = ray.depth + 1;
+            Color Lr = Li(scene, refractiveRay);
+            L += f * Lr * absdot(wi, n);
+        }
+        return L;
+    }
+
 }

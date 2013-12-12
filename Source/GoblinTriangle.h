@@ -10,7 +10,7 @@ namespace Goblin {
         Triangle(ObjMesh* parentMesh, size_t index);
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Fragment* fragment);
         BBox getObjectBound();
     private:
         ObjMesh* mParentMesh;

@@ -56,6 +56,10 @@ namespace Goblin {
     // material related keywords;
     static const char* MATERIAL = "material";
     static const char* LAMBERT = "lambert";
+    static const char* TRANSPARENT = "transparent";
+    static const char* REFLECTION = "Kr";
+    static const char* REFRACTION = "Kt";
+    static const char* REFRACTION_INDEX = "index";
     static const char* DIFFUSE = "Kd";
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
@@ -281,12 +285,20 @@ namespace Goblin {
         string materialType = pt.parseString(TYPE);
         string name = pt.parseString(NAME);
 
-        std::cout <<"\nmaterial " << name << std::endl;
+        std::cout <<"\n" << materialType <<" material " << name << std::endl;
         MaterialPtr material;
         if(materialType == LAMBERT) {
             Color Kd = parseColor(pt, DIFFUSE);
             std::cout << "-Kd: " << Kd << std::endl;
             material = MaterialPtr(new LambertMaterial(Kd));
+        } else if(materialType == TRANSPARENT) {
+            Color Kr = parseColor(pt, REFLECTION);
+            Color Kt = parseColor(pt, REFRACTION);
+            float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
+            std::cout << "-Kr: " << Kr << std::endl;
+            std::cout << "-Kt: " << Kt << std::endl;
+            std::cout << "refraction index: " << index << std::endl;
+            material = MaterialPtr(new TransparentMaterial(Kr, Kt, index));
         } else {
             std::cerr << "undefined material type, use default lambert\n";
             material = MaterialPtr(new LambertMaterial(Color::White));
@@ -298,7 +310,10 @@ namespace Goblin {
 
     ScenePtr SceneLoader::load(const string& filename) {
         ScenePtr scene;
-        PropertyTree pt(filename);
+        PropertyTree pt;
+        if(!pt.read(filename)) {
+            return scene;
+        }
 
         GeometryMap geometryMap;
         // model name may map to the direct model, or its proxy aggregate

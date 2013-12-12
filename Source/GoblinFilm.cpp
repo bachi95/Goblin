@@ -15,11 +15,11 @@ namespace Goblin {
 
         mXStart = ceilInt(mXRes * mCrop[0]);
         mXCount = max(1, ceilInt(mXRes * mCrop[1])- mXStart);
-        mXEnd = mXStart + mXCount - 1;
+        mXEnd = mXStart + mXCount;
 
         mYStart = ceilInt(mYRes * mCrop[2]); 
         mYCount = max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
-        mYEnd = mYStart + mYCount - 1;
+        mYEnd = mYStart + mYCount;
 
         mPixels = new Pixel[mXRes * mYRes];
     } 

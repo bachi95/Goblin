@@ -12,9 +12,9 @@ namespace Goblin {
 
     class PropertyTree {
     public:
-        PropertyTree(const std::string& fileName);
         PropertyTree(const ptree& pt);
         PropertyTree() {};
+        bool read(const std::string& fileName);
         const PtreeList& getChildren() const;
         bool getChild(const char* key, PropertyTree* child) const;
         float parseFloat(const char* key, float fallback = 0.0f) const;

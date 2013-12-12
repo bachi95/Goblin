@@ -10,7 +10,7 @@ namespace Goblin {
         void init();
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Fragment* fragment);
         BBox getObjectBound();
 
     private:

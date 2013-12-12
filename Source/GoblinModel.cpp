@@ -11,7 +11,8 @@ namespace Goblin {
 
     bool Model::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection) {
-        bool hit = mGeometry->intersect(ray, epsilon, intersection);
+        bool hit = mGeometry->intersect(ray, epsilon, 
+            &intersection->fragment);
         if(hit) {
             intersection->primitive = this;
         }

@@ -21,9 +21,11 @@ namespace Goblin {
         Ray r = mToWorld.invertRay(ray);
         bool hit = mPrimitive->intersect(r, epsilon, intersection);
         if(hit) {
-            intersection->position = mToWorld.onPoint(intersection->position);
-            intersection->normal = mToWorld.onNormal(intersection->normal);
-            intersection->normal.normalize();
+            Fragment& f = intersection->fragment;
+            f.position = mToWorld.onPoint(f.position);
+            f.normal = normalize(mToWorld.onNormal(f.normal));
+            f.dpdu = mToWorld.onVector(f.dpdu);
+            f.dpdv = mToWorld.onVector(f.dpdv);
             ray.maxt = r.maxt;
         }
         return hit;

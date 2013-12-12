@@ -39,10 +39,15 @@ namespace Goblin {
 
     typedef std::vector<Renderable> RenderList;
 
-    struct Intersection;
     class Primitive;
     typedef boost::shared_ptr<Primitive> PrimitivePtr;
     typedef std::vector<PrimitivePtr> PrimitiveList;
+
+    struct Intersection {
+        Intersection(): primitive(NULL) {}
+        Fragment fragment;
+        const Primitive* primitive;
+    };
 
     class Primitive {
     public:

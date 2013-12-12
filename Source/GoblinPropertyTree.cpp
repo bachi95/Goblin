@@ -5,7 +5,18 @@
 namespace Goblin {
     using boost::lexical_cast;
 
-    PropertyTree::PropertyTree(const std::string& filename) {
+    PropertyTree::PropertyTree(const ptree& pt):
+        mPtree(pt) {
+        for(ptree::const_iterator it = mPtree.begin(); 
+            it != mPtree.end(); it++) {
+            std::string key(it->first);
+            std::pair<std::string, PropertyTree> pair(it->first,
+                PropertyTree(it->second));
+            mChildren.push_back(pair);
+        }
+    }
+
+    bool PropertyTree::read(const std::string& filename) {
         try {
             read_json(filename, mPtree);
             for(ptree::const_iterator it = mPtree.begin(); 
@@ -15,21 +26,12 @@ namespace Goblin {
                     PropertyTree(it->second));
                 mChildren.push_back(pair);
             }
+            return true;
         }
         catch(boost::property_tree::json_parser::json_parser_error e) {
             std::cerr <<"error reading json file " << filename << std::endl;
             std::cerr <<e.what() << std::endl;
-        }
-    }
-
-    PropertyTree::PropertyTree(const ptree& pt):
-        mPtree(pt) {
-        for(ptree::const_iterator it = mPtree.begin(); 
-            it != mPtree.end(); it++) {
-            std::string key(it->first);
-            std::pair<std::string, PropertyTree> pair(it->first,
-                PropertyTree(it->second));
-            mChildren.push_back(pair);
+            return false;
         }
     }
 

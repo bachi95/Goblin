@@ -120,7 +120,7 @@ namespace Goblin {
 
    
     static bool writeImagePNG(const std::string& filename, const Color* colorBuffer,
-            int width, int height) {
+            int width, int height, float gama = 2.2f) {
         FILE *fp = fopen(filename.c_str(), "wb");
         if(!fp) {
             return false;
@@ -154,7 +154,7 @@ namespace Goblin {
         png_write_info(pngPtr, infoPtr);
 
         // TODO 
-        // add in tone mapping / gama correction to make this float->byte
+        // add in tone mapping to make this float->byte
         // conversion......less wasteful
 
         //write out image data
@@ -163,14 +163,20 @@ namespace Goblin {
         for(int y = 0; y < height; ++y) {
             for(int x = 0; x < width; ++x) {
                 size_t index = y * width + x;
+                Color c = colorBuffer[index];
+                // gama correction
+                float invGama = 1.0f / gama;
+                c.r = pow(c.r, invGama);
+                c.g = pow(c.g, invGama);
+                c.b = pow(c.b, invGama);
                 buffer[index * 4 + 0] = 
-                    static_cast<unsigned char>(clamp(colorBuffer[index].r, 0, 1) * 255.0f);
+                    static_cast<unsigned char>(clamp(c.r, 0, 1) * 255.0f);
                 buffer[index * 4 + 1] =
-                    static_cast<unsigned char>(clamp(colorBuffer[index].g, 0, 1) * 255.0f);
+                    static_cast<unsigned char>(clamp(c.g, 0, 1) * 255.0f);
                 buffer[index * 4 + 2] = 
-                    static_cast<unsigned char>(clamp(colorBuffer[index].b, 0, 1) * 255.0f);
+                    static_cast<unsigned char>(clamp(c.b, 0, 1) * 255.0f);
                 buffer[index * 4 + 3] = 
-                    static_cast<unsigned char>(clamp(colorBuffer[index].a, 0, 1) * 255.0f);
+                    static_cast<unsigned char>(clamp(c.a, 0, 1) * 255.0f);
             }
             rowPointers[y] = &buffer[y * width * 4];
         }

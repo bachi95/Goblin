@@ -15,17 +15,23 @@ namespace Goblin {
         bool intersectable() const;
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Fragment* fragment);
         BBox getObjectBound();
         void refine(GeometryList& refinedGeometries);
         bool load();
 
+        bool hasNormal() const;
+        bool hasTexCoord() const;
     private:
         std::string mFilename;
         BBox mBBox;
+        bool mHasNormal;
+        bool mHasTexCoord;
     };
 
     inline bool ObjMesh::intersectable() const { return false; }
+    inline bool ObjMesh::hasNormal() const { return mHasNormal; }
+    inline bool ObjMesh::hasTexCoord() const { return mHasTexCoord; }
 }
 
 #endif //GOBLIN_OBJ_MESH

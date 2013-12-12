@@ -10,14 +10,21 @@ namespace Goblin {
     class Sampler;
     class Renderer {
     public:
-        Renderer();
+        Renderer(int maxRayDepth = 5);
         ~Renderer();
 
         void render(ScenePtr scene);
-        Color Li(ScenePtr scene, const Ray& ray);
+    private:
+        Color Li(ScenePtr scene, const Ray& ray) const;
+        Color specularReflect(const ScenePtr& scene, const Ray& ray, 
+            float epsilon, const Intersection& intersection) const;
+        Color specularRefract(const ScenePtr& scene, const Ray& ray, 
+            float epsilon, const Intersection& intersection) const;
+
     private:
         CameraSample* mSamples;
         Sampler* mSampler;
+        int mMaxRayDepth;
     };
 }
 

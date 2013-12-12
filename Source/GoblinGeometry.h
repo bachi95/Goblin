@@ -13,16 +13,12 @@ namespace Goblin {
     class BBox;
     class Ray;
 
-    //bad.....double reference between Geometry and Primitive
-    //TODO change the parameter in Intersect for geometry
-    // from Intersection to.... maybe Vertex.....
-    class Primitive;
-    struct Intersection {
-        Intersection(): primitive(NULL) {}
-
+    struct Fragment {
         Vector3 position;
         Vector3 normal;
-        const Primitive* primitive;
+        Vector3 dpdu;
+        Vector3 dpdv;
+        Vector2 uv;
     };
 
     struct TriangleIndex {
@@ -41,7 +37,7 @@ namespace Goblin {
         virtual bool intersectable() const;
         virtual bool intersect(const Ray& ray) = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) = 0;
+            Fragment* fragment) = 0;
         virtual BBox getObjectBound() = 0;
         virtual void refine(GeometryList& refinedGeometries);
         const size_t getVertexNum() const;

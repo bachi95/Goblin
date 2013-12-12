@@ -116,6 +116,10 @@ namespace Goblin {
         return lhs.x * rhs.x + lhs.y * rhs.y;
     }
 
+    inline float absdot(const Vector2& lhs, const Vector2& rhs) {
+        return fabs(dot(lhs, rhs));
+    }
+
     inline float squaredLength(const Vector2& v) {
         return v.squaredLength();
     }
@@ -247,6 +251,10 @@ namespace Goblin {
 
     inline float dot(const Vector3& lhs, const Vector3& rhs) {
         return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+    }
+
+    inline float absdot(const Vector3& lhs, const Vector3& rhs) {
+        return fabs(dot(lhs, rhs));
     }
 
     inline Vector3 cross(const Vector3& lhs, const Vector3& rhs) {
@@ -403,6 +411,10 @@ namespace Goblin {
 
     inline float dot(const Vector4& lhs, const Vector4& rhs) {
         return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+    }
+
+    inline float absdot(const Vector4& lhs, const Vector4& rhs) {
+        return fabs(dot(lhs, rhs));
     }
 
     inline float squaredLength(const Vector4& v) {

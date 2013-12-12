@@ -40,7 +40,7 @@ namespace Goblin {
     };
 
     ObjMesh::ObjMesh(const std::string& filename) :
-        mFilename(filename){}
+        mFilename(filename), mHasNormal(false), mHasTexCoord(false) {}
 
     ObjMesh::~ObjMesh() {
     }
@@ -71,9 +71,8 @@ namespace Goblin {
         FaceList faceList;
 
         ObjFormat format = VERTEX_ONLY;
-        bool hasNormal = false;
-        bool hasTexCoord = false;
-
+        mHasNormal = false;
+        mHasTexCoord = false;
         std::string line;
         int lineNum = 0;
         while(std::getline(file, line)) {
@@ -133,7 +132,7 @@ namespace Goblin {
                     std::string faceToken = faceTokens[0];
                     if(faceToken.find("//") != std::string::npos) {
                         format = VERTEX_NORMAL;
-                        hasNormal = true;
+                        mHasNormal = true;
                     } else if(faceToken.find('/') == std::string::npos) {
                         format = VERTEX_ONLY;
                     } else {
@@ -141,11 +140,11 @@ namespace Goblin {
                         size_t p2 = faceToken.rfind('/');
                         if(p1 == p2) {
                             format = VERTEX_UV;
-                            hasTexCoord = true;
+                            mHasTexCoord = true;
                         } else {
                             format = VERTEX_UV_NORMAL;
-                            hasNormal = true;
-                            hasTexCoord = true;
+                            mHasNormal = true;
+                            mHasTexCoord = true;
                         }
                     }
                 }
@@ -266,7 +265,7 @@ namespace Goblin {
     }
 
     bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
+        Fragment* fragment) {
         return false;
     }
 

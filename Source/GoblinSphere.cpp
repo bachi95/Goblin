@@ -22,6 +22,9 @@ bool Sphere::intersect(const Ray& ray) {
     if(!quadratic(A, B, C, &tNear, &tFar)) {
         return false;
     }
+    if(tNear > ray.maxt || tFar < ray.mint) {
+        return false;
+    }
     float tHit = tNear;
     if(tHit < ray.mint) {
         tHit = tFar;
@@ -33,12 +36,15 @@ bool Sphere::intersect(const Ray& ray) {
 }
 
 bool Sphere::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
+        Fragment* fragment) {
     float A = squaredLength(ray.d);
     float B = 2.0f * dot(ray.d, ray.o);
     float C = squaredLength(ray.o) - mRadius * mRadius;
     float tNear, tFar;
     if(!quadratic(A, B, C, &tNear, &tFar)) {
+        return false;
+    }
+    if(tNear > ray.maxt || tFar < ray.mint) {
         return false;
     }
     float tHit = tNear;
@@ -50,8 +56,51 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
     }
     ray.maxt = tHit;
     *epsilon = 1e-3f * tHit;
-    intersection->position = ray(tHit);
-    intersection->normal = normalize(intersection->position);
+    Vector3 pHit = ray(tHit);
+    fragment->position = pHit;
+    fragment->normal = normalize(fragment->position);
+
+    /* math time~
+    spherical cooridnate
+    x = r * sinTheta * cosPhi
+    y = r * cosTheta
+    z = r * sinTheta * sinPhi
+    0 < = Phi <= 2PI, 0 <= Theta <=PI
+    u = Phi / 2PI
+    v = Theta / PI
+
+    dPx/du = d(r * sinTheta * cosPhi)/du = r * sinTheta * d(cos(2PI * u))/du =
+    r * sinTheta *-sin(2PI * u) * 2PI = -2PI * z
+    dPx/du = d(r * cosTheta)/du = 0
+    dPx/dz = d(r * sinTheta * sinPhi)/du = r * sinTheta * d(sin(2PI * u))/du =
+    r * sinTheta *cos(2PI * u) * 2PI = 2PI * x
+    dpdu = [-2PI * z, 0, 2PI * x]
+
+    dPx/dv = d(r * sinTheta * cosPhi)/dv = r * cosPhi * d(sin(PI * v))/dv =
+    r * cosPhi * cos(PI * v) * PI = y * PI * cosPhi
+    dPy/dv = d(r * cosTheta)/dv = r * d(cos(PI * v))/dv = r * PI * -sinTheta =
+    -PI * r * sinTheta
+    dPz/dv = d(r * sinTheta * sinPhi)/dv = r * sinPhi * d(sin(PI * v))/dv =
+    r * sinPhi * cos(PI * v) * PI = y * PI * sinPhi
+    dpdv = PI * (y * cosPhi, -r * sinTheta, y * sinPhi)
+
+    cosPhi = x / sqrt(x * x + z * z)
+    sinPhi = z / sqrt(x * x + z * z)
+    */
+    float phi = atan2(pHit.z, pHit.x); 
+    if(phi < 0.0f) {
+        phi += 2.0f * PI;
+    }
+    float u = phi * INV_TWOPI;
+    float theta = acos(pHit.y / mRadius);
+    float v = theta * INV_PI;
+    float invR = 1.0f / sqrt(pHit.x * pHit.x + pHit.z * pHit.z);
+    float cosPhi = pHit.x * invR;
+    float sinPhi = pHit.z * invR;
+    fragment->uv = Vector2(u, v);
+    fragment->dpdu = Vector3(-TWO_PI * pHit.z, 0.0f, TWO_PI * pHit.x);
+    fragment->dpdv = PI * Vector3(pHit.y * cosPhi, -mRadius * sin(theta),
+        pHit.y * sinPhi);
     return true;
 }
 
@@ -61,28 +110,32 @@ BBox Sphere::getObjectBound() {
 }
 
 void Sphere::buildStacks() {
-    float phiStep = PI / mNumStacks;
-    float thetaStep = 2.0f * PI / mNumSlices;
+    float thetaStep = PI / mNumStacks;
+    float phiStep = 2.0f * PI / mNumSlices;
     // two poles of the sphere are not counted as ring
     size_t numRings = mNumStacks - 1;
     for(size_t i = 1; i <= numRings; ++i) {
-        float phi = i * phiStep;
+        float theta = i * thetaStep;
         for(size_t j = 0; j <= mNumSlices; ++j) {
-            float theta = j * thetaStep;
+            float phi = j * phiStep;
             // from top to bottom
             Vertex v;
-            v.position.x = mRadius * sinf(phi) * cosf(theta);
-            v.position.y = mRadius * cosf(phi);
-            v.position.z = mRadius * sinf(phi) * sinf(theta);
+            float sinTheta = sin(theta);
+            float cosTheta = cos(theta);
+            float sinPhi = sin(phi);
+            float cosPhi = cos(phi);
+            v.position.x = mRadius * sinTheta * cosPhi;
+            v.position.y = mRadius * cosTheta;
+            v.position.z = mRadius * sinTheta * sinPhi;
 
-            v.tangent.x = -mRadius * sinf(phi) * sinf(theta);
+            v.tangent.x = -mRadius * cosTheta * sinPhi;
             v.tangent.y = 0.0f;
-            v.tangent.z = mRadius * sinf(phi) * cosf(theta); 
+            v.tangent.z = mRadius * sinTheta * cosPhi; 
             
             v.normal = normalize(v.position);
 
-            v.texC.x = theta / (2.0f * PI);
-            v.texC.y = phi / PI;
+            v.texC.x = phi * INV_TWOPI;
+            v.texC.y = theta * INV_PI;
 
             mVertices.push_back(v);
         }
