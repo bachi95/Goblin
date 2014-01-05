@@ -24,22 +24,17 @@ namespace Goblin {
 
     void Renderer::render(ScenePtr scene) {
         const CameraPtr camera = scene->getCamera();
-        // TODO sampler should instantiated based on the scene description
-        // instead of this kind of combo getter + hardcode 1, 1
         Film* film = camera->getFilm();
-        int xRes = film->getXResolution();
-        int yRes = film->getYResolution();
-        int xStart = film->getXStart();
-        int yStart = film->getYStart();
-        int xEnd = film->getXEnd();
-        int yEnd = film->getYEnd();
+        int xStart, xEnd, yStart, yEnd;
+        film->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
         if(mSampler != NULL) {
             delete mSampler;
         }
         if(mSamples != NULL) {
             delete [] mSamples;
         }
-        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 1, 1);
+        // TODO sampler should instantiated based on the scene description
+        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 2, 2);
         mSamples = new CameraSample[mSampler->maxSamplesPerRequest()];
         int sampleNum = 0;
         while((sampleNum = mSampler->requestSamples(mSamples)) > 0) {
@@ -53,6 +48,7 @@ namespace Goblin {
         //for now leave this here as debug purpose......
         //Ray ray(Vector3(0, 0, 0.0), Vector3(0, 0, 1), 0); 
         //Color L = Li(scene, ray);
+
         film->writeImage();
     }
 

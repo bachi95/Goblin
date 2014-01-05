@@ -5,6 +5,7 @@
 #include "GoblinMaterial.h"
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
+#include "GoblinFilter.h"
 #include "GoblinLight.h"
 #include "GoblinUtils.h"
 #include "GoblinPropertyTree.h"
@@ -31,6 +32,10 @@ namespace Goblin {
     static const char* FILM = "film";
     static const char* RESOLUTION = "resolution";
     static const char* CROP = "crop";
+    static const char* FILTER = "filter";
+    static const char* BOX = "box";
+    static const char* TRIANGLE = "triangle";
+    static const char* FILTER_WIDTH = "width";
     // geometry related keywords
     static const char* GEOMETRY = "geometry";
     static const char* NAME = "name";
@@ -107,6 +112,33 @@ namespace Goblin {
         return Quaternion(rv[0], rv[1], rv[2], rv[3]);
     }
 
+    static Filter* parseFilter(const PropertyTree& pt) {
+        float xWidth = 2;
+        float yWidth = 2;
+        string filterType = BOX;
+        PropertyTree filterTree;
+        if(pt.getChild(FILTER, &filterTree)) {
+            Vector2 filterWidth = parseVector2(filterTree, FILTER_WIDTH);
+            if(filterWidth != Vector2::Zero) {
+                xWidth = filterWidth.x;
+                yWidth = filterWidth.y;
+            }
+            filterType = filterTree.parseString(TYPE, BOX);
+        }
+
+        std::cout << "\nfilter " << filterType << std::endl;
+        std::cout << "-width(" << xWidth << ", " << yWidth << ")" << std::endl;
+        Filter* filter;
+        if(filterType == BOX) {
+            filter = new BoxFilter(xWidth, yWidth);
+        } else if(filterType == TRIANGLE) {
+            filter = new TriangleFilter(xWidth, yWidth);
+        } else {
+            filter = new BoxFilter(xWidth, yWidth);
+        }
+        return filter;
+    }
+
     static Film* parseFilm(const PropertyTree& pt) {
         int xRes = 640;
         int yRes = 480;
@@ -134,13 +166,13 @@ namespace Goblin {
         std::cout << "-crop(" << crop[0] << " "<< crop[1] << " "<< 
             crop[2] << " "<< crop[3] << ")" << std::endl;
         std::cout << "-filename: " << filename << std::endl;
+        Filter* filter = parseFilter(pt);
 
-        return new Film(xRes, yRes, crop, filename);
+        return new Film(xRes, yRes, crop, filter, filename);
     }
 
     static CameraPtr parseCamera(const PropertyTree& pt) {
         Film* film = parseFilm(pt);
-
         Vector3 position =  Vector3::Zero;
         Quaternion orientation = Quaternion::Identity;
         float zn = 0.1f;
