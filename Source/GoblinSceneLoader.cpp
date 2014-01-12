@@ -1,4 +1,5 @@
 #include "GoblinSceneLoader.h"
+#include "GoblinRenderer.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinSphere.h"
@@ -35,6 +36,11 @@ namespace Goblin {
     static const char* FILTER = "filter";
     static const char* BOX = "box";
     static const char* TRIANGLE = "triangle";
+    static const char* GAUSSIAN = "gaussian";
+    static const char* FALLOFF = "falloff";
+    static const char* MITCHELL = "mitchell";
+    static const char* B = "b";
+    static const char* C = "c";
     static const char* FILTER_WIDTH = "width";
     // geometry related keywords
     static const char* GEOMETRY = "geometry";
@@ -66,6 +72,11 @@ namespace Goblin {
     static const char* REFRACTION = "Kt";
     static const char* REFRACTION_INDEX = "index";
     static const char* DIFFUSE = "Kd";
+    // render setting related keywords;
+    static const char* RENDER_SETTING = "render_setting";
+    static const char* X_PER_PIXEL = "x_per_pixel";
+    static const char* Y_PER_PIXEL = "y_per_pixel";
+    static const char* MAX_RAY_DEPTH = "max_ray_depth";
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
         std::vector<float> rv = pt.parseFloatArray(key);
@@ -133,6 +144,15 @@ namespace Goblin {
             filter = new BoxFilter(xWidth, yWidth);
         } else if(filterType == TRIANGLE) {
             filter = new TriangleFilter(xWidth, yWidth);
+        } else if(filterType == GAUSSIAN) {
+            float falloff = filterTree.parseFloat(FALLOFF, 2.0f);
+            std::cout << "-falloff " << falloff << std::endl;
+            filter = new GaussianFilter(xWidth, yWidth, falloff);
+        } else if(filterType == MITCHELL) {
+            float b = filterTree.parseFloat(B, 1.0f / 3.0f);
+            float c = filterTree.parseFloat(C, 1.0f / 3.0f);
+            std::cout << "b " << b << " c " << c << std::endl;
+            filter = new MitchellFilter(xWidth, yWidth, b, c);
         } else {
             filter = new BoxFilter(xWidth, yWidth);
         }
@@ -340,7 +360,30 @@ namespace Goblin {
         materialMap->insert(pair); 
     }
 
-    ScenePtr SceneLoader::load(const string& filename) {
+    static void parseRenderSetting(const PropertyTree& pt, 
+        RenderSetting* setting) {
+        int xPixelSamples = 1;
+        int yPixelSamples = 1;
+        int maxRayDepth = 5;
+
+        PropertyTree rt;
+        if(pt.getChild(RENDER_SETTING, &rt)) {
+            xPixelSamples = rt.parseInt(X_PER_PIXEL, xPixelSamples);
+            yPixelSamples = rt.parseInt(Y_PER_PIXEL, yPixelSamples);
+            maxRayDepth = rt.parseInt(MAX_RAY_DEPTH, maxRayDepth);
+        }
+        setting->xPixelSamples = xPixelSamples;
+        setting->yPixelSamples = yPixelSamples;
+        setting->maxRayDepth = maxRayDepth;
+        std::cout << "\nrender setting" << std::endl;
+        std::cout << "-sample per pixel [" << xPixelSamples << ", " << 
+            yPixelSamples << "]" << std::endl;
+        std::cout << "-max ray depth " << maxRayDepth << std::endl;
+    }
+
+
+    ScenePtr SceneLoader::load(const string& filename, 
+        RenderSetting* setting) {
         ScenePtr scene;
         PropertyTree pt;
         if(!pt.read(filename)) {
@@ -352,6 +395,10 @@ namespace Goblin {
         PrimitiveMap modelMap;
         MaterialMap materialMap;
         PrimitiveList instances;
+
+        if(setting) {
+            parseRenderSetting(pt, setting);
+        }
         CameraPtr camera = parseCamera(pt);
         LightList lights;
 

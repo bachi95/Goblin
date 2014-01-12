@@ -5,11 +5,12 @@
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
 #include "GoblinSampler.h"
+#include "GoblinUtils.h"
 
 namespace Goblin {
 
-    Renderer::Renderer(int maxRayDepth):
-        mSamples(NULL), mSampler(NULL), mMaxRayDepth(maxRayDepth) {}
+    Renderer::Renderer(RenderSetting setting):
+        mSamples(NULL), mSampler(NULL), mSetting(setting) {}
 
     Renderer::~Renderer() {
         if(mSamples) {
@@ -24,6 +25,7 @@ namespace Goblin {
 
     void Renderer::render(ScenePtr scene) {
         const CameraPtr camera = scene->getCamera();
+
         Film* film = camera->getFilm();
         int xStart, xEnd, yStart, yEnd;
         film->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
@@ -33,9 +35,20 @@ namespace Goblin {
         if(mSamples != NULL) {
             delete [] mSamples;
         }
-        // TODO sampler should instantiated based on the scene description
-        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 2, 2);
+        int xPerPixel = mSetting.xPixelSamples;
+        int yPerPixel = mSetting.yPixelSamples;
+        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 
+            xPerPixel, yPerPixel);
         mSamples = new CameraSample[mSampler->maxSamplesPerRequest()];
+
+        // temp progress reporter so that waiting can be not that boring...
+        // TODO make this something more elegant
+        int accumulatedBuffer = 0;
+        int accumulatedSamples = 0;
+        int maxTotalSamples = mSampler->maxTotalSamples();
+        int reportStep = maxTotalSamples / 100;
+        string backspace = "\b\b\b\b\b\b\b\b\b\b\b\b\b";
+
         int sampleNum = 0;
         while((sampleNum = mSampler->requestSamples(mSamples)) > 0) {
             for(int i = 0; i < sampleNum; ++i) {
@@ -44,7 +57,19 @@ namespace Goblin {
                 Color L = w * Li(scene, ray);
                 film->addSample(mSamples[i], L);
             }
+
+            // print out progress
+            accumulatedBuffer += sampleNum;
+            if(accumulatedBuffer > reportStep) {
+                accumulatedSamples += accumulatedBuffer;
+                accumulatedBuffer = 0;
+                std::cout << backspace;
+                std::cout << "progress %";
+                std::cout << 100 * accumulatedSamples / maxTotalSamples;
+            }
         }
+        std::cout << backspace;
+
         //for now leave this here as debug purpose......
         //Ray ray(Vector3(0, 0, 0.0), Vector3(0, 0, 1), 0); 
         //Color L = Li(scene, ray);
@@ -74,7 +99,7 @@ namespace Goblin {
                 }
             }
             // reflection and refraction
-            if(ray.depth < mMaxRayDepth) {
+            if(ray.depth < mSetting.maxRayDepth) {
                 Li += specularReflect(scene, ray, epsilon, intersection);
                 Li += specularRefract(scene, ray, epsilon, intersection);
             }

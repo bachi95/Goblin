@@ -27,6 +27,8 @@ typedef unsigned __int64 uint64_t;
 #endif // INFINITY
 
 namespace Goblin {
+    using std::vector;
+    using std::string;
     using std::min;
     using std::max;
     using std::swap;

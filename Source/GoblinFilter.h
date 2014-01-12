@@ -14,30 +14,12 @@ namespace Goblin {
         float mXWidth, mYWidth;
     };
 
-    inline Filter::Filter(float xWidth, float yWidth):
-        mXWidth(xWidth), mYWidth(yWidth) {}
-
-    inline float Filter::getXWidth() const {
-        return mXWidth;
-    }
-
-    inline float Filter::getYWidth() const {
-        return mYWidth;
-    }
-
 
     class BoxFilter : public Filter {
     public:
         BoxFilter(float xWidth, float yWidth);
         float evaluate(float x, float y) const;
     };
-
-    inline BoxFilter::BoxFilter(float xWidth, float yWidth):
-        Filter(xWidth, yWidth) {}
-
-    inline float BoxFilter::evaluate(float x, float y) const {
-        return 1.0f;
-    }
 
 
     class TriangleFilter : public Filter {
@@ -46,13 +28,30 @@ namespace Goblin {
         float evaluate(float x, float y) const;
     };
 
-    inline TriangleFilter::TriangleFilter(float xWidth, float yWidth):
-        Filter(xWidth, yWidth) {}
 
-    inline float TriangleFilter::evaluate(float x, float y) const {
-        return  max(0.0f, mXWidth - fabs(x)) * max(0.0f, mYWidth - fabs(y));
-    }
-    
+    class GaussianFilter : public Filter {
+    public:
+        GaussianFilter(float xWidth, float yWidth, float falloff);
+        float evaluate(float x, float y) const;
+    private:
+        float gaussian(float v, float expbase) const;
+    private:
+        const float mAlpha;
+        const float mExpX, mExpY;
+    };
+
+
+    class MitchellFilter: public Filter {
+    public:
+        MitchellFilter(float xWidth, float yWidth, float b, float c);
+    private:
+        float Mitchell(float x) const;
+        float evaluate(float x, float y) const;
+    private:
+        const float mB, mC;
+        const float mInvWidthX, mInvWidthY;
+    };
+
 }
 
 #endif //GOBLIN_FILTER_H

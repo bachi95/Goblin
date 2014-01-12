@@ -6,8 +6,6 @@
 
 #include <cstring>
 
-#include <iostream>
-
 namespace Goblin {
     Film::Film(int xRes, int yRes, const float crop[4],
         Filter* filter, const std::string& filename): 

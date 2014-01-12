@@ -8,9 +8,19 @@ namespace Goblin {
     class Color;
     class Ray;
     class Sampler;
+    class ParamSet;
+
+    struct RenderSetting {
+        RenderSetting(): 
+            xPixelSamples(1), yPixelSamples(1), maxRayDepth(5) {}
+        int xPixelSamples;
+        int yPixelSamples;
+        int maxRayDepth;
+    };
+
     class Renderer {
     public:
-        Renderer(int maxRayDepth = 5);
+        Renderer(RenderSetting setting);
         ~Renderer();
 
         void render(ScenePtr scene);
@@ -25,6 +35,7 @@ namespace Goblin {
         CameraSample* mSamples;
         Sampler* mSampler;
         int mMaxRayDepth;
+        RenderSetting mSetting;
     };
 }
 

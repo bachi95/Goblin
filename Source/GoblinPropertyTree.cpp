@@ -60,6 +60,16 @@ namespace Goblin {
         }
     }
 
+    int PropertyTree::parseInt(const char* key, int fallback) const {
+        try {
+            return static_cast<int>(mPtree.get<float>(key));
+        }
+        catch (boost::property_tree::ptree_bad_path) {
+            std::cerr << "value non exist for key " << key << std::endl;
+            return fallback;
+        }
+    }
+
     std::string PropertyTree::parseString(const char* key, 
         const char* fallback) const {
         try {

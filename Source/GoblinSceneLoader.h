@@ -5,9 +5,11 @@
 #include <string>
 
 namespace Goblin {
+    struct RenderSetting;
     class SceneLoader {
     public:
-        ScenePtr load(const std::string& filename);
+        ScenePtr load(const std::string& filename, 
+            RenderSetting* setting = NULL);
     };
 }
 

@@ -18,6 +18,7 @@ namespace Goblin {
         const PtreeList& getChildren() const;
         bool getChild(const char* key, PropertyTree* child) const;
         float parseFloat(const char* key, float fallback = 0.0f) const;
+        int parseInt(const char* key, int fallback = 0) const;
         std::string parseString(const char* key, const char* fallback = "") const;
         std::vector<float> parseFloatArray(const char* key) const;
 

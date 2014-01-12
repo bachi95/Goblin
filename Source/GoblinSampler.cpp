@@ -13,6 +13,10 @@ namespace Goblin {
         return mSamplesPerPixel;
     }
 
+    int Sampler::maxTotalSamples() const {
+        return mSamplesPerPixel * (mXEnd - mXStart) * (mYEnd - mYStart);
+    }
+
     int Sampler::requestSamples(CameraSample* samples) {
         if(mCurrentY == mYEnd) {
             return 0;

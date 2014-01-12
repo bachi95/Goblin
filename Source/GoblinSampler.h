@@ -18,6 +18,7 @@ namespace Goblin {
         Sampler(int xStart, int xEnd, int yStart, int yEnd, 
             int xPerPixel, int yPerPixel);
         int maxSamplesPerRequest() const;
+        int maxTotalSamples() const;
         int requestSamples(CameraSample* samples);
     private:
         void stratifiedSample2D(CameraSample* samples);
