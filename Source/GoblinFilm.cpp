@@ -56,7 +56,12 @@ namespace Goblin {
         *yEnd = floorInt(mYStart + 0.5f + mYCount + yWidth);
     }
 
-    void Film::addSample(const CameraSample& sample, const Color& L) {
+    void Film::addSample(const Sample& sample, const Color& L) {
+        if(L.isNaN()) {
+            std::cout << "sample ("<< sample.imageX << " " << sample.imageY
+                << ") generate NaN point, discard this sample" << std::endl;
+            return;
+        }
         // transform continuous space sample to discrete space
         float dImageX = sample.imageX - 0.5f;
         float dImageY = sample.imageY - 0.5f;

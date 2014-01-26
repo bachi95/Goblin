@@ -34,7 +34,7 @@ namespace Goblin{
         }
     }
 
-    float Camera::generateRay(const CameraSample& sample, Ray* ray) {
+    float Camera::generateRay(const Sample& sample, Ray* ray) {
         float xNDC = +2.0f * sample.imageX / mFilm->getXResolution() - 1.0f;
         float yNDC = -2.0f * sample.imageY / mFilm->getYResolution() + 1.0f;
         // from NDC space to view space

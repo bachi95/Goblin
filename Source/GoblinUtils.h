@@ -8,6 +8,7 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
+using namespace std;
 // VS2008 doesn't have stdint.h
 #if (defined _MSC_VER && _MSC_VER < 1500)
 typedef __int8 int8_t; 
@@ -69,6 +70,14 @@ namespace Goblin {
         return floorInt(f + 0.5f);
     }
 
+    inline int roundToSquare(int n, int* root = NULL) {
+        int s = ceilInt(sqrt(static_cast<float>(n)));
+        if(root) {
+            *root = s;
+        }
+        return s * s;
+    }
+
     inline float radians(float degrees) {
 	    return PI * (degrees / 180.0f);
     }
@@ -80,6 +89,10 @@ namespace Goblin {
     // utils for quadratic equation, solution stored in t1 and t2
     // if it return true
     bool quadratic(float A, float B, float C, float* t1, float* t2);
+
+    float randomFloat();
+
+    uint32_t randomUInt();
 }
 
 #endif // GOBLIN_UTILS_H

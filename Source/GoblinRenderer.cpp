@@ -1,16 +1,15 @@
 #include "GoblinRenderer.h"
-#include "GoblinScene.h"
 #include "GoblinRay.h"
 #include "GoblinColor.h"
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
-#include "GoblinSampler.h"
 #include "GoblinUtils.h"
 
 namespace Goblin {
 
-    Renderer::Renderer(RenderSetting setting):
-        mSamples(NULL), mSampler(NULL), mSetting(setting) {}
+    Renderer::Renderer(const RenderSetting& setting):
+        mSamples(NULL), mSampler(NULL), mSetting(setting) {
+    }
 
     Renderer::~Renderer() {
         if(mSamples) {
@@ -18,14 +17,18 @@ namespace Goblin {
             mSamples = NULL;
         }
         if(mSampler) {
-            delete [] mSampler;
+            delete mSampler;
             mSampler = NULL;
         }
     }
 
-    void Renderer::render(ScenePtr scene) {
-        const CameraPtr camera = scene->getCamera();
+    void Renderer::querySampleQuota(const ScenePtr& scene, Sampler* sampler) {
+        uint32_t oneDOffset = sampler->requestOneDQuota(4);
+        uint32_t twoDOffset = sampler->requestTwoDQuota(25);
+    }
 
+    void Renderer::render(const ScenePtr& scene) {
+        const CameraPtr camera = scene->getCamera();
         Film* film = camera->getFilm();
         int xStart, xEnd, yStart, yEnd;
         film->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
@@ -35,18 +38,20 @@ namespace Goblin {
         if(mSamples != NULL) {
             delete [] mSamples;
         }
-        int xPerPixel = mSetting.xPixelSamples;
-        int yPerPixel = mSetting.yPixelSamples;
+        int samplePerPixel = mSetting.samplePerPixel;
         mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 
-            xPerPixel, yPerPixel);
-        mSamples = new CameraSample[mSampler->maxSamplesPerRequest()];
-
+            samplePerPixel);
+        // bluh....api dependency on the above sampler
+        // TODO wragle out the on APIdependency  
+        querySampleQuota(scene, mSampler);
+        int batchAmount = mSampler->maxSamplesPerRequest();
+        mSamples = mSampler->allocateSampleBuffer(batchAmount);
         // temp progress reporter so that waiting can be not that boring...
         // TODO make this something more elegant
-        int accumulatedBuffer = 0;
-        int accumulatedSamples = 0;
-        int maxTotalSamples = mSampler->maxTotalSamples();
-        int reportStep = maxTotalSamples / 100;
+        unsigned long int accumulatedBuffer = 0;
+        unsigned long int accumulatedSamples = 0;
+        unsigned long int maxTotalSamples = mSampler->maxTotalSamples();
+        unsigned long int reportStep = maxTotalSamples / 100;
         string backspace = "\b\b\b\b\b\b\b\b\b\b\b\b\b";
 
         int sampleNum = 0;
@@ -66,6 +71,7 @@ namespace Goblin {
                 std::cout << backspace;
                 std::cout << "progress %";
                 std::cout << 100 * accumulatedSamples / maxTotalSamples;
+                std::cout.flush();
             }
         }
         std::cout << backspace;
@@ -77,7 +83,7 @@ namespace Goblin {
         film->writeImage();
     }
 
-    Color Renderer::Li(ScenePtr scene, const Ray& ray) const {
+    Color Renderer::Li(const ScenePtr& scene, const Ray& ray) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;

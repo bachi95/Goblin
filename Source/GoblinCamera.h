@@ -7,7 +7,7 @@
 
 namespace Goblin {
     class Film;
-    class CameraSample;
+    class Sample;
     class Ray;
     class Camera {
     public:
@@ -22,7 +22,7 @@ namespace Goblin {
         const Quaternion& getOrientation() const;
 
         Film* getFilm();
-        float generateRay(const CameraSample& sample, Ray* ray);
+        float generateRay(const Sample& sample, Ray* ray);
 
         bool isUpdated() const;
         void update();

@@ -74,8 +74,7 @@ namespace Goblin {
     static const char* DIFFUSE = "Kd";
     // render setting related keywords;
     static const char* RENDER_SETTING = "render_setting";
-    static const char* X_PER_PIXEL = "x_per_pixel";
-    static const char* Y_PER_PIXEL = "y_per_pixel";
+    static const char* SAMPLE_PER_PIXEL = "sample_per_pixel";
     static const char* MAX_RAY_DEPTH = "max_ray_depth";
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
@@ -362,22 +361,18 @@ namespace Goblin {
 
     static void parseRenderSetting(const PropertyTree& pt, 
         RenderSetting* setting) {
-        int xPixelSamples = 1;
-        int yPixelSamples = 1;
+        int samplePerPixel = 1;
         int maxRayDepth = 5;
 
         PropertyTree rt;
         if(pt.getChild(RENDER_SETTING, &rt)) {
-            xPixelSamples = rt.parseInt(X_PER_PIXEL, xPixelSamples);
-            yPixelSamples = rt.parseInt(Y_PER_PIXEL, yPixelSamples);
+            samplePerPixel = rt.parseInt(SAMPLE_PER_PIXEL, samplePerPixel);
             maxRayDepth = rt.parseInt(MAX_RAY_DEPTH, maxRayDepth);
         }
-        setting->xPixelSamples = xPixelSamples;
-        setting->yPixelSamples = yPixelSamples;
+        setting->samplePerPixel = samplePerPixel;
         setting->maxRayDepth = maxRayDepth;
         std::cout << "\nrender setting" << std::endl;
-        std::cout << "-sample per pixel [" << xPixelSamples << ", " << 
-            yPixelSamples << "]" << std::endl;
+        std::cout << "-sample per pixel " << samplePerPixel << std::endl;
         std::cout << "-max ray depth " << maxRayDepth << std::endl;
     }
 

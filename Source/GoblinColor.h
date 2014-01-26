@@ -1,6 +1,8 @@
 #ifndef GOBLIN_COLOR_H
 #define GOBLIN_COLOR_H
 
+#include "GoblinUtils.h"
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -36,6 +38,7 @@ namespace Goblin {
         Color operator-() const;
         bool operator==(const Color& rhs) const;
         bool operator!=(const Color& rhs) const;
+        bool isNaN() const;
         const float* ptr() const;
     };
 
@@ -122,6 +125,13 @@ namespace Goblin {
 
     inline bool Color::operator!=(const Color& rhs) const {
         return !operator==(rhs);
+    }
+
+    inline bool Color::isNaN() const {
+        return Goblin::isNaN(r) ||
+            Goblin::isNaN(g) ||
+            Goblin::isNaN(b) ||
+            Goblin::isNaN(a);
     }
 
     inline const float* Color::ptr() const {

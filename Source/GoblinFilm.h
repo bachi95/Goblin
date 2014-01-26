@@ -5,7 +5,7 @@
 #include <string>
 namespace Goblin {
     const int FILTER_TABLE_WIDTH = 16;
-    class CameraSample;
+    class Sample;
     class Filter;
     class Film {
     public:
@@ -18,7 +18,7 @@ namespace Goblin {
         void getSampleRange(int* xStart, int* xEnd,
             int* yStart, int* yEnd) const;
 
-        void addSample(const CameraSample& sample, const Color& L);
+        void addSample(const Sample& sample, const Color& L);
         void writeImage();
 
     private:
