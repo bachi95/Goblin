@@ -11,6 +11,7 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Fragment* fragment);
+        float area() const;
         BBox getObjectBound();
 
     private:
@@ -21,6 +22,10 @@ namespace Goblin {
         size_t mNumSlices;
         size_t mNumStacks;
     };
+
+    inline float Sphere::area() const {
+        return 4.0f * PI * mRadius * mRadius;
+    }
 }
 
 #endif //GOBLIN_SHPERE_H

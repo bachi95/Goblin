@@ -2,6 +2,15 @@
 #include "GoblinRay.h"
 
 namespace Goblin {
+
+    Color Intersection::Le(const Vector3& outDirection) {
+        Vector3 ps = fragment.position;
+        Vector3 ns = fragment.normal;
+        const AreaLight* areaLight = primitive->getAreaLight();
+        return areaLight == NULL ? 
+            Color::Black : areaLight->L(ps, ns, outDirection);
+    }
+
     InstancedPrimitive::InstancedPrimitive(const Transform& toWorld, 
         const PrimitivePtr& primitive):
         mToWorld(toWorld), mPrimitive(primitive) {}

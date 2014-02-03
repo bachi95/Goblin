@@ -38,6 +38,7 @@ namespace Goblin {
         virtual bool intersect(const Ray& ray) = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
             Fragment* fragment) = 0;
+        virtual float area() const = 0;
         virtual BBox getObjectBound() = 0;
         virtual void refine(GeometryList& refinedGeometries);
         const size_t getVertexNum() const;

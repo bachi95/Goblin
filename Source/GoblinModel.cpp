@@ -2,8 +2,9 @@
 #include "GoblinBBox.h"
 
 namespace Goblin {
-    Model::Model(const GeometryPtr& geometry, const MaterialPtr& material): 
-        mGeometry(geometry), mMaterial(material) {}
+    Model::Model(const GeometryPtr& geometry, const MaterialPtr& material,
+        const AreaLight* areaLight): 
+        mGeometry(geometry), mMaterial(material), mAreaLight(areaLight) {}
 
     bool Model::intersect(const Ray& ray) {
         return mGeometry->intersect(ray);
@@ -27,7 +28,8 @@ namespace Goblin {
         GeometryList refinedGeometries;
         mGeometry->refine(refinedGeometries);
         for(size_t i = 0; i < refinedGeometries.size(); ++i) {
-            PrimitivePtr primitive(new Model(refinedGeometries[i], mMaterial));
+            PrimitivePtr primitive(new Model(refinedGeometries[i], mMaterial,
+                getAreaLight()));
             refinedPrimitives.push_back(primitive);
         }
     }

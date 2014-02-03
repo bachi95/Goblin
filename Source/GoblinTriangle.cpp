@@ -162,6 +162,18 @@ namespace Goblin {
         return true;
     }
 
+    inline float Triangle::area() const {
+        TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
+        unsigned int i0 = ti->v[0];
+        unsigned int i1 = ti->v[1];
+        unsigned int i2 = ti->v[2];
+        Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
+        Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
+        Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+
+        return 0.5f * length(cross(p1 - p0, p2 - p0));
+    }
+
     BBox Triangle::getObjectBound() {
         TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
         unsigned int i0 = ti->v[0];

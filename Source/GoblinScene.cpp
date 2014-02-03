@@ -3,14 +3,21 @@
 namespace Goblin {
 
     Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
-        const LightList& lights):
+        const vector<Light*>& lights):
         mAggregate(root), mCamera(camera), mLights(lights) {}
+
+    Scene::~Scene() {
+        for(size_t i = 0; i < mLights.size(); ++i) {
+            delete mLights[i];
+            mLights[i] = NULL;
+        }
+    }
 
     const CameraPtr Scene::getCamera() const {
         return mCamera;
     }
 
-    const LightList& Scene::getLights() const {
+    const vector<Light*>& Scene::getLights() const {
         return mLights;
     }
 

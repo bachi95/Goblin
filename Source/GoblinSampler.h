@@ -4,6 +4,8 @@
 #include "GoblinUtils.h"
 
 namespace Goblin {
+    class Vector3;
+
     struct SampleQuota {
         void clear();
         size_t size() const;
@@ -95,6 +97,40 @@ namespace Goblin {
         float mIntegral;
         float mDx;
     };
+
+
+    /*
+     * u1, u2 are 2 [0, 1) sample value in uniform distribution
+     * u, v are barycentric coordinates for two vertices in triangle 
+     */
+    void uniformSampleTriangle(float u1, float u2, float* u, float* v);
+
+    Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax);
+
+    Vector3 uniformSampleSphere(float u1, float u2);
+
+    Vector3 uniformSampleHemisphere(float u1, float u2);
+
+    Vector3 cosineSampleHemisphere(float u1, float u2);
+
+    inline float uniformConePdf(float cosThetaMax) {
+        return 1.0f / (TWO_PI * (1.0f - cosThetaMax));
+    }
+
+    inline float uniformSpherePdf() {
+        // 1 / 4pi
+        return  0.5f * INV_TWOPI;
+    }
+
+    inline float uniformHemispherePdf() {
+        return INV_TWOPI;
+    }
+
+    inline float cosineHemispherePdf(float cosTheta) {
+        return  cosTheta * INV_PI;
+    }
 }
 
 #endif //GOBLIN_SAMPLER_H
+
+

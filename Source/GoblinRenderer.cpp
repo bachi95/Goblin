@@ -90,14 +90,17 @@ namespace Goblin {
         if(scene->intersect(ray, &epsilon, &intersection)) {
             const MaterialPtr& material = 
                 intersection.primitive->getMaterial();
-            const std::vector<LightPtr>& lights = scene->getLights();
+            // if intersect an area light
+            Li += intersection.Le(-ray.d);
+
+            const vector<Light*>& lights = scene->getLights();
             // direct light contribution
             for(size_t i = 0; i < lights.size(); ++i) {
                 Vector3 wo = -ray.d;
                 Vector3 wi;
                 Ray shadowRay;
                 const Fragment& fragment = intersection.fragment;
-                Color L = lights[i]->Li(fragment.position, epsilon, &wi, 
+                Color L = lights[i]->sampleL(fragment.position, epsilon, &wi, 
                     &shadowRay);
                 Color f = material->bsdf(fragment, wo, wi);
                 if(f != Color::Black && !scene->intersect(shadowRay)) {

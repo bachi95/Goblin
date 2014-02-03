@@ -40,7 +40,8 @@ namespace Goblin {
     };
 
     ObjMesh::ObjMesh(const std::string& filename) :
-        mFilename(filename), mHasNormal(false), mHasTexCoord(false) {}
+        mFilename(filename), mHasNormal(false), mHasTexCoord(false),
+        mArea(0.0f) {}
 
     ObjMesh::~ObjMesh() {
     }
@@ -256,6 +257,7 @@ namespace Goblin {
             }
             mTriangles.push_back(triangle);
         }
+        recalculateArea();
         std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";
         return true;
     }
@@ -278,5 +280,18 @@ namespace Goblin {
             GeometryPtr triangle(new Triangle(this, i));
             refinedGeometries.push_back(triangle);
         } 
+    }
+
+    void ObjMesh::recalculateArea() {
+        mArea = 0.0f;
+        for(size_t i = 0; i < mTriangles.size(); ++i) {
+            size_t i0 = mTriangles[i].v[0];
+            size_t i1 = mTriangles[i].v[1];
+            size_t i2 = mTriangles[i].v[2];
+            Vector3 v0 = mVertices[i0].position;
+            Vector3 v1 = mVertices[i0].position;
+            Vector3 v2 = mVertices[i0].position;
+            mArea += 0.5f * length(cross(v1 - v0, v2 - v0));
+        }
     }
 }

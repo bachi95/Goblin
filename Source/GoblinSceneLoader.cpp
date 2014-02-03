@@ -61,6 +61,7 @@ namespace Goblin {
     static const char* LIGHT = "light";
     static const char* POINT = "point";
     static const char* DIRECTIONAL = "directional";
+    static const char* AREA = "area";
     static const char* INTENSITY = "intensity";
     static const char* RADIANCE = "radiance";
     static const char* DIRECTION = "direction";
@@ -76,6 +77,7 @@ namespace Goblin {
     static const char* RENDER_SETTING = "render_setting";
     static const char* SAMPLE_PER_PIXEL = "sample_per_pixel";
     static const char* MAX_RAY_DEPTH = "max_ray_depth";
+    static const char* SAMPLE_NUM = "sample_num";
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
         std::vector<float> rv = pt.parseFloatArray(key);
@@ -303,25 +305,70 @@ namespace Goblin {
         instances->push_back(instance);
     }
 
-    static void parseLight(const PropertyTree& pt, LightList* lights) {
+    static void parseLight(const PropertyTree& pt, vector<Light*>* lights,
+        GeometryMap* geometryMap, PrimitiveList* instances) {
         string lightType = pt.parseString(TYPE);
 
         string name = pt.parseString(NAME);
 
         std::cout <<"\nlight " << name << std::endl;
-        LightPtr light;
+        Light* light;
         if(lightType == POINT) {
             Color intensity = parseColor(pt, INTENSITY);
             Vector3 position = parseVector3(pt, POSITION);
             std::cout << "-intensity: " << intensity << std::endl;
             std::cout << "-position: " << position << std::endl;
-            light = LightPtr(new PointLight(intensity, position));
+            light = new PointLight(intensity, position);
         } else if(lightType == DIRECTIONAL) {
             Color radiance = parseColor(pt, RADIANCE);
             Vector3 direction = parseVector3(pt, DIRECTION);
             std::cout << "-radiance: " << radiance << std::endl;
             std::cout << "-direction: " << direction << std::endl;
-            light = LightPtr(new DirectionalLight(radiance, direction));
+            light = new DirectionalLight(radiance, direction);
+        } else if(lightType == AREA) {
+            Color radiance = parseColor(pt, RADIANCE);
+            Vector3 position = parseVector3(pt, POSITION);
+            Quaternion orientation = parseQuaternion(pt, ORIENTATION);
+            string geoName = pt.parseString(GEOMETRY);
+            int sampleNum = pt.parseInt(SAMPLE_NUM);
+            std::cout << "-radiance: " << radiance << std::endl;
+            std::cout << "-position: " << position << std::endl;
+            std::cout << "-orientation: " << orientation << std::endl;
+            std::cout << "-geometry: " << geoName << std::endl;
+            std::cout << "-samples: " << sampleNum << std::endl;
+            GeometryMap::iterator it = geometryMap->find(geoName);
+            if(it == geometryMap->end()) {
+                std::cerr << "geometry " << geoName << " not defined!\n";
+                return;
+            }
+            // TODO: this cause a problem that we can't run time modify
+            // the transform for area light since it's not tied in between
+            // instance in scene and the transform in area light itself..
+            // need to find a way to improve this part
+            Transform toWorld(position, orientation, 
+                Vector3(1.0f, 1.0f, 1.0f));
+
+            AreaLight* areaLight = new AreaLight(radiance, it->second, 
+                toWorld, sampleNum);
+            light = areaLight;
+            // and we need to push this geometry into scene so that it can
+            // be intersection tested.....this is gonna be messy for the 
+            // current awkward parsing mechanics.......
+            MaterialPtr mtl(new LambertMaterial(Color::White));
+            PrimitivePtr model(new Model(it->second, mtl, areaLight));
+            PrimitivePtr instance;
+            if(!model->intersectable()) {
+                PrimitiveList primitives;
+                primitives.push_back(model);
+                PrimitivePtr aggregate(new BVH(primitives, 1, "equal_count"));
+                instance = 
+                    PrimitivePtr(new InstancedPrimitive(toWorld, aggregate));
+            } else {
+                instance = 
+                    PrimitivePtr(new InstancedPrimitive(toWorld, model)); 
+            }
+            instances->push_back(instance);
+
         } else {
             std::cerr << "unrecognized light type " << lightType << std::endl;
         }
@@ -395,7 +442,7 @@ namespace Goblin {
             parseRenderSetting(pt, setting);
         }
         CameraPtr camera = parseCamera(pt);
-        LightList lights;
+        vector<Light*> lights;
 
         const PtreeList& nodes = pt.getChildren(); 
         for(PtreeList::const_iterator it = nodes.begin(); 
@@ -408,7 +455,7 @@ namespace Goblin {
             } else if(key == INSTANCE) {
                 parseInstance(it->second, &modelMap, &instances);
             } else if(key == LIGHT) {
-                parseLight(it->second, &lights);
+                parseLight(it->second, &lights, &geometryMap, &instances);
             } else if(key == MATERIAL) {
                 parseMaterial(it->second, &materialMap);
             }

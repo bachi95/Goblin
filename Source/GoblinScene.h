@@ -15,17 +15,17 @@ namespace Goblin {
     class Scene {
     public:
         Scene(const PrimitivePtr& root, const CameraPtr& camera,
-            const LightList& lights);
-
+            const vector<Light*>& lights);
+        ~Scene();
         const CameraPtr getCamera() const; 
-        const LightList& getLights() const;
+        const vector<Light*>& getLights() const;
         void collectRenderList(RenderList& rList);
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* itersection);
     private:
         PrimitivePtr mAggregate;
-        LightList mLights;
+        vector<Light*> mLights;
         CameraPtr mCamera;
     };
 

@@ -1,4 +1,5 @@
 #include "GoblinSampler.h"
+#include "GoblinVector.h"
 
 namespace Goblin {
     void SampleQuota::clear() {
@@ -50,7 +51,7 @@ namespace Goblin {
         mXStart(xStart), mXEnd(xEnd), 
         mYStart(yStart), mYEnd(yEnd),
         mCurrentX(xStart), mCurrentY(yStart),
-        mSampleBuffer(NULL), mJitter(false) {
+        mSampleBuffer(NULL), mJitter(true) {
 
         int root;
         mSamplesPerPixel = roundToSquare(samplePerPixel, &root);
@@ -304,10 +305,153 @@ namespace Goblin {
     int CDF1D::sampleDiscrete(float u , float* pdf) {
         vector<float>::iterator lowBound;
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
-        int offset = max(0, lowBound - mCDF.begin() - 1);
+        int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
         if(pdf) {
             *pdf = (mFunction[offset] / mIntegral) * mDx;
         }
         return offset;
     }
+
+    /*
+     * for a isosceles right triangle with area 1/2 
+     * (derivation is the same for other case)
+     * pdf(u, v) = 1/(1/2) = 2 (pdf with respect to area)
+     * marginal pdf(u) = integrate pdf(u, v) over 0 to 1 -u (0 <= v <= 1 - u)
+     * = 2(1 - u) 
+     * conditional pdf(u|v) = pdf(u, v)/pdf(u) = 1 / (1 - u)
+     * cdf(u) = integratge pdf(u) over 0 to u = 2u - u^2
+     * cdf(v) = integrate pdf(v|u) over 0 to v = v / (1 - u)
+     * inverse method:
+     * u1 = 2u - u^2 -> u = 1 - sqrt(1-u1) can be simplified as 1 -sqrt(u1)
+     * u2 = v / (1-u) -> v = sqrt(u1) * u2
+     */
+    void uniformSampleTriangle(float u1, float u2, float* u, float* v) {
+        float u1root = sqrtf(u1);
+        *u = 1.0f - u1root;
+        *v = u1root * u2;
+    }
+    
+    /*
+     * for cone 0 <= theta <= thetaMax, 0 <= phi <= 2pi
+     * the solid angle extended by the cone is:
+     * integrate dw = sin(theta)d(theta)d(phi) over theta and phi
+     * = 2pi(1 - cos(thetaMax))
+     * pdf(w) = 1 / 2pi(1 - cos(thetaMax))
+     * pdf(theta, phi) = sin(theta) / 2pi(1 - cos(thetaMx))
+     * marginal pdf(theta) = integrate pdf(theta, phi) over 0 to 2pi
+     * = sin(theta) / (1 - cos(thetaMax))
+     * conditional pdf(phi|theta) = pdf(theta, phi) / pdf(theta) = 1 / 2pi
+     * cdf(theta) = integrate sin(theta) / (1 - cos(thetaMax)) over 0 to theta
+     * cdf(theta) = (1 - cos(theta)) / (1 - cos(thetaMax))
+     * cdf(phi) = integrate 1 / 2pi over 0 to phi = phi / 2pi
+     * inverse method:
+     * u1 = (1 - cos(theta)) / (1 - cos(thetaMax)) ->
+     * cos(theta) = 1 - u1 + u1 * cos(thetaMax)
+     * u2 = phi / 2pi -> phi = 2pi * u2
+     * transofrm it back to spherical coordinate:
+     * sin(theta) = sqrt(1 - cos^2(theta))
+     * x = cos(phi) * sin(theta)
+     * y = sin(phi) * sin(theta)
+     * z = cos(theta)
+     */
+    Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax) {
+        float cosTheta = 1.0f - u1 + u1 * cosThetaMax;
+        float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+        float phi = TWO_PI * u2;
+        float z = cosTheta;
+        float x = sinTheta * cos(phi);
+        float y = sinTheta * sin(phi);
+        return Vector3(x, y, z);
+    }
+
+    /*
+     * uniform means integrate pdf(w) over sphere = 1
+     * pdf(w) = 1 / 4pi, since dw = sin(theta)d(theta)d(phi)
+     * pdf(theta, phi) = sin(theta) / 4pi
+     * marginal pdf(theta) = integrate pdf(theata, phi) over 0 to 2pi
+     * = sin(theta) / 2
+     * conditional pdf(phi|theta) = pdf(theta, phi) / pdf(theta) = 1 / 2pi
+     * cdf(theta) = integrate sin(theta) / 2 over 0 to theta ->
+     * cdf(theta) = (1 - cos(theta)) / 2
+     * cdf(phi) = integrate 1 / 2pi over 0 to phi = phi / 2pi
+     * inverse method:
+     * u1 = (1 - cos(theta)) / 2  -> theta = arcos(1 - 2 * u1) 
+     * u2 = phi / 2pi -> phi = 2pi * u2
+     * transform it back to spherical coordinate:
+     * cos(theta) = 1 - 2 * u1
+     * sin(theta) = sqrt(1 - cos^2(theta))
+     * x = cos(phi) * sin(theta)
+     * y = sin(phi) * sin(theta)
+     * z = cos(theta)
+     */
+    Vector3 uniformSampleSphere(float u1, float u2) {
+        float z = 1.0f - 2.0f * u1;
+        float sinTheta = sqrtf(max(0.0f, 1.0f - z * z));
+        float phi = TWO_PI * u2;
+        float x = sinTheta * cos(phi);
+        float y = sinTheta * sin(phi);
+        return Vector3(x, y, z);
+    }
+
+    /*
+     * uniform means integrate pdf(w) over hemisphere = 1
+     * pdf(w) = 1 / 2pi, since dw = sin(theta)d(theta)d(phi)
+     * pdf(theta, phi) = sin(theta) / 2pi
+     * marginal pdf(theta) = integrate pdf(theata, phi) over 0 to 2pi
+     * = sin(theta)
+     * conditional pdf(phi|theta) = pdf(theta, phi) / pdf(theta) = 1 / 2pi
+     * cdf(theta) = integrate sin(theta) over 0 to theta = 1 - cos(theta)
+     * cdf(phi) = integrate 1 / 2pi over 0 to phi = phi / 2pi
+     * inverse method:
+     * u1 = 1 - cos(theta) -> theta = arcos(1 - u1) can be simplified as
+     * theta = arcos(u1) (since u1 is uniform distribution)
+     * phi = 2pi * u2
+     * transform it back to spherical coordinate:
+     * cos(theta) = u1
+     * x = cos(phi) * sin(theta) = cos(2pi * u2) * sqrt(1 - u1^2)
+     * y = sin(phi) * sin(theta) = sin(2pi * u2) * sqrt(1 - u1^2)
+     * z = cos(theta) = u1
+     */
+    Vector3 uniformSampleHemisphere(float u1, float u2) {
+        float z = u1;
+        float sinTheta = sqrtf(max(0.0f, 1.0f - u1 * u1));
+        float phi = TWO_PI * u2;
+        float x = sinTheta * cos(phi);
+        float y = sinTheta * sin(phi);
+        return Vector3(x, y, z);
+    }
+
+    /*
+     * since the pdf is proportional to cos(theta)
+     * let pdf(w) = c * cos(theta)
+     * pdf(theta, phi) = c * sin(theta) * cos(tehta) = (c/2)  * sin(2 * theta)
+     * integrate c/2 * sin(2*theta) over theta and phi = 1 ->
+     * c = 1 / pi -> pdf(w) = cos(theta) / pi ->
+     * pdf(theta, phi) =  sin(2 * theta) / 2pi
+     * marginal pdf(theta) = integrage pdf(theta, phi) over 0 to 2pi
+     * = sin(2 * theta)
+     * conditional pdf(phi|theta) = 1 / 2pi
+     * cdf(theta) = integrate sin(theta) * cos(theta) over 0 to theta ->
+     * cdf(theta) = (1 - cos(2 * theta)) / 2 = sin^2(theta)
+     * cdf(phi) = integrate 1 / 2pi over 0 to phi = phi / 2pi
+     * inverse method:
+     * u1 = sin^2(theta) -> theta = arcsin(sqrt(u1))
+     * u2 = phi / 2pi -> phi = 2pi * u2
+     * transform it back to spherical coordinate:
+     * sinTheta = sqrt(u1)
+     * cosTheta = sqrt(1 - sinTheta * sinTheta) = sqrt(1 - u1)
+     * x = cos(phi) * sin(theta)
+     * y = sin(phi) * sin(theta)
+     * z = cos(theta)
+     */
+    Vector3 cosineSampleHemisphere(float u1, float u2) {
+        float sinTheta = sqrtf(u1);
+        float cosTheta = sqrtf(max(0.0f, 1.0f - u1));
+        float phi = TWO_PI * u2;
+        float z = cosTheta;
+        float x = sinTheta * cos(phi);
+        float y = sinTheta * sin(phi);
+        return Vector3(x, y, y);
+    }
+    
 }

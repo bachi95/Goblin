@@ -16,6 +16,7 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Fragment* fragment);
+        float area() const;
         BBox getObjectBound();
         void refine(GeometryList& refinedGeometries);
         bool load();
@@ -23,12 +24,16 @@ namespace Goblin {
         bool hasNormal() const;
         bool hasTexCoord() const;
     private:
+        void recalculateArea();
+    private:
         std::string mFilename;
         BBox mBBox;
+        float mArea;
         bool mHasNormal;
         bool mHasTexCoord;
     };
 
+    inline float ObjMesh::area() const { return mArea; }
     inline bool ObjMesh::intersectable() const { return false; }
     inline bool ObjMesh::hasNormal() const { return mHasNormal; }
     inline bool ObjMesh::hasTexCoord() const { return mHasTexCoord; }

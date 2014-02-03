@@ -6,6 +6,7 @@
 #include "GoblinMaterial.h"
 #include "GoblinBBox.h"
 #include "GoblinUtils.h"
+#include "GoblinLight.h"
 
 #include <vector>
 #include <exception>
@@ -45,6 +46,7 @@ namespace Goblin {
 
     struct Intersection {
         Intersection(): primitive(NULL) {}
+        Color Le(const Vector3& outDirection);
         Fragment fragment;
         const Primitive* primitive;
     };
@@ -59,6 +61,7 @@ namespace Goblin {
             Intersection* intersection) = 0;
         virtual BBox getAABB() const = 0;
         virtual const MaterialPtr& getMaterial() const;
+        virtual const AreaLight* getAreaLight() const;
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) = 0;
     };
@@ -74,6 +77,11 @@ namespace Goblin {
     //material override, add it in later...
     inline const MaterialPtr& Primitive::getMaterial() const {
         std::cerr << "unimplemented Primitive::getMaterial" << std::endl; 
+        throw std::exception();
+    }
+
+    inline const AreaLight* Primitive::getAreaLight() const {
+        std::cerr << "unimplemented Primitive::getAreaLight" << std::endl; 
         throw std::exception();
     }
 
