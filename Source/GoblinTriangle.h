@@ -8,9 +8,10 @@ namespace Goblin {
     class Triangle : public Geometry {
     public:
         Triangle(ObjMesh* parentMesh, size_t index);
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Fragment* fragment);
+            Fragment* fragment) const;
+        Vector3 sample(float u1, float u2, Vector3* normal) const;
         float area() const;
         BBox getObjectBound();
     private:

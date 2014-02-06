@@ -23,8 +23,8 @@ namespace Goblin {
     }
 
     void Renderer::querySampleQuota(const ScenePtr& scene, Sampler* sampler) {
-        uint32_t oneDOffset = sampler->requestOneDQuota(4);
-        uint32_t twoDOffset = sampler->requestTwoDQuota(25);
+        SampleIndex oneDIndex = sampler->requestOneDQuota(4);
+        SampleIndex twoDIndex = sampler->requestTwoDQuota(25);
     }
 
     void Renderer::render(const ScenePtr& scene) {

@@ -155,8 +155,19 @@ namespace Goblin {
                 fillinBuffer += 2 * mSamplesPerPixel;
             }
         }
+        // another round of shuffle, so that all the u1D u2D in one sample
+        // won't have correlation
+        for(int i = 0; i < mSamplesPerPixel; ++i) {
+            for(size_t j = 0; j < mSampleQuota.n1D.size(); ++j) {
+                shuffle(samples[i].u1D[j], mSampleQuota.n1D[j], 1);
+            }
+            for(size_t j = 0; j < mSampleQuota.n2D.size(); ++j) {
+                shuffle(samples[i].u2D[j], mSampleQuota.n2D[j], 2);
+            }
+        }
 
         //debugOutput(samples);
+
         if(++mCurrentX == mXEnd) {
             mCurrentX= mXStart;
             mCurrentY++;
@@ -225,14 +236,16 @@ namespace Goblin {
         }
     }
 
-    uint32_t Sampler::requestOneDQuota(uint32_t samplesNum) {
-        mSampleQuota.n1D.push_back(roundToSquare(samplesNum));
-        return mSampleQuota.n1D.size() - 1;
+    SampleIndex Sampler::requestOneDQuota(uint32_t samplesNum) {
+        int nSample = roundToSquare(samplesNum);
+        mSampleQuota.n1D.push_back(nSample);
+        return SampleIndex(mSampleQuota.n1D.size() - 1, nSample);
     }
 
-    uint32_t Sampler::requestTwoDQuota(uint32_t samplesNum) {
-        mSampleQuota.n2D.push_back(roundToSquare(samplesNum));
-        return mSampleQuota.n2D.size() - 1;
+    SampleIndex Sampler::requestTwoDQuota(uint32_t samplesNum) {
+        int nSample = roundToSquare(samplesNum);
+        mSampleQuota.n2D.push_back(roundToSquare(nSample));
+        return SampleIndex(mSampleQuota.n2D.size() - 1, nSample);
     }
 
     Sample* Sampler::allocateSampleBuffer(size_t bufferSize) {

@@ -61,6 +61,7 @@ namespace Goblin {
     private:
         GeometryList mGeometries;
         vector<float> mGeometriesArea;
+        float mSumArea;
         CDF1D* mAreaDistribution;
     };
 

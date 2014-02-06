@@ -39,14 +39,20 @@ namespace Goblin {
     }
 
     GeometrySet::GeometrySet(const GeometryPtr& geometry):
-        mAreaDistribution(NULL) {
+        mAreaDistribution(NULL), mSumArea(0.0f) {
         if(geometry->intersectable()) {
             mGeometries.push_back(geometry);
         } else {
             geometry->refine(mGeometries);
         }
-        //TODO calculate out the sum area
-        //TODO form the area distributioin based on the areas
+        mSumArea = 0.0f;
+        mGeometriesArea.resize(mGeometries.size());
+        for(size_t i = 0; i < mGeometries.size(); ++i) {
+            float area = mGeometries[i]->area();
+            mGeometriesArea[i] = area;
+            mSumArea += area;
+        }
+        mAreaDistribution = new CDF1D(mGeometriesArea);
     }
 
     GeometrySet::~GeometrySet() {

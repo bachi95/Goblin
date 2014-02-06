@@ -2,6 +2,7 @@
 #include "GoblinUtils.h"
 #include "GoblinRay.h"
 #include "GoblinBBox.h"
+#include "GoblinSampler.h"
 
 using namespace Goblin;
 
@@ -14,7 +15,7 @@ void Sphere::init() {
     buildStacks();
 }
 
-bool Sphere::intersect(const Ray& ray) {
+bool Sphere::intersect(const Ray& ray) const {
     float A = squaredLength(ray.d);
     float B = 2.0f * dot(ray.d, ray.o);
     float C = squaredLength(ray.o) - mRadius * mRadius;
@@ -36,7 +37,7 @@ bool Sphere::intersect(const Ray& ray) {
 }
 
 bool Sphere::intersect(const Ray& ray, float* epsilon, 
-        Fragment* fragment) {
+        Fragment* fragment) const {
     float A = squaredLength(ray.d);
     float B = 2.0f * dot(ray.d, ray.o);
     float C = squaredLength(ray.o) - mRadius * mRadius;
@@ -102,6 +103,11 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
     fragment->dpdv = PI * Vector3(pHit.y * cosPhi, -mRadius * sin(theta),
         pHit.y * sinPhi);
     return true;
+}
+
+Vector3 Sphere::sample(float u1, float u2, Vector3* normal) const {
+    *normal = mRadius * uniformSampleSphere(u1, u2);
+    return mRadius * (*normal);
 }
 
 BBox Sphere::getObjectBound() {

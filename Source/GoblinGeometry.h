@@ -35,12 +35,18 @@ namespace Goblin {
         virtual ~Geometry() {}
         virtual void init();
         virtual bool intersectable() const;
-        virtual bool intersect(const Ray& ray) = 0;
+        virtual bool intersect(const Ray& ray) const = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
-            Fragment* fragment) = 0;
+            Fragment* fragment) const = 0;
+        virtual Vector3 sample(float u1, float u2, Vector3* normal) const;
+        virtual Vector3 sample(const Vector3& p, float u1, float u2, 
+            Vector3* normal) const;
+        // pdf with respect to solid angle from p and extanded by this geometry
+        virtual float pdf(const Vector3& p, const Vector3& wi) const; 
         virtual float area() const = 0;
         virtual BBox getObjectBound() = 0;
         virtual void refine(GeometryList& refinedGeometries);
+
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;
         const void* getVertexPtr(size_t index = 0) const;
@@ -62,6 +68,13 @@ namespace Goblin {
     inline void Geometry::init() {}
 
     inline bool Geometry::intersectable() const { return true; }
+
+    inline Vector3 Geometry::sample(float u1, float u2, 
+        Vector3* normal) const {
+        std::cerr << "unimplemented Geometry::sample(float, float, Vector3*)"
+            << std::endl;
+        throw std::exception();
+    }
 
     inline void Geometry::refine(GeometryList& refinedGeometries) {
         std::cerr << "unimplemented Geometry::refine" << std::endl;

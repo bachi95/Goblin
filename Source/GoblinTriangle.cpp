@@ -2,6 +2,7 @@
 #include "GoblinObjMesh.h"
 #include "GoblinRay.h"
 #include "GoblinBBox.h"
+#include "GoblinSampler.h"
 
 namespace Goblin {
     Triangle::Triangle(ObjMesh* parentMesh, size_t index):
@@ -35,7 +36,7 @@ namespace Goblin {
      * then calculate b1, b2 with 2 2X2 linear equation, but the above 
      * one is cheaper to implement
      */
-    bool Triangle::intersect(const Ray& ray) {
+    bool Triangle::intersect(const Ray& ray) const {
 
         TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
         unsigned int i0 = ti->v[0];
@@ -74,7 +75,7 @@ namespace Goblin {
     }
 
     bool Triangle::intersect(const Ray& ray, float* epsilon, 
-        Fragment* fragment) {
+        Fragment* fragment) const {
         TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
@@ -160,6 +161,20 @@ namespace Goblin {
         }
 
         return true;
+    }
+
+    Vector3 Triangle::sample(float u1, float u2, Vector3* normal) const {
+        float b0, b1;
+        uniformSampleTriangle(u1, u2, &b0, &b1);
+        TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
+        unsigned int i0 = ti->v[0];
+        unsigned int i1 = ti->v[1];
+        unsigned int i2 = ti->v[2];
+        Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
+        Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
+        Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+        *normal = cross(p1 - p0, p2 - p0);
+        return b0 * p0 + b1 * p1 + (1.0f - b0 - b1) * p2;
     }
 
     inline float Triangle::area() const {

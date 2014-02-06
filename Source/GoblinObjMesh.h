@@ -13,9 +13,9 @@ namespace Goblin {
         ~ObjMesh();
         void init();
         bool intersectable() const;
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Fragment* fragment);
+            Fragment* fragment) const;
         float area() const;
         BBox getObjectBound();
         void refine(GeometryList& refinedGeometries);

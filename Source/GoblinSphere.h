@@ -8,9 +8,10 @@ namespace Goblin {
         Sphere(float r, size_t numSlices = 30, size_t numStacks = 30);
         ~Sphere() {};
         void init();
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Fragment* fragment);
+            Fragment* fragment) const;
+        Vector3 sample(float u1, float u2, Vector3* normal) const;
         float area() const;
         BBox getObjectBound();
 

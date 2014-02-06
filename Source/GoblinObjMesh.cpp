@@ -262,12 +262,12 @@ namespace Goblin {
         return true;
     }
 
-    bool ObjMesh::intersect(const Ray& ray) {
+    bool ObjMesh::intersect(const Ray& ray) const {
         return false;
     }
 
     bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
-        Fragment* fragment) {
+        Fragment* fragment) const {
         return false;
     }
 

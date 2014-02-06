@@ -13,6 +13,15 @@ namespace Goblin {
         vector<uint32_t> n2D;
     };
 
+    // use for book keeping where and how many u1d/u2d can be
+    // retrieved from Sample
+    struct SampleIndex {
+        SampleIndex(uint32_t o, uint32_t n):
+            offset(o), sampleNum(n) {}
+        uint32_t offset;
+        uint32_t sampleNum;
+    };
+
     class Sample {
     public:
         Sample();
@@ -55,8 +64,8 @@ namespace Goblin {
         int maxTotalSamples() const;
         int requestSamples(Sample* samples);
 
-        uint32_t requestOneDQuota(uint32_t samplesNum);
-        uint32_t requestTwoDQuota(uint32_t samplesNum);
+        SampleIndex requestOneDQuota(uint32_t samplesNum);
+        SampleIndex requestTwoDQuota(uint32_t samplesNum);
         Sample* allocateSampleBuffer(size_t bufferSize);
     private:
         void stratifiedUniform1D(float* buffer, uint32_t n1D);
