@@ -106,7 +106,7 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
 }
 
 Vector3 Sphere::sample(float u1, float u2, Vector3* normal) const {
-    *normal = mRadius * uniformSampleSphere(u1, u2);
+    *normal = uniformSampleSphere(u1, u2);
     return mRadius * (*normal);
 }
 

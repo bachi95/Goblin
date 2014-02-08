@@ -10,6 +10,8 @@ namespace Goblin {
     class Ray;
     class Sampler;
     class ParamSet;
+    struct LightSample;
+    struct LightSampleIndex;
 
     struct RenderSetting {
         RenderSetting(): 
@@ -24,17 +26,26 @@ namespace Goblin {
         ~Renderer();
         void render(const ScenePtr& scene);
     private:
-        Color Li(const ScenePtr& scene, const Ray& ray) const;
+        Color Li(const ScenePtr& scene, const Ray& ray, 
+            const Sample& sample) const;
+        Color directLighting(const ScenePtr& scene, const Ray& ray,
+            float epsilon, const Intersection& intersection, 
+            const Sample& sample) const;
+        Color estimateLd(const ScenePtr& scene, const Ray& ray,
+            float epsilon, const Intersection& intersection, 
+            const Light* light, const LightSample& ls) const;
         Color specularReflect(const ScenePtr& scene, const Ray& ray, 
-            float epsilon, const Intersection& intersection) const;
+            float epsilon, const Intersection& intersection,
+            const Sample& sample) const;
         Color specularRefract(const ScenePtr& scene, const Ray& ray, 
-            float epsilon, const Intersection& intersection) const;
-
+            float epsilon, const Intersection& intersection,
+            const Sample& sample) const;
         void querySampleQuota(const ScenePtr& scene, Sampler* sampler);
+
     private:
+        LightSampleIndex* mLightSampleIndexes;
         Sample* mSamples;
         Sampler* mSampler;
-        int mMaxRayDepth;
         RenderSetting mSetting;
     };
 }

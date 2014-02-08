@@ -3,6 +3,30 @@
 #include "GoblinSampler.h"
 
 namespace Goblin {
+
+    LightSampleIndex::LightSampleIndex(Sampler* sampler, int requestNum) {
+        SampleIndex oneDIndex = sampler->requestOneDQuota(requestNum);
+        SampleIndex twoDIndex = sampler->requestTwoDQuota(requestNum);
+        // theoretically this two should be the same...
+        // this is just a paranoid double check
+        samplesNum = min(oneDIndex.sampleNum, twoDIndex.sampleNum);
+        componentIndex = oneDIndex.offset;
+        geometryIndex = twoDIndex.offset;
+    }
+
+    LightSample::LightSample() {
+        uComponent = randomFloat();
+        uGeometry[0] = randomFloat();
+        uGeometry[1] = randomFloat();
+    }
+
+    LightSample::LightSample(const Sample& sample, 
+        const LightSampleIndex& index, uint32_t n) {
+        uComponent = sample.u1D[index.componentIndex][n];
+        uGeometry[0] = sample.u2D[index.geometryIndex][2 * n];
+        uGeometry[1] = sample.u2D[index.geometryIndex][2 * n + 1];
+    }
+
     PointLight::PointLight(const Color& I, const Vector3& P):
     intensity(I), position(P) {
         mParams.setInt("type", Point);
@@ -10,15 +34,17 @@ namespace Goblin {
         mParams.setVector3("position", position);
     }
 
-    Color PointLight::sampleL(const Vector3& p, float epsilon, Vector3* wi,
-        Ray* shadowRay) const {
+    Color PointLight::sampleL(const Vector3& p, float epsilon, 
+        const LightSample& lightSample,
+        Vector3* wi, float* pdf, Ray* shadowRay) const {
         Vector3 dir = position - p;
         *wi = normalize(dir);
+        *pdf = 1.0f;
         shadowRay->o = p;
         shadowRay->d = *wi;
         shadowRay->mint = epsilon;
         float squaredDistance = squaredLength(dir);
-        shadowRay->maxt = sqrt(squaredDistance);
+        shadowRay->maxt = sqrt(squaredDistance) - epsilon;
         return intensity / squaredDistance;
     }
 
@@ -30,8 +56,10 @@ namespace Goblin {
     }
 
     Color DirectionalLight::sampleL(const Vector3& p, float epsilon, 
-        Vector3* wi, Ray* shadowRay) const {
+        const LightSample& lightSample,
+        Vector3* wi, float* pdf, Ray* shadowRay) const {
         *wi = -direction;
+        *pdf = 1.0f;
         shadowRay->o = p;
         shadowRay->d = *wi;
         shadowRay->mint = epsilon;
@@ -62,10 +90,32 @@ namespace Goblin {
         }
     }
 
+    Vector3 GeometrySet::sample(const Vector3& p, 
+        const LightSample& lightSample,
+        Vector3* normal) const {
+        // pick up a geometry to sample based on area distribution
+        float uComp = lightSample.uComponent;
+        int geoIndex = mAreaDistribution->sampleDiscrete(uComp);
+        // sample out ps from picked up geometry surface
+        float u1 = lightSample.uGeometry[0];
+        float u2 = lightSample.uGeometry[1];
+        Vector3 ps = mGeometries[geoIndex]->sample(p, u1, u2, normal);
+        return ps;
+    }
+
+    float GeometrySet::pdf(const Vector3& p, const Vector3& wi) const {
+        float pdf = 0.0f;
+        for(size_t i = 0; i < mGeometries.size(); ++i) {
+            pdf += mGeometriesArea[i] * mGeometries[i]->pdf(p, wi);    
+        }
+        pdf /= mSumArea;
+        return pdf;
+    }
+
+
     AreaLight::AreaLight(const Color& Le, const GeometryPtr& geometry,
         const Transform& toWorld, uint32_t samplesNum): mLe(Le), 
         mToWorld(toWorld), mSamplesNum(samplesNum) {
-        // TODO geometry init
         mGeometrySet = new GeometrySet(geometry);
     }
 
@@ -82,16 +132,32 @@ namespace Goblin {
     }
 
     Color AreaLight::sampleL(const Vector3& p, float epsilon,
-        Vector3* wi, Ray* shadowRay) const {
-        Vector3 ns;
-        //Vector3 ps = geometries.sample(p, sample, &ns);
-        //*wi = normalize(ps - p);
-        //*pdf = geometries.pdf(p, *wi);
-        //shadowRay->o = p;
-        //shadowRay->d = *wi;
-        //shadowRay->mint = epsilon;
-        //shadowRay->maxt = sqrt(ps - p);
-        //return L(ps, ns, -*wi);
-        return Color::Black;
+        const LightSample& lightSample,
+        Vector3* wi, float* pdf, Ray* shadowRay) const {
+        // transform world space p to local space since all GeometrySet methods
+        // are in local space
+        Vector3 pLocal = mToWorld.invertPoint(p);
+        Vector3 nsLocal;
+        Vector3 psLocal = mGeometrySet->sample(pLocal, lightSample, &nsLocal);
+        Vector3 wiLocal = normalize(psLocal - pLocal);
+        *pdf = mGeometrySet->pdf(pLocal, wiLocal);
+        // transform
+        Vector3 ps = mToWorld.onPoint(psLocal); 
+        Vector3 ns = normalize(mToWorld.onNormal(nsLocal));
+        *wi = normalize(ps - p);
+
+        shadowRay->o = p;
+        shadowRay->d = *wi;
+        shadowRay->mint = epsilon;
+        shadowRay->maxt = length(ps - p) - epsilon;
+
+        return L(ps, ns, -*wi);
+    }
+
+    float AreaLight::pdf(const Vector3& p, const Vector3& wi) const {
+        Vector3 pLocal = mToWorld.invertPoint(p);
+        Vector3 wiLocal = mToWorld.invertVector(wi);
+        return mGeometrySet->pdf(pLocal, wiLocal);
     }
 }
+

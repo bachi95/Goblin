@@ -26,7 +26,6 @@ namespace Goblin {
          */
         float pdf = squaredLength(p - fragment.position) / 
             (area() * absdot(-wi, fragment.normal));
-
         return pdf;    
     }
 

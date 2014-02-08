@@ -173,7 +173,7 @@ namespace Goblin {
         Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
         Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
         Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
-        *normal = cross(p1 - p0, p2 - p0);
+        *normal = normalize(cross(p1 - p0, p2 - p0));
         return b0 * p0 + b1 * p1 + (1.0f - b0 - b1) * p2;
     }
 
