@@ -4,8 +4,8 @@
 namespace Goblin {
 
     Color Intersection::Le(const Vector3& outDirection) {
-        Vector3 ps = fragment.position;
-        Vector3 ns = fragment.normal;
+        Vector3 ps = fragment.getPosition();
+        Vector3 ns = fragment.getNormal();
         const AreaLight* areaLight = primitive->getAreaLight();
         return areaLight == NULL ? 
             Color::Black : areaLight->L(ps, ns, outDirection);
@@ -30,11 +30,7 @@ namespace Goblin {
         Ray r = mToWorld.invertRay(ray);
         bool hit = mPrimitive->intersect(r, epsilon, intersection);
         if(hit) {
-            Fragment& f = intersection->fragment;
-            f.position = mToWorld.onPoint(f.position);
-            f.normal = normalize(mToWorld.onNormal(f.normal));
-            f.dpdu = mToWorld.onVector(f.dpdu);
-            f.dpdv = mToWorld.onVector(f.dpdv);
+            intersection->fragment.transform(mToWorld);
             ray.maxt = r.maxt;
         }
         return hit;
@@ -91,7 +87,6 @@ namespace Goblin {
     bool Aggregate::intersect(const Ray& ray) {
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             if(mRefinedPrimitives[i]->intersect(ray)) {
-            //if(mRefinedPrimitives[i]->getAABB().intersect(ray)) {
                 return true;
             }
         }

@@ -464,7 +464,7 @@ namespace Goblin {
         float z = cosTheta;
         float x = sinTheta * cos(phi);
         float y = sinTheta * sin(phi);
-        return Vector3(x, y, y);
+        return Vector3(x, y, z);
     }
     
 }

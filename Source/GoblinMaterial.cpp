@@ -3,12 +3,31 @@
 #include "GoblinMatrix.h"
 #include "GoblinVertex.h"
 #include "GoblinGeometry.h"
+#include "GoblinSampler.h"
 
 namespace Goblin {
 
+    BSDFSampleIndex::BSDFSampleIndex(Sampler* sampler, 
+        int requestNum) {
+        SampleIndex twoDIndex = sampler->requestTwoDQuota(requestNum);
+        samplesNum = twoDIndex.sampleNum;
+        directionIndex = twoDIndex.offset;
+    }
+
+    BSDFSample::BSDFSample() {
+        uDirection[0] = randomFloat();
+        uDirection[1] = randomFloat();
+    }
+
+    BSDFSample::BSDFSample(const Sample& sample,
+        const BSDFSampleIndex& index, uint32_t n) {
+        uDirection[0] = sample.u2D[index.directionIndex][2 * n];
+        uDirection[1] = sample.u2D[index.directionIndex][2 * n + 1];
+    }
+
     BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
         const Fragment& fragment, BSDFType type) const {
-        const Vector3& n = fragment.normal;
+        const Vector3& n = fragment.getNormal();
         if(dot(n, wo) * dot(n, wi) > 0.0f) {
             type = BSDFType(type & ~BSDFTransmission);
         } else {
@@ -17,21 +36,15 @@ namespace Goblin {
         return type;
     }
 
-    Matrix3 Material::getShadingMatrix(const Fragment& fragment) const {
-        Vector3 n = fragment.normal;
-        // dpdu is not necessarily orthgnal to normal, use gram-shmidt
-        // to tick out normal component from dpdu to form tangent
-        Vector3 t = normalize(fragment.dpdu - n * dot(fragment.dpdu, n));
-        Vector3 b = cross(n, t);
-        return Matrix3(
-            t.x, t.y, t.z,
-            b.x, b.y, b.z,
-            n.x, n.y, n.z);
+    bool Material::sameHemisphere(const Fragment& fragment,
+        const Vector3& wo, const Vector3& wi) const {
+        const Vector3& normal = fragment.getNormal();
+        return dot(wo, normal) * dot(wi, normal) > 0.0f;
     }
 
     float Material::specularReflect(const Fragment& fragment, 
         const Vector3& wo, Vector3* wi, float etai, float etat) const {
-        Vector3 n = fragment.normal;
+        Vector3 n = fragment.getNormal();
         // wo(face outward) is the input ray(with n form angle i), 
         // wi is the reflect ray
         float cosi = dot(n, wo);
@@ -56,7 +69,7 @@ namespace Goblin {
         const Vector3& wo, Vector3* wi, float etai, float etat) const {
         // wo(face outward) is the input ray(with n form angle i), 
         // wi is the refract ray(with -n form angle t)
-        Vector3 n = fragment.normal;
+        Vector3 n = fragment.getNormal();
         // wo(face outward) is the input ray(with n form angle i), 
         // wi is the reflect ray
         float cosi = dot(n, wo);
@@ -117,28 +130,98 @@ namespace Goblin {
     }
 
     Color LambertMaterial::sampleBSDF(const Fragment& fragment, 
-        const Vector3& wo, Vector3* wi, BSDFType type) const {
-        Color f(Color::Black);
-        if(matchType(type, BSDFType(BSDFDiffuse | BSDFReflection))) {
-            f += mDiffuseFactor * INV_PI;
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        BSDFType materialType = BSDFType(BSDFDiffuse | BSDFReflection);
+        if(!matchType(type, materialType)) {
+            *pdf = 0.0f;
+            return Color::Black;
         }
-        //TODO wi need to be determined by monte carlo sampling
-        return f;
+        float u1 = bsdfSample.uDirection[0];
+        float u2 = bsdfSample.uDirection[1];
+        Vector3 wiLocal = cosineSampleHemisphere(u1, u2);
+        // flip it if wo and normal at different sides of hemisphere
+        if(dot(wo, fragment.getNormal()) < 0.0f) {
+            wiLocal *= -1.0f;
+        }
+        Matrix3 shadeToWorld = fragment.getWorldToShade().transpose();
+        *wi = shadeToWorld * wiLocal;;
+        *pdf = this->pdf(fragment, wo, *wi, materialType);
+        if(sampledType) {
+            *sampledType = materialType;
+        }
+        return mDiffuseFactor * INV_PI;
+    }
+
+    float LambertMaterial::pdf(const Fragment& fragment,
+        const Vector3& wo, const Vector3& wi,
+        BSDFType type) const {
+        if(!matchType(type, BSDFType(BSDFDiffuse | BSDFReflection))) {
+            return 0.0f;
+        }
+        return sameHemisphere(fragment, wo, wi)? 
+            absdot(fragment.getNormal(), wi) * INV_PI : 0.0f;
     }
 
     Color TransparentMaterial::sampleBSDF(const Fragment& fragment, 
-        const Vector3& wo, Vector3* wi, BSDFType type) const {
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        int nMatch = 0;
         if(matchType(type, BSDFType(BSDFSpecular | BSDFReflection))) {
-            Color f = mReflectFactor * 
-                specularReflect(fragment, wo, wi, mEtai, mEtat);
-            return f;
+            nMatch++;
         }
         if(matchType(type, BSDFType(BSDFSpecular | BSDFTransmission))) {
-            Color f = mRefractFactor * 
-                specularRefract(fragment, wo, wi, mEtai, mEtat);
-            return f;
+            nMatch++;
         }
-        return Color::Black;
+
+        Color f(Color::Black);
+        if(nMatch == 1) {
+            if(matchType(type, BSDFReflection)) {
+                f = mReflectFactor * 
+                    specularReflect(fragment, wo, wi, mEtai, mEtat);
+                if(sampledType) {
+                    *sampledType = BSDFType(BSDFSpecular | BSDFReflection);
+                }
+            } else {
+                f = mRefractFactor *
+                    specularRefract(fragment, wo, wi, mEtai, mEtat);
+                if(sampledType) {
+                    *sampledType = BSDFType(BSDFSpecular | BSDFTransmission);
+                }
+            }
+            *pdf = 1.0f;
+        } else if(nMatch == 2) {
+            Vector3 wReflect;
+            Vector3 wRefract;
+            float reflect = specularReflect(fragment, wo, 
+                &wReflect, mEtai, mEtat);
+            float refract = specularRefract(fragment, wo, 
+                &wRefract, mEtai, mEtat);
+            // use fresnel factor to do importance sampling
+            float fresnel = reflect * absdot(wReflect, fragment.getNormal());
+            float reflectChance = fresnel;
+            bool doReflect = randomFloat() < reflectChance;
+
+            if(doReflect) {
+                f = mReflectFactor * reflect;
+                *wi = wReflect;
+                if(sampledType) {
+                    *sampledType = BSDFType(BSDFSpecular | BSDFReflection);
+                }
+                *pdf = reflectChance;
+            } else {
+                f = mRefractFactor * refract;
+                    specularRefract(fragment, wo, wi, mEtai, mEtat);
+                *wi = wRefract;
+                if(sampledType) {
+                    *sampledType = BSDFType(BSDFSpecular | BSDFTransmission);
+                }
+                *pdf = 1.0f - reflectChance;
+            }
+        } else {
+            *pdf = 0.0f;
+        }
+        return f;
     }
 
 }

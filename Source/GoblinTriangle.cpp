@@ -120,17 +120,16 @@ namespace Goblin {
         *epsilon = 1e-3f * t;
         // start collect intersection geometry info:
         // position, normal, uv, dpdu, dpdv....
-        fragment->position = ray(t);
-
+        Vector3 position(ray(t));
+        Vector3 normal;
         if(mParentMesh->hasNormal()) {
             Vector3& n0 = v0.normal;
             Vector3& n1 = v1.normal;
             Vector3& n2 = v2.normal;
-            fragment->normal = b0 * n0 + b1 * n1 + b2 * n2;
+            normal = normalize(b0 * n0 + b1 * n1 + b2 * n2);
         } else {
-            fragment->normal = cross(e1, e2);
+            normal = normalize(cross(e1, e2));
         }
-        fragment->normal.normalize();
 
         Vector2 uvs[3];
         if(mParentMesh->hasTexCoord()) {
@@ -142,24 +141,25 @@ namespace Goblin {
             uvs[1] = Vector2(1.0f, 0.0f);
             uvs[2] = Vector2(0.0f, 1.0f);
         }
-        fragment->uv = b0 * uvs[0] + b1 * uvs[1] + b2 * uvs[2];
+        Vector2 uv(b0 * uvs[0] + b1 * uvs[1] + b2 * uvs[2]);
 
         float du1 = uvs[1].x - uvs[0].x;
         float dv1 = uvs[1].y - uvs[0].y;
         float du2 = uvs[2].x - uvs[0].x;
         float dv2 = uvs[2].y - uvs[0].y;
         float determinant = du1 * dv2 - dv1 * du2;
+        Vector3 dpdu, dpdv;
         if(determinant == 0.0f) {
             // form a random shading coordinate from normal then
-            fragment->dpdu = normalize(e1 - 
-                dot(fragment->normal, e1) * fragment->normal);
-            fragment->dpdv = cross(fragment->normal, fragment->dpdv);
+            dpdu = normalize(e1 - 
+                dot(fragment->getNormal(), e1) * fragment->getNormal());
+            dpdv = cross(fragment->getNormal(), fragment->getDPDV());
         } else {
             float invDet = 1.0f / determinant;
-            fragment->dpdu = invDet * (dv2 * e1 - dv1 * e2);
-            fragment->dpdv = invDet * (-du2 * e1 + du1 * e2);
+            dpdu = invDet * (dv2 * e1 - dv1 * e2);
+            dpdv = invDet * (-du2 * e1 + du1 * e2);
         }
-
+        *fragment = Fragment(position, normal, uv, dpdu, dpdv);
         return true;
     }
 

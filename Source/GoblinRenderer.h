@@ -1,6 +1,7 @@
 #ifndef GOBLIN_RENDERER_H
 #define GOBLIN_RENDERER_H
 
+#include "GoblinMaterial.h"
 #include "GoblinScene.h"
 #include "GoblinSampler.h"
 
@@ -10,7 +11,9 @@ namespace Goblin {
     class Ray;
     class Sampler;
     class ParamSet;
+    struct BSDFSample;
     struct LightSample;
+    struct BSDFSampleIndex;
     struct LightSampleIndex;
 
     struct RenderSetting {
@@ -30,10 +33,11 @@ namespace Goblin {
             const Sample& sample) const;
         Color directLighting(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
-            const Sample& sample) const;
+            const Sample& sample, BSDFType type = BSDFAll) const;
         Color estimateLd(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
-            const Light* light, const LightSample& ls) const;
+            const Light* light, const LightSample& ls,
+            const BSDFSample& bs, BSDFType type = BSDFAll) const;
         Color specularReflect(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample) const;
@@ -44,6 +48,7 @@ namespace Goblin {
 
     private:
         LightSampleIndex* mLightSampleIndexes;
+        BSDFSampleIndex* mBSDFSampleIndexes;
         Sample* mSamples;
         Sampler* mSampler;
         RenderSetting mSetting;

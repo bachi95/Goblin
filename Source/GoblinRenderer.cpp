@@ -8,7 +8,7 @@
 namespace Goblin {
 
     Renderer::Renderer(const RenderSetting& setting):
-        mLightSampleIndexes(NULL),
+        mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mSamples(NULL), mSampler(NULL), mSetting(setting) {
     }
 
@@ -16,6 +16,10 @@ namespace Goblin {
         if(mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
+        }
+        if(mBSDFSampleIndexes) {
+            delete [] mBSDFSampleIndexes;
+            mBSDFSampleIndexes = NULL;
         }
         if(mSamples) {
             delete [] mSamples;
@@ -32,12 +36,19 @@ namespace Goblin {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         } 
+        if(mBSDFSampleIndexes) {
+            delete [] mBSDFSampleIndexes;
+            mBSDFSampleIndexes = NULL;
+        }
 
         const vector<Light*>& lights = scene->getLights();
         mLightSampleIndexes = new LightSampleIndex[lights.size()];
+        mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
         for(size_t i = 0; i < lights.size(); ++i) {
             uint32_t samplesNum = lights[i]->getSamplesNum();
             mLightSampleIndexes[i] = LightSampleIndex(sampler, samplesNum);
+            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampler, 
+                samplesNum);
         }
     }
 
@@ -105,8 +116,10 @@ namespace Goblin {
         if(scene->intersect(ray, &epsilon, &intersection)) {
             // if intersect an area light
             Li += intersection.Le(-ray.d);
-            // direct light contribution
-            Li += directLighting(scene, ray, epsilon, intersection, sample); 
+            // direct light contribution, for specular part we let
+            // specularReflect/specularRefract to deal with it
+            Li += directLighting(scene, ray, epsilon, intersection, sample,
+                BSDFType(BSDFAll & ~BSDFSpecular)); 
             // reflection and refraction
             if(ray.depth < mSetting.maxRayDepth) {
                 Li += specularReflect(scene, ray, epsilon, intersection, 
@@ -120,8 +133,9 @@ namespace Goblin {
 
     Color Renderer::directLighting(const ScenePtr& scene, const Ray& ray,
         float epsilon, const Intersection& intersection,
-        const Sample& sample) const {
+        const Sample& sample, BSDFType type) const {
 
+        Matrix3 w2s = intersection.fragment.getWorldToShade();
         Color totalLd = Color::Black;
         const vector<Light*>& lights = scene->getLights();
         for(size_t i = 0; i < lights.size(); ++i) {
@@ -130,8 +144,9 @@ namespace Goblin {
             for(size_t n = 0; n < samplesNum; ++n) {
                 const Light* light = lights[i];
                 LightSample ls(sample, mLightSampleIndexes[i], n);
+                BSDFSample bs(sample, mBSDFSampleIndexes[i], n);
                 Ld +=  estimateLd(scene, ray, epsilon, intersection,
-                    light, ls);
+                    light, ls, bs, type);
             }
             Ld /= static_cast<float>(samplesNum);
             totalLd += Ld;
@@ -141,24 +156,62 @@ namespace Goblin {
 
 
     Color Renderer::estimateLd(const ScenePtr& scene, const Ray& ray,
-        float epsilon, const Intersection& intersection, 
-        const Light* light, const LightSample& ls) const {
+        float epsilon, const Intersection& intersection, const Light* light, 
+        const LightSample& ls, const BSDFSample& bs, BSDFType type) const {
 
         Color Ld = Color::Black;
         const MaterialPtr& material = 
             intersection.primitive->getMaterial();
         const Fragment& fragment = intersection.fragment;
+        Vector3 wo = -ray.d;
         Vector3 wi;
-        float pdf;
+        Vector3 p = fragment.getPosition();
+        Vector3 n = fragment.getNormal();
+        float lightPdf, bsdfPdf;
         Ray shadowRay;
-        Color L = light->sampleL(fragment.position, epsilon, 
-            ls, &wi, &pdf, &shadowRay);
-
-        if(L != Color::Black && pdf > 0.0f) {
-            Vector3 wo = -ray.d;
+        // MIS for lighting part
+        Color L = light->sampleL(p, epsilon, ls, &wi, &lightPdf, &shadowRay);
+        if(L != Color::Black && lightPdf > 0.0f) {
             Color f = material->bsdf(fragment, wo, wi);
             if(f != Color::Black && !scene->intersect(shadowRay)) {
-                Ld += f * L * absdot(fragment.normal, wi) / pdf;
+                // we don't do MIS for delta distribution light
+                // since there is only one sample need for it
+                if(light->isDelta()) {
+                    return f * L * absdot(n, wi) / lightPdf;
+                } else {
+                    bsdfPdf = material->pdf(fragment, wo, wi);
+                    float lWeight = powerHeuristic(1, lightPdf, 1, bsdfPdf);
+                    Ld += f * L * absdot(n, wi) * lWeight / lightPdf;
+                }
+            }
+        }
+
+        // MIS for bsdf part
+        BSDFType sampledType;
+        Color f = material->sampleBSDF(fragment, wo, bs, 
+            &wi, &bsdfPdf, type, &sampledType);
+        if(f != Color::Black && bsdfPdf > 0.0f) {
+            // calculate the misWeight if it's not a specular material
+            // otherwise we should got 0 Ld from light sample earlier,
+            // and count on this part for all the Ld contribution
+            float fWeight = 1.0f;
+            if(!(sampledType & BSDFSpecular)) {
+                lightPdf = light->pdf(p, wi);
+                if(lightPdf == 0.0f) {
+                    return Ld;
+                }
+                fWeight = powerHeuristic(1, bsdfPdf, 1, lightPdf);
+            }
+            Intersection lightIntersect;
+            float lightEpsilon;
+            Ray r(fragment.getPosition(), wi, epsilon);
+            if(scene->intersect(r, &lightEpsilon, &lightIntersect)) {
+                if(lightIntersect.primitive->getAreaLight() == light) {
+                    Color Li = lightIntersect.Le(-wi);
+                    if(Li != Color::Black) {
+                        Ld += f * Li * absdot(wi, n) * fWeight / bsdfPdf;
+                    }
+                }
             }
         }
 
@@ -169,19 +222,23 @@ namespace Goblin {
         float epsilon, const Intersection& intersection,
         const Sample& sample) const {
         Color L(Color::Black);
-        const Vector3& n = intersection.fragment.normal;
-        const Vector3& p = intersection.fragment.position;
+        const Vector3& n = intersection.fragment.getNormal();
+        const Vector3& p = intersection.fragment.getPosition();
         const MaterialPtr& material = 
             intersection.primitive->getMaterial();
         Vector3 wo = -ray.d;
         Vector3 wi;
+        float pdf;
+        // fill in a random BSDFSample for api request, specular actually
+        // don't need to do any monte carlo sampling(only one possible out dir)
         Color f = material->sampleBSDF(intersection.fragment, 
-            wo, &wi, BSDFType(BSDFSpecular | BSDFReflection));
+            wo, BSDFSample(), &wi, &pdf, 
+            BSDFType(BSDFSpecular | BSDFReflection));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
             Ray reflectiveRay(p, wi, epsilon);
             reflectiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, reflectiveRay, sample);
-            L += f * Lr * absdot(wi, n);
+            L += f * Lr * absdot(wi, n) / pdf;
         }
         return L;
     }
@@ -190,19 +247,22 @@ namespace Goblin {
         float epsilon, const Intersection& intersection,
         const Sample& sample) const {
         Color L(Color::Black);
-        const Vector3& n = intersection.fragment.normal;
-        const Vector3& p = intersection.fragment.position;
+        const Vector3& n = intersection.fragment.getNormal();
+        const Vector3& p = intersection.fragment.getPosition();
         const MaterialPtr& material = 
             intersection.primitive->getMaterial();
         Vector3 wo = -ray.d;
         Vector3 wi;
+        float pdf;
+        // fill in a random BSDFSample for api request, specular actually
+        // don't need to do any monte carlo sampling(only one possible out dir)
         Color f = material->sampleBSDF(intersection.fragment, 
-            wo, &wi, BSDFType(BSDFSpecular | BSDFTransmission));
+            wo, BSDFSample(), &wi, &pdf, BSDFType(BSDFSpecular | BSDFTransmission));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
             Ray refractiveRay(p, wi, epsilon);
             refractiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, refractiveRay, sample);
-            L += f * Lr * absdot(wi, n);
+            L += f * Lr * absdot(wi, n) / pdf;
         }
         return L;
     }

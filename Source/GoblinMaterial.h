@@ -6,9 +6,11 @@
 
 namespace Goblin {
     struct Vertex;
-    struct Fragment;
+    class Fragment;
     class Vector3;
     class Matrix3;
+    class Sampler;
+    class Sample;
     
     enum BSDFType {
         BSDFReflection = 1 << 0,
@@ -18,6 +20,20 @@ namespace Goblin {
         BSDFSpecular = 1 << 4,
         BSDFAll = BSDFReflection | BSDFTransmission |
             BSDFDiffuse | BSDFGlossy | BSDFSpecular
+    };
+
+    struct BSDFSampleIndex {
+        BSDFSampleIndex() {}
+        BSDFSampleIndex(Sampler* sampler, int requestNum);
+        uint32_t samplesNum;
+        uint32_t directionIndex;
+    };
+
+    struct BSDFSample {
+        BSDFSample();
+        BSDFSample(const Sample& sample,
+            const BSDFSampleIndex& index, uint32_t n);
+        float uDirection[2];
     };
 
     // This serves the purpose of what GPU shader usually do
@@ -30,8 +46,14 @@ namespace Goblin {
         virtual Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type = BSDFAll) const = 0;
 
-        virtual Color sampleBSDF(const Fragment& fragment, const Vector3& wo,
-            Vector3* wi, BSDFType type = BSDFAll) const = 0;
+        virtual Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type = BSDFAll, 
+            BSDFType* sampledType = NULL) const = 0;
+
+        virtual float pdf(const Fragment& fragment,
+            const Vector3& wo, const Vector3& wi,
+            BSDFType type = BSDFAll) const = 0;
 
     protected:
         bool matchType(BSDFType type, BSDFType toMatch) const;
@@ -39,10 +61,8 @@ namespace Goblin {
         BSDFType getType(const Vector3& wo, const Vector3& wi, 
             const Fragment& f, BSDFType type) const;
 
-        // get the matrix convert world space vector to shading space
-        // formed by tangent, bitangent, normal
-        // normal is Vector3(0, 0, 1) in this shading space
-        Matrix3 getShadingMatrix(const Fragment& fragment) const;
+        bool sameHemisphere(const Fragment& fragment,
+            const Vector3& wo, const Vector3& wi) const;
 
         float specularReflect(const Fragment& fragment, const Vector3& wo,
             Vector3* wi, float etai, float etat) const;
@@ -66,8 +86,12 @@ namespace Goblin {
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
 
-        Color sampleBSDF(const Fragment& fragment, const Vector3& wo,
-            Vector3* wi, BSDFType type = BSDFAll) const;
+        Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type, BSDFType* sampledType) const;
+
+        float pdf(const Fragment& fragment, 
+            const Vector3& wo, const Vector3& wi, BSDFType type) const;
 
     private:
         Color mDiffuseFactor;
@@ -84,8 +108,12 @@ namespace Goblin {
             const Vector3& wi, BSDFType type) const;
 
         // given wo sample a wi and corresponding bsdf value to return
-        Color sampleBSDF(const Fragment& fragment, const Vector3& wo, 
-            Vector3* wi, BSDFType type = BSDFAll) const;
+        Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type, BSDFType* sampledType) const;
+
+        float pdf(const Fragment& fragment, 
+            const Vector3& wo, const Vector3& wi, BSDFType type) const;
 
     private:
         Color mReflectFactor;
@@ -99,11 +127,16 @@ namespace Goblin {
         mReflectFactor(Kr), mRefractFactor(Kt), mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection
-    // is a delta distribution function, we are count on sample way to get
+    // is a delta distribution function, we count on sample way to get
     // the wi by feeding in wo
     inline Color TransparentMaterial::bsdf(const Fragment& fragment, 
         const Vector3& wo, const Vector3& wi, BSDFType type) const {
         return Color::Black;
+    }
+
+    inline float TransparentMaterial::pdf(const Fragment& fragment,
+        const Vector3& wo, const Vector3& wi, BSDFType type) const {
+        return 0.0f;
     }
 }
 

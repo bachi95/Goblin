@@ -79,47 +79,52 @@ namespace Goblin {
     static const char* MAX_RAY_DEPTH = "max_ray_depth";
     static const char* SAMPLE_NUM = "sample_num";
 
-    static Vector2 parseVector2(const PropertyTree& pt, const char* key) {
+    static Vector2 parseVector2(const PropertyTree& pt, const char* key,
+        const Vector2& fallback = Vector2::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 2) {
             std::cerr << "invalid value for Vector2 " << key << std::endl;
-            return Vector2::Zero;
+            return fallback;
         }
         return Vector2(rv[0], rv[1]);
     }
 
-    static Vector3 parseVector3(const PropertyTree& pt, const char* key) {
+    static Vector3 parseVector3(const PropertyTree& pt, const char* key,
+        const Vector3& fallback = Vector3::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 3) {
             std::cerr << "invalid value for Vector3 " << key << std::endl;
-            return Vector3::Zero;
+            return fallback;
         }
         return Vector3(rv[0], rv[1], rv[2]);
     }
 
-    static Vector4 parseVector4(const PropertyTree& pt, const char* key) {
+    static Vector4 parseVector4(const PropertyTree& pt, const char* key,
+        const Vector4& fallback = Vector4::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 4) {
             std::cerr << "invalid value for Vector4 " << key << std::endl;
-            return Vector4::Zero;
+            return fallback;
         }
         return Vector4(rv[0], rv[1], rv[2], rv[3]);
     }
 
-    static Color parseColor(const PropertyTree& pt, const char* key) {
+    static Color parseColor(const PropertyTree& pt, const char* key,
+        const Color& fallback = Color::White) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 3) {
             std::cerr << "invalid value for Color " << key << std::endl;
-            return Color::White;
+            return fallback;
         }
         return Color(rv[0], rv[1], rv[2], 1.0f);
     }
 
-    static Quaternion parseQuaternion(const PropertyTree& pt, const char* key) {
+    static Quaternion parseQuaternion(const PropertyTree& pt, const char* key,
+        const Quaternion& fallback = Quaternion::Identity) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 4) {
             std::cerr << "invalid value for Quaternion " << key << std::endl;
-            return Quaternion::Identity;
+            return fallback;
         }
         return Quaternion(rv[0], rv[1], rv[2], rv[3]);
     }
@@ -329,10 +334,12 @@ namespace Goblin {
             Color radiance = parseColor(pt, RADIANCE);
             Vector3 position = parseVector3(pt, POSITION);
             Quaternion orientation = parseQuaternion(pt, ORIENTATION);
+            Vector3 scale = parseVector3(pt, SCALE, Vector3(1.0f, 1.0f, 1.0f));
             string geoName = pt.parseString(GEOMETRY);
             int sampleNum = pt.parseInt(SAMPLE_NUM);
             std::cout << "-radiance: " << radiance << std::endl;
             std::cout << "-position: " << position << std::endl;
+            std::cout << "-scale: " << scale << std::endl;
             std::cout << "-orientation: " << orientation << std::endl;
             std::cout << "-geometry: " << geoName << std::endl;
             std::cout << "-samples: " << sampleNum << std::endl;
@@ -345,8 +352,7 @@ namespace Goblin {
             // the transform for area light since it's not tied in between
             // instance in scene and the transform in area light itself..
             // need to find a way to improve this part
-            Transform toWorld(position, orientation, 
-                Vector3(1.0f, 1.0f, 1.0f));
+            Transform toWorld(position, orientation, scale);
 
             AreaLight* areaLight = new AreaLight(radiance, it->second, 
                 toWorld, sampleNum);

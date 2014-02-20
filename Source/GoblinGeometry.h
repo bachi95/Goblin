@@ -3,6 +3,7 @@
 #include "GoblinVertex.h"
 #include "GoblinBBox.h"
 #include "GoblinUtils.h"
+#include "GoblinMatrix.h"
 
 #include <cstdio>
 #include <vector>
@@ -12,14 +13,70 @@
 namespace Goblin {
     class BBox;
     class Ray;
+    class Transform;
 
-    struct Fragment {
-        Vector3 position;
-        Vector3 normal;
-        Vector3 dpdu;
-        Vector3 dpdv;
-        Vector2 uv;
+    class Fragment {
+    public:
+        Fragment();
+        Fragment(const Vector3& p, const Vector3& n, const Vector2& uv,
+            const Vector3& dpdu, const Vector3& dpdv);
+
+        Vector3 getPosition() const;
+        Vector3 getNormal() const;
+        Vector3 getDPDU() const;
+        Vector3 getDPDV() const;
+        Vector2 getUV() const;
+        Matrix3 getWorldToShade() const;
+
+        void setPosition(const Vector3& position);
+        void setNormal(const Vector3& normal);
+        void setDPDU(const Vector3& dpdu);
+        void setDPDV(const Vector3& dpdv);
+        void setUV(const Vector2& uv);
+
+        void transform(const Transform& t);
+    private:
+        Vector3 mPosition;
+        Vector3 mNormal;
+        Vector2 mUV;
+        Vector3 mDPDU;
+        Vector3 mDPDV;
+        mutable bool mIsUpdated;
+        mutable Matrix3 mWorldToShade;
     };
+
+    inline Fragment::Fragment():mIsUpdated(false) {}
+    inline Vector3 Fragment::getPosition() const { return mPosition; }
+    inline Vector3 Fragment::getNormal() const { return mNormal; }
+    inline Vector2 Fragment::getUV() const { return mUV; }
+    inline Vector3 Fragment::getDPDU() const { return mDPDU; }
+    inline Vector3 Fragment::getDPDV() const { return mDPDV; }
+
+    inline void Fragment::setPosition(const Vector3& position) { 
+        mIsUpdated = false;
+        mPosition = position;
+    }
+
+    inline void Fragment::setNormal(const Vector3& normal) {
+        mIsUpdated = false;
+        mNormal = normal;
+    }
+
+    inline void Fragment::setUV(const Vector2& uv) {
+        mIsUpdated = false;
+        mUV = uv;
+    }
+
+    inline void Fragment::setDPDU(const Vector3& dpdu) {
+        mIsUpdated = false;
+        mDPDU = dpdu;
+    }
+
+    inline void Fragment::setDPDV(const Vector3& dpdv) {
+        mIsUpdated = false;
+        mDPDV = dpdv;
+    }
+
 
     struct TriangleIndex {
         unsigned int v[3];

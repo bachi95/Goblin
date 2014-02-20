@@ -58,50 +58,51 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
     ray.maxt = tHit;
     *epsilon = 1e-3f * tHit;
     Vector3 pHit = ray(tHit);
-    fragment->position = pHit;
-    fragment->normal = normalize(fragment->position);
-
-    /* math time~
-    spherical cooridnate
-    x = r * sinTheta * cosPhi
-    y = r * cosTheta
-    z = r * sinTheta * sinPhi
-    0 < = Phi <= 2PI, 0 <= Theta <=PI
-    u = Phi / 2PI
-    v = Theta / PI
-
-    dPx/du = d(r * sinTheta * cosPhi)/du = r * sinTheta * d(cos(2PI * u))/du =
-    r * sinTheta *-sin(2PI * u) * 2PI = -2PI * z
-    dPx/du = d(r * cosTheta)/du = 0
-    dPx/dz = d(r * sinTheta * sinPhi)/du = r * sinTheta * d(sin(2PI * u))/du =
-    r * sinTheta *cos(2PI * u) * 2PI = 2PI * x
-    dpdu = [-2PI * z, 0, 2PI * x]
-
-    dPx/dv = d(r * sinTheta * cosPhi)/dv = r * cosPhi * d(sin(PI * v))/dv =
-    r * cosPhi * cos(PI * v) * PI = y * PI * cosPhi
-    dPy/dv = d(r * cosTheta)/dv = r * d(cos(PI * v))/dv = r * PI * -sinTheta =
-    -PI * r * sinTheta
-    dPz/dv = d(r * sinTheta * sinPhi)/dv = r * sinPhi * d(sin(PI * v))/dv =
-    r * sinPhi * cos(PI * v) * PI = y * PI * sinPhi
-    dpdv = PI * (y * cosPhi, -r * sinTheta, y * sinPhi)
-
-    cosPhi = x / sqrt(x * x + z * z)
-    sinPhi = z / sqrt(x * x + z * z)
-    */
-    float phi = atan2(pHit.z, pHit.x); 
+    /* 
+     * spherical cooridnate
+     * x = r * sinTheta * cosPhi
+     * y = r * sinTheta * sinPhi
+     * z = r * cosTheta
+     * 0 < = Phi <= 2PI, 0 <= Theta <=PI
+     * u = Phi / 2PI
+     * v = Theta / PI
+     *
+     * dPx/du = d(r * sinTheta * cosPhi)/du = r * sinTheta * d(cos(2PI * u))/du =
+     *     r * sinTheta *-sin(2PI * u) * 2PI = -2PI * y
+     * dPx/du = d(r * sinTheta * sinPhi)/du = r * sinTheta * d(sin(2PI * u))/du =
+     *     r * sinTheta *cos(2PI * u) * 2PI = 2PI * x
+     * dPx/dz = d(r * cosTheta)/du = 0
+     * dpdu = [-2PI * y, 2PI * x, 0]
+     * 
+     * dPx/dv = d(r * sinTheta * cosPhi)/dv = r * cosPhi * d(sin(PI * v))/dv =
+     *     r * cosPhi * cos(PI * v) * PI = z * PI * cosPhi
+     * dPy/dv = d(r * sinTheta * sinPhi)/dv = r * sinPhi * d(sin(PI * v))/dv =
+     *    r * sinPhi * cos(PI * v) * PI = z * PI * sinPhi
+     * dPz/dv = d(r * cosTheta)/dv = r * d(cos(PI * v))/dv = r * PI * -sinTheta =
+     *     -PI * r * sinTheta
+     * dpdv = PI * (z * cosPhi, z * sinPhi, -r * sinTheta)
+     *
+     * cosPhi = x / sqrt(x * x + y * y)
+     * sinPhi = y / sqrt(x * x + y * y)
+     */
+    float phi = atan2(pHit.y, pHit.x); 
     if(phi < 0.0f) {
         phi += 2.0f * PI;
     }
     float u = phi * INV_TWOPI;
-    float theta = acos(pHit.y / mRadius);
+    float theta = acos(pHit.z / mRadius);
     float v = theta * INV_PI;
-    float invR = 1.0f / sqrt(pHit.x * pHit.x + pHit.z * pHit.z);
+    float invR = 1.0f / sqrt(pHit.x * pHit.x + pHit.y * pHit.y);
     float cosPhi = pHit.x * invR;
-    float sinPhi = pHit.z * invR;
-    fragment->uv = Vector2(u, v);
-    fragment->dpdu = Vector3(-TWO_PI * pHit.z, 0.0f, TWO_PI * pHit.x);
-    fragment->dpdv = PI * Vector3(pHit.y * cosPhi, -mRadius * sin(theta),
-        pHit.y * sinPhi);
+    float sinPhi = pHit.y * invR;
+
+    Vector3 position = pHit;
+    Vector3 normal = normalize(pHit);
+    Vector2 uv(u, v);
+    Vector3 dpdu(-TWO_PI * pHit.y, TWO_PI * pHit.x, 0.0f);
+    Vector3 dpdv(PI * Vector3(pHit.z * cosPhi, pHit.z * sinPhi,
+        -mRadius * sin(theta)));
+    *fragment = Fragment(position, normal, uv, dpdu, dpdv);
     return true;
 }
 
@@ -116,6 +117,9 @@ BBox Sphere::getObjectBound() {
 }
 
 void Sphere::buildStacks() {
+    // TODO make this follow the traditional spherical coordinate:
+    // (r * sinTheta * cosPhi, r * sinTheta * sinPhi,r * cosTheta)
+
     float thetaStep = PI / mNumStacks;
     float phiStep = 2.0f * PI / mNumSlices;
     // two poles of the sphere are not counted as ring

@@ -138,6 +138,13 @@ namespace Goblin {
     inline float cosineHemispherePdf(float cosTheta) {
         return  cosTheta * INV_PI;
     }
+
+    // determine weight for multi-importance sampling
+    inline float powerHeuristic(float nA, float pdfA, float nB, float pdfB) {
+        float A = nA * pdfA;
+        float B = nB * pdfB;
+        return A * A / (A * A + B * B);
+    }
 }
 
 #endif //GOBLIN_SAMPLER_H
