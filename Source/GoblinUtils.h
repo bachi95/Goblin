@@ -35,6 +35,11 @@ namespace Goblin {
     using std::max;
     using std::swap;
 
+    class Camera;
+    class Scene;
+    typedef boost::shared_ptr<Camera> CameraPtr;
+    typedef boost::shared_ptr<Scene> ScenePtr;
+
     const float PI = 3.14159265358979323f;
     const float TWO_PI = 6.28318530718f;
     const float INV_PI = 0.31830988618379067154f;
@@ -94,6 +99,8 @@ namespace Goblin {
     float randomFloat();
 
     uint32_t randomUInt();
+
+
 }
 
 #endif // GOBLIN_UTILS_H

@@ -6,10 +6,8 @@
 #include "GoblinSampler.h"
 
 namespace Goblin {
-    class Sample;
     class Color;
     class Ray;
-    class Sampler;
     class ParamSet;
     struct BSDFSample;
     struct LightSample;
@@ -26,31 +24,50 @@ namespace Goblin {
     class Renderer {
     public:
         Renderer(const RenderSetting& setting);
-        ~Renderer();
+        virtual ~Renderer();
         void render(const ScenePtr& scene);
-    private:
-        Color Li(const ScenePtr& scene, const Ray& ray, 
-            const Sample& sample) const;
-        Color directLighting(const ScenePtr& scene, const Ray& ray,
+
+    protected:
+        virtual Color Li(const ScenePtr& scene, const Ray& ray, 
+            const Sample& sample) const = 0;
+
+        Color singleSampleLd(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
-            const Sample& sample, BSDFType type = BSDFAll) const;
+            const Sample& sample, 
+            const LightSample& lightSample,
+            const BSDFSample& bsdfSample,
+            float pickLightSample,
+            BSDFType type = BSDFAll) const;
+
+        Color multiSampleLd(const ScenePtr& scene, const Ray& ray,
+            float epsilon, const Intersection& intersection, 
+            const Sample& sample, LightSampleIndex* lightSampleIndexes = NULL,
+            BSDFSampleIndex* bsdfSampleIndexes = NULL,
+            BSDFType type = BSDFAll) const;
+
         Color estimateLd(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
             const Light* light, const LightSample& ls,
             const BSDFSample& bs, BSDFType type = BSDFAll) const;
+
         Color specularReflect(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample) const;
+
         Color specularRefract(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample) const;
-        void querySampleQuota(const ScenePtr& scene, Sampler* sampler);
-
     private:
+        virtual void querySampleQuota(const ScenePtr& scene, 
+            Sampler* sampler) = 0;
+
+    protected:
         LightSampleIndex* mLightSampleIndexes;
         BSDFSampleIndex* mBSDFSampleIndexes;
+        SampleIndex* mPickLightSampleIndexes;
         Sample* mSamples;
         Sampler* mSampler;
+        CDF1D* mPowerDistribution;
         RenderSetting mSetting;
     };
 }

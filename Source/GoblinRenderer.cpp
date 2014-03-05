@@ -9,7 +9,9 @@ namespace Goblin {
 
     Renderer::Renderer(const RenderSetting& setting):
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
-        mSamples(NULL), mSampler(NULL), mSetting(setting) {
+        mPickLightSampleIndexes(NULL),
+        mSamples(NULL), mSampler(NULL), mPowerDistribution(NULL), 
+        mSetting(setting) {
     }
 
     Renderer::~Renderer() {
@@ -21,6 +23,10 @@ namespace Goblin {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
+        if(mPickLightSampleIndexes) {
+            delete [] mPickLightSampleIndexes;
+            mPickLightSampleIndexes = NULL;
+        }
         if(mSamples) {
             delete [] mSamples;
             mSamples = NULL;
@@ -29,26 +35,9 @@ namespace Goblin {
             delete mSampler;
             mSampler = NULL;
         }
-    }
-
-    void Renderer::querySampleQuota(const ScenePtr& scene, Sampler* sampler) {
-        if(mLightSampleIndexes) {
-            delete [] mLightSampleIndexes;
-            mLightSampleIndexes = NULL;
-        } 
-        if(mBSDFSampleIndexes) {
-            delete [] mBSDFSampleIndexes;
-            mBSDFSampleIndexes = NULL;
-        }
-
-        const vector<Light*>& lights = scene->getLights();
-        mLightSampleIndexes = new LightSampleIndex[lights.size()];
-        mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
-        for(size_t i = 0; i < lights.size(); ++i) {
-            uint32_t samplesNum = lights[i]->getSamplesNum();
-            mLightSampleIndexes[i] = LightSampleIndex(sampler, samplesNum);
-            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampler, 
-                samplesNum);
+        if(mPowerDistribution) {
+            delete mPowerDistribution;
+            mPowerDistribution = NULL;
         }
     }
 
@@ -100,51 +89,46 @@ namespace Goblin {
             }
         }
         std::cout << backspace;
-
-        //for now leave this here as debug purpose......
-        //Ray ray(Vector3(0, 0, 0.0), Vector3(0, 0, 1), 0); 
-        //Color L = Li(scene, ray);
-
         film->writeImage();
     }
 
-    Color Renderer::Li(const ScenePtr& scene, const Ray& ray, 
-        const Sample& sample) const {
-        Color Li = Color::Black;
-        float epsilon;
-        Intersection intersection;
-        if(scene->intersect(ray, &epsilon, &intersection)) {
-            // if intersect an area light
-            Li += intersection.Le(-ray.d);
-            // direct light contribution, for specular part we let
-            // specularReflect/specularRefract to deal with it
-            Li += directLighting(scene, ray, epsilon, intersection, sample,
-                BSDFType(BSDFAll & ~BSDFSpecular)); 
-            // reflection and refraction
-            if(ray.depth < mSetting.maxRayDepth) {
-                Li += specularReflect(scene, ray, epsilon, intersection, 
-                    sample);
-                Li += specularRefract(scene, ray, epsilon, intersection,
-                    sample);
-            }
-        }
-        return Li;
+    Color Renderer::singleSampleLd(const ScenePtr& scene, const Ray& ray,
+        float epsilon, const Intersection& intersection,
+        const Sample& sample, 
+        const LightSample& lightSample,
+        const BSDFSample& bsdfSample,
+        float pickLightSample,
+        BSDFType type) const {
+
+        const vector<Light*>& lights = scene->getLights();
+        float pdf;
+        int lightIndex = 
+            mPowerDistribution->sampleDiscrete(pickLightSample, &pdf);
+        const Light* light = lights[lightIndex];
+        Color Ld = estimateLd(scene, ray, epsilon, intersection,
+            light, lightSample, bsdfSample, type) / pdf;
+        return Ld;
     }
 
-    Color Renderer::directLighting(const ScenePtr& scene, const Ray& ray,
+    Color Renderer::multiSampleLd(const ScenePtr& scene, const Ray& ray,
         float epsilon, const Intersection& intersection,
-        const Sample& sample, BSDFType type) const {
-
-        Matrix3 w2s = intersection.fragment.getWorldToShade();
+        const Sample& sample, 
+        LightSampleIndex* lightSampleIndexes,
+        BSDFSampleIndex* bsdfSampleIndexes,
+        BSDFType type) const {
         Color totalLd = Color::Black;
         const vector<Light*>& lights = scene->getLights();
         for(size_t i = 0; i < lights.size(); ++i) {
             Color Ld = Color::Black;
-            uint32_t samplesNum = mLightSampleIndexes[i].samplesNum;
+            uint32_t samplesNum = lightSampleIndexes[i].samplesNum;
             for(size_t n = 0; n < samplesNum; ++n) {
                 const Light* light = lights[i];
-                LightSample ls(sample, mLightSampleIndexes[i], n);
-                BSDFSample bs(sample, mBSDFSampleIndexes[i], n);
+                LightSample ls;
+                BSDFSample bs;
+                if(lightSampleIndexes != NULL && bsdfSampleIndexes != NULL) {
+                    ls = LightSample(sample, lightSampleIndexes[i], n);
+                    bs = BSDFSample(sample, bsdfSampleIndexes[i], n);
+                }
                 Ld +=  estimateLd(scene, ray, epsilon, intersection,
                     light, ls, bs, type);
             }
@@ -153,7 +137,6 @@ namespace Goblin {
         }
         return totalLd;
     }
-
 
     Color Renderer::estimateLd(const ScenePtr& scene, const Ray& ray,
         float epsilon, const Intersection& intersection, const Light* light, 
@@ -257,7 +240,8 @@ namespace Goblin {
         // fill in a random BSDFSample for api request, specular actually
         // don't need to do any monte carlo sampling(only one possible out dir)
         Color f = material->sampleBSDF(intersection.fragment, 
-            wo, BSDFSample(), &wi, &pdf, BSDFType(BSDFSpecular | BSDFTransmission));
+            wo, BSDFSample(), &wi, &pdf, 
+            BSDFType(BSDFSpecular | BSDFTransmission));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
             Ray refractiveRay(p, wi, epsilon);
             refractiveRay.depth = ray.depth + 1;
@@ -266,5 +250,4 @@ namespace Goblin {
         }
         return L;
     }
-
 }

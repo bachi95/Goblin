@@ -1,6 +1,7 @@
 #include "GoblinLight.h"
 #include "GoblinRay.h"
 #include "GoblinSampler.h"
+#include "GoblinScene.h"
 
 namespace Goblin {
 
@@ -48,6 +49,10 @@ namespace Goblin {
         return intensity / squaredDistance;
     }
 
+    Color PointLight::power(const ScenePtr& scene) const {
+        return 4.0f * PI * intensity;
+    }
+
     DirectionalLight::DirectionalLight(const Color& R, const Vector3& D):
     radiance(R), direction(D) {
         mParams.setInt("type", Directional);
@@ -64,6 +69,15 @@ namespace Goblin {
         shadowRay->d = *wi;
         shadowRay->mint = epsilon;
         return radiance;
+    }
+
+    Color DirectionalLight::power(const ScenePtr& scene) const {
+        Vector3 center;
+        float radius;
+        scene->getBoundingSphere(&center, &radius);
+        // well...... we can't make it infinitely big, so use bounding
+        // sphere for a rough approximation 
+        return radius * radius * PI * radiance;
     }
 
     GeometrySet::GeometrySet(const GeometryPtr& geometry):
@@ -152,6 +166,13 @@ namespace Goblin {
         shadowRay->maxt = length(ps - p) - epsilon;
 
         return L(ps, ns, -*wi);
+    }
+
+    Color AreaLight::power(const ScenePtr& scene) const {
+        // if any random angle output mLe on the area light surface,
+        // we can think of the input radience with perpendular angle
+        // per unit area mLe * PI (similar to how we get lambert bsdf)
+        return mLe * PI * mGeometrySet->area();
     }
 
     float AreaLight::pdf(const Vector3& p, const Vector3& wi) const {

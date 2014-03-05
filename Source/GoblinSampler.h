@@ -16,6 +16,7 @@ namespace Goblin {
     // use for book keeping where and how many u1d/u2d can be
     // retrieved from Sample
     struct SampleIndex {
+        SampleIndex() {};
         SampleIndex(uint32_t o, uint32_t n):
             offset(o), sampleNum(n) {}
         uint32_t offset;

@@ -19,6 +19,7 @@ namespace Goblin {
         int longestAxis();
         const Vector3& operator[](int i) const;
         Vector3& operator[](int i);
+        void getBoundingSphere(Vector3* center, float* radius) const;
 
     public:
         Vector3 pMin;
@@ -43,6 +44,11 @@ namespace Goblin {
     inline Vector3& BBox::operator[](int i) {
         assert(i == 0 || i == 1);
         return (&pMin)[i];
+    }
+
+    inline void BBox::getBoundingSphere(Vector3* center, float* radius) const {
+        *center = 0.5f * (pMin + pMax);
+        *radius = length(pMax - pMin);
     }
 
 }

@@ -47,6 +47,7 @@ namespace Goblin {
             Vector3* wi, float* pdf, Ray* shadowRay) const = 0;
         virtual float pdf(const Vector3& p, const Vector3& wi) const;
         virtual bool isDelta() const;
+        virtual Color power(const ScenePtr& scene) const = 0;
         virtual uint32_t getSamplesNum() const;
         ParamSet& getParams();
     protected:
@@ -75,6 +76,8 @@ namespace Goblin {
         Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color power(const ScenePtr& scene) const;
+    public:
         Color intensity;
         Vector3 position;
     };
@@ -86,6 +89,8 @@ namespace Goblin {
         Color sampleL(const Vector3& p, float epsilon,
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color power(const ScenePtr& scene) const;
+    public:
         Color radiance;
         Vector3 direction;
     };
@@ -98,12 +103,17 @@ namespace Goblin {
         Vector3 sample(const Vector3& p, const LightSample& lightSample,
             Vector3* normal) const;
         float pdf(const Vector3& p, const Vector3& wi) const;
+        float area() const;
     private:
         GeometryList mGeometries;
         vector<float> mGeometriesArea;
         float mSumArea;
         CDF1D* mAreaDistribution;
     };
+
+    inline float GeometrySet::area() const {
+        return mSumArea;
+    }
 
 
     class AreaLight : public Light {
@@ -122,6 +132,7 @@ namespace Goblin {
          * w: direction L leaving surface
          */
         Color L(const Vector3& ps, const Vector3& ns, const Vector3& w) const;
+        Color power(const ScenePtr& scene) const;
         uint32_t getSamplesNum() const;
     private:
         Color mLe;

@@ -8,8 +8,6 @@
 #include <vector>
 
 namespace Goblin {
-    class Camera;
-    typedef boost::shared_ptr<Camera> CameraPtr;
     class Ray;
 
     class Scene {
@@ -23,13 +21,12 @@ namespace Goblin {
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* itersection);
+        void getBoundingSphere(Vector3* center, float* radius) const;
     private:
         PrimitivePtr mAggregate;
         vector<Light*> mLights;
         CameraPtr mCamera;
     };
-
-    typedef boost::shared_ptr<Scene> ScenePtr;
 }
 
 #endif //GOBLIN_SCENE_H

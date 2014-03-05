@@ -39,6 +39,7 @@ namespace Goblin {
         bool operator==(const Color& rhs) const;
         bool operator!=(const Color& rhs) const;
         bool isNaN() const;
+        float luminance() const;
         const float* ptr() const;
     };
 
@@ -132,6 +133,10 @@ namespace Goblin {
             Goblin::isNaN(g) ||
             Goblin::isNaN(b) ||
             Goblin::isNaN(a);
+    }
+
+    inline float Color::luminance() const {
+        return 0.212671f * r + 0.715160f * g + 0.072169f * b;
     }
 
     inline const float* Color::ptr() const {

@@ -17,6 +17,10 @@ namespace Goblin {
         return mCamera;
     }
 
+    void Scene::getBoundingSphere(Vector3* center, float* radius) const {
+        mAggregate->getAABB().getBoundingSphere(center, radius);
+    }
+
     const vector<Light*>& Scene::getLights() const {
         return mLights;
     }
