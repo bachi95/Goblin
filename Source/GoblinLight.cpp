@@ -49,6 +49,16 @@ namespace Goblin {
         return intensity / squaredDistance;
     }
 
+    Color PointLight::sampleL(const ScenePtr& scene, const LightSample& ls,
+        float u1, float u2, Ray* ray, float* pdf) const {
+        Vector3 dir = uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
+        *ray = Ray(position, dir, 0.0f);
+        if(pdf) {
+            *pdf = uniformSpherePdf();
+        }
+        return intensity;
+    }
+
     Color PointLight::power(const ScenePtr& scene) const {
         return 4.0f * PI * intensity;
     }
@@ -68,6 +78,32 @@ namespace Goblin {
         shadowRay->o = p;
         shadowRay->d = *wi;
         shadowRay->mint = epsilon;
+        return radiance;
+    }
+
+    /*
+     * approximation of sample directional light by sampling among
+     * the world bounding sphere, first sample a point from disk
+     * with world radius that perpendicular to light direction, 
+     * then offset it back world radius distance as ray origin
+     * ray dir is simply light dir
+     */
+    Color DirectionalLight::sampleL(const ScenePtr& scene, 
+        const LightSample& ls,
+        float u1, float u2, Ray* ray, float* pdf) const {
+        Vector3 worldCenter;
+        float worldRadius;
+        scene->getBoundingSphere(&worldCenter, &worldRadius);
+        Vector3 xAxis, yAxis;
+        coordinateAxises(direction, &xAxis, &yAxis);
+        Vector2 diskXY = uniformSampleDisk(ls.uGeometry[0], ls.uGeometry[1]);
+        Vector3 worldDiskSample = worldCenter + 
+            worldRadius * (diskXY.x * xAxis + diskXY.y * yAxis);
+        Vector3 origin = worldDiskSample - direction * worldRadius;
+        *ray = Ray(origin, direction, 0.0f);
+        if(pdf) {
+            *pdf = INV_PI / (worldRadius * worldRadius);
+        }
         return radiance;
     }
 
@@ -114,6 +150,16 @@ namespace Goblin {
         float u1 = lightSample.uGeometry[0];
         float u2 = lightSample.uGeometry[1];
         Vector3 ps = mGeometries[geoIndex]->sample(p, u1, u2, normal);
+        return ps;
+    }
+
+    Vector3 GeometrySet::sample(const LightSample& lightSample,
+        Vector3* normal) const {
+        float uComp = lightSample.uComponent;
+        int geoIndex = mAreaDistribution->sampleDiscrete(uComp);
+        float u1 = lightSample.uGeometry[0];
+        float u2 = lightSample.uGeometry[1];
+        Vector3 ps = mGeometries[geoIndex]->sample(u1, u2, normal);
         return ps;
     }
 
@@ -166,6 +212,28 @@ namespace Goblin {
         shadowRay->maxt = length(ps - p) - epsilon;
 
         return L(ps, ns, -*wi);
+    }
+
+    Color AreaLight::sampleL(const ScenePtr& scene, const LightSample& ls,
+        float u1, float u2, Ray* ray, float* pdf) const {
+        Vector3 n;
+        Vector3 origin = mGeometrySet->sample(ls, &n);
+        Vector3 dir = uniformSampleSphere(u1, u2);
+        // the case sampled dir is in the opposite hemisphere of area light
+        // surface normal
+        if(dot(n, dir) < 0.0f) {
+            dir *= -1.0f;
+        }
+        *ray = Ray(origin, dir, 1e-3);
+        // each point on the area light has uniform hemisphere distribution
+        // output radiance
+        if(pdf) {
+            Vector3 worldScale = mToWorld.getScale();
+            float worldArea = mGeometrySet->area() *
+                worldScale.x * worldScale.y * worldScale.z;
+            *pdf = (1.0f / worldArea) * INV_TWOPI;
+        }
+        return mLe;
     }
 
     Color AreaLight::power(const ScenePtr& scene) const {

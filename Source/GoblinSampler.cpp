@@ -466,5 +466,49 @@ namespace Goblin {
         float y = sinTheta * sin(phi);
         return Vector3(x, y, z);
     }
-    
+
+    /* 
+     * based on Shirley. P, Chiu. K 1997
+     * "A low distortion map between disk and square"
+     * mapping x y coordinate from square to r, theta in disk
+     * r = x, theta = y / x
+     */
+    Vector2 uniformSampleDisk(float u1, float u2) {
+        float r, theta;
+        // transform [0, 1] sample to [-1, 1]
+        float x = 2.0f * u1 - 1.0f;
+        float y = 2.0f * u2 - 1.0f;
+
+        if(x + y > 0) {
+            if(x > y) {
+                // right quarter of square
+                r = x;
+                theta = 0.25f * PI * (y / x);
+            } else {
+                // up quarter of square
+                r = y;
+                // (-pi / 4) * (x / y) + pi / 2
+                theta = 0.25f * PI * (2.0f - x / y);
+            }
+        } else {
+            if(x < y) {
+                // left quarter of square
+                r = -x;
+                // (pi / 4) * (y / x) + pi
+                theta = 0.25f * PI * (4.0f + y / x);
+            } else {
+                // down quarter of square
+                r = -y;
+                // x and y may both be 0
+                if(y != 0.0f) {
+                    // (-pi / 4) * (x / y) + (3pi / 2)
+                    theta = 0.25f * PI * (6.0f - x / y);
+                } else {
+                    theta = 0.0f;
+                }
+            }
+        }
+
+        return Vector2(r * cos(theta), r * sin(theta));
+    }
 }

@@ -45,6 +45,9 @@ namespace Goblin {
         virtual Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const = 0;
+        // sample a light ray leaving the light surface
+        virtual Color sampleL(const ScenePtr& scene, const LightSample& ls,
+            float u1, float u2, Ray* ray, float* pdf = NULL) const = 0;
         virtual float pdf(const Vector3& p, const Vector3& wi) const;
         virtual bool isDelta() const;
         virtual Color power(const ScenePtr& scene) const = 0;
@@ -76,6 +79,8 @@ namespace Goblin {
         Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color sampleL(const ScenePtr& scene, const LightSample& ls,
+            float u1, float u2, Ray* ray, float* pdf = NULL) const;
         Color power(const ScenePtr& scene) const;
     public:
         Color intensity;
@@ -89,6 +94,8 @@ namespace Goblin {
         Color sampleL(const Vector3& p, float epsilon,
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color sampleL(const ScenePtr& scene, const LightSample& ls,
+            float u1, float u2, Ray* ray, float* pdf = NULL) const;
         Color power(const ScenePtr& scene) const;
     public:
         Color radiance;
@@ -101,6 +108,8 @@ namespace Goblin {
         GeometrySet(const GeometryPtr& geometry);
         ~GeometrySet();
         Vector3 sample(const Vector3& p, const LightSample& lightSample,
+            Vector3* normal) const;
+        Vector3 sample(const LightSample& lightSample, 
             Vector3* normal) const;
         float pdf(const Vector3& p, const Vector3& wi) const;
         float area() const;
@@ -124,6 +133,8 @@ namespace Goblin {
         Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color sampleL(const ScenePtr& scene, const LightSample& ls,
+            float u1, float u2, Ray* ray, float* pdf = NULL) const;
         float pdf(const Vector3& p, const Vector3& wi) const;
         bool isDelta() const;
         /*

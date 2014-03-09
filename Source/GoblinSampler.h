@@ -4,6 +4,7 @@
 #include "GoblinUtils.h"
 
 namespace Goblin {
+    class Vector2;
     class Vector3;
 
     struct SampleQuota {
@@ -122,6 +123,8 @@ namespace Goblin {
     Vector3 uniformSampleHemisphere(float u1, float u2);
 
     Vector3 cosineSampleHemisphere(float u1, float u2);
+
+    Vector2 uniformSampleDisk(float u1, float u2);
 
     inline float uniformConePdf(float cosThetaMax) {
         return 1.0f / (TWO_PI * (1.0f - cosThetaMax));

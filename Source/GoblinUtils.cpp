@@ -1,8 +1,12 @@
 #include "GoblinUtils.h"
+#include "GoblinVector.h"
+
 #include <ctime>
 #include <limits>
-#include <boost/random.hpp>
+
 #include <boost/generator_iterator.hpp>
+#include <boost/random.hpp>
+
 
 
 namespace Goblin {
@@ -26,6 +30,19 @@ namespace Goblin {
 
     uint32_t randomUInt() {
         return randomUIntGen();
+    }
+
+    void coordinateAxises(const Vector3& a1, Vector3* a2, Vector3* a3) {
+        // in case you throw in case like a1 = Vector3(0, 1, 0)
+        if(fabsf(a1.x) > fabsf(a1.y)) {
+            float invLen = 1.0f / sqrtf(a1.x * a1.x + a1.z * a1.z);
+            // dot(a1, a2) = 0 <-> penpenticular to each other
+            *a2 = Vector3(-a1.z * invLen, 0.0f, a1.x * invLen);
+        } else {
+            float invLen = 1.0f / sqrtf(a1.y * a1.y + a1.z * a1.z);
+            *a2 = Vector3(0.0f, -a1.z * invLen, a1.y * invLen);
+        }
+        *a3 = cross(a1, *a2);
     }
 
     bool quadratic(float A, float B, float C, float* t1, float* t2) {

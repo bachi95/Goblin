@@ -1,12 +1,13 @@
 #ifndef GOBLIN_UTILS_H
 #define GOBLIN_UTILS_H
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <iostream>
-#include <algorithm>
 #include <string>
 #include <vector>
+
 #include <boost/shared_ptr.hpp>
 
 using namespace std;
@@ -35,6 +36,7 @@ namespace Goblin {
     using std::max;
     using std::swap;
 
+    class Vector3;
     class Camera;
     class Scene;
     typedef boost::shared_ptr<Camera> CameraPtr;
@@ -91,6 +93,10 @@ namespace Goblin {
     inline float degrees(float radians) {
 	    return (radians / PI) * 180.0f;
     }
+
+    // utils that let you form a local coordinate with feed in random axis,
+    // ex: form a local coordinate based on surface normal vector
+    void coordinateAxises(const Vector3& a1, Vector3* a2, Vector3* a3);
 
     // utils for quadratic equation, solution stored in t1 and t2
     // if it return true
