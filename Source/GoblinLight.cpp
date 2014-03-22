@@ -224,7 +224,7 @@ namespace Goblin {
         if(dot(n, dir) < 0.0f) {
             dir *= -1.0f;
         }
-        *ray = Ray(origin, dir, 1e-3);
+        *ray = Ray(origin, dir, 1e-3f);
         // each point on the area light has uniform hemisphere distribution
         // output radiance
         if(pdf) {

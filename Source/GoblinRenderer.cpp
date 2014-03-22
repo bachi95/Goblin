@@ -101,11 +101,14 @@ namespace Goblin {
         BSDFType type) const {
 
         const vector<Light*>& lights = scene->getLights();
+        if(lights.size() == 0) {
+            return Color::Black;
+        }
         float pdf;
         int lightIndex = 
             mPowerDistribution->sampleDiscrete(pickLightSample, &pdf);
         const Light* light = lights[lightIndex];
-        Color Ld = estimateLd(scene, ray, epsilon, intersection,
+        Color Ld = estimateLd(scene, -ray.d, epsilon, intersection,
             light, lightSample, bsdfSample, type) / pdf;
         return Ld;
     }
@@ -129,7 +132,7 @@ namespace Goblin {
                     ls = LightSample(sample, lightSampleIndexes[i], n);
                     bs = BSDFSample(sample, bsdfSampleIndexes[i], n);
                 }
-                Ld +=  estimateLd(scene, ray, epsilon, intersection,
+                Ld +=  estimateLd(scene, -ray.d, epsilon, intersection,
                     light, ls, bs, type);
             }
             Ld /= static_cast<float>(samplesNum);
@@ -138,7 +141,7 @@ namespace Goblin {
         return totalLd;
     }
 
-    Color Renderer::estimateLd(const ScenePtr& scene, const Ray& ray,
+    Color Renderer::estimateLd(const ScenePtr& scene, const Vector3& wo,
         float epsilon, const Intersection& intersection, const Light* light, 
         const LightSample& ls, const BSDFSample& bs, BSDFType type) const {
 
@@ -146,7 +149,6 @@ namespace Goblin {
         const MaterialPtr& material = 
             intersection.primitive->getMaterial();
         const Fragment& fragment = intersection.fragment;
-        Vector3 wo = -ray.d;
         Vector3 wi;
         Vector3 p = fragment.getPosition();
         Vector3 n = fragment.getNormal();

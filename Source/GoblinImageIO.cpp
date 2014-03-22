@@ -7,8 +7,158 @@
 #include <cassert>
 #include <png.h>
 
+
+#ifdef GOBLIN_ENABLE_EXR
+#include <ImfInputFile.h>
+#include <ImfRgbaFile.h>
+#include <ImfOutputFile.h>
+#include <ImfChannelList.h>
+#include <ImfFrameBuffer.h>
+#include <half.h>
+using namespace Imf;
+using namespace Imath;
+#endif //GOBLIN_ENABLE_EXR
+
 namespace Goblin {
-    static Color* loadImagePNG(const std::string& filename, int *width, int *height) {
+
+#ifdef GOBLIN_ENABLE_EXR
+    static Color* loadImageEXR(const string& filename, 
+        int *width, int *height) {
+        half* rgba = NULL;
+        Color* colorBuffer = NULL;
+        try {
+            InputFile file(filename.c_str());
+            Box2i dw = file.header().dataWindow();
+            *width = dw.max.x - dw.min.x + 1;
+            *height = dw.max.y - dw.min.y + 1;
+
+            rgba = new half[4 * (*width) * (*height)];
+            FrameBuffer frameBuffer;
+            frameBuffer.insert("R", Slice(
+                HALF,                               // type
+                (char*)(rgba),                      // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * (*width),        // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+             frameBuffer.insert("G", Slice(
+                HALF,                               // type
+                (char*)(rgba) + 1 * sizeof(half),   // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * (*width),        // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+             frameBuffer.insert("B", Slice(
+                HALF,                               // type
+                (char*)(rgba) + 2 * sizeof(half),   // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * (*width),        // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+             frameBuffer.insert("A", Slice(
+                HALF,                               // type
+                (char*)(rgba) + 3 * sizeof(half),   // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * (*width),        // ystride
+                1, 1,                               // x/y sampling
+                1.0));                              // fill value
+
+            file.setFrameBuffer(frameBuffer); 
+            file.readPixels(dw.min.y, dw.max.y);
+
+            colorBuffer = new Color[(*width) * (*height)];
+            for(size_t i = 0; i < (*width) * (*height); ++i) {
+                colorBuffer[i].r = rgba[4 * i];
+                colorBuffer[i].g = rgba[4 * i + 1];
+                colorBuffer[i].b = rgba[4 * i + 2];
+                colorBuffer[i].a = rgba[4 * i + 3];
+            }
+            delete [] rgba;
+            return colorBuffer;
+
+        } catch (const std::exception &e) {
+            if(rgba) {
+                delete [] rgba;
+                rgba = NULL;
+            }
+            if(colorBuffer) {
+                delete [] colorBuffer;
+                colorBuffer = NULL;
+            }
+            std::cerr << "unable to read iamge " << filename << 
+                ":" << e.what();
+            return NULL;
+        }
+    }
+
+    static bool writeImageEXR(const string& filename, const Color* colorBuffer,
+        int width, int height) {
+        Rgba* hrgba = NULL;
+        try {
+            hrgba = new Rgba[width * height];
+            for(size_t i = 0; i < width * height; ++i) {
+                hrgba[i] = Rgba(
+                    colorBuffer[i].r,
+                    colorBuffer[i].g,
+                    colorBuffer[i].b,
+                    colorBuffer[i].a);
+            }
+            Header header(width, height);
+            header.channels().insert("R", Channel(HALF));
+            header.channels().insert("G", Channel(HALF));
+            header.channels().insert("B", Channel(HALF));
+            header.channels().insert("A", Channel(HALF));
+
+            OutputFile file(filename.c_str(), header);
+
+            FrameBuffer frameBuffer;
+            frameBuffer.insert("R", Slice(
+                HALF,                               // type
+                (char*)(hrgba),                     // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * width,           // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+            frameBuffer.insert("G", Slice(
+                HALF,                               // type
+                (char*)(hrgba) + 1 * sizeof(half),  // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * width,           // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+            frameBuffer.insert("B", Slice(
+                HALF,                               // type
+                (char*)(hrgba) + 2 * sizeof(half),  // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * width,           // ystride
+                1, 1,                               // x/y sampling
+                0.0));                              // fill value
+            frameBuffer.insert("A", Slice(
+                HALF,                               // type
+                (char*)(hrgba) + 3 * sizeof(half),  // base
+                4 * sizeof(half),                   // xstride 
+                4 * sizeof(half) * width,           // ystride
+                1, 1,                               // x/y sampling
+                1.0));                              // fill value
+
+            file.setFrameBuffer(frameBuffer);
+            file.writePixels(height);
+            delete [] hrgba;
+            return true;
+        } catch (const std::exception &e) {
+            if(hrgba) {
+                delete [] hrgba;
+                hrgba = NULL;
+            }
+            std::cerr << "unable to read iamge " << filename << 
+                ":" << e.what();
+            return false;
+        }
+    }
+
+#endif //GOBLIN_ENABLE_EXR
+
+    static Color* loadImagePNG(const string& filename, int *width, int *height) {
         FILE* fp = fopen(filename.c_str(), "rb");
         if(!fp) {
             std::cerr << "can't open image file " << filename << std::endl;
@@ -119,7 +269,7 @@ namespace Goblin {
     }
 
    
-    static bool writeImagePNG(const std::string& filename, const Color* colorBuffer,
+    static bool writeImagePNG(const string& filename, const Color* colorBuffer,
             int width, int height, float gama = 2.2f) {
         FILE *fp = fopen(filename.c_str(), "wb");
         if(!fp) {
@@ -182,10 +332,6 @@ namespace Goblin {
         }
         png_write_image(pngPtr, rowPointers);
         png_write_end(pngPtr, infoPtr);
-
-        //TODO replace this constant new/delete with better 
-        //memory management pool
-        
         // clean up
         delete [] rowPointers;
         delete [] buffer;
@@ -195,17 +341,21 @@ namespace Goblin {
     }
 
 
-    Color* loadImage(const std::string& filename, int *width, int *height) {
+    Color* loadImage(const string& filename, int *width, int *height) {
         size_t extOffset = filename.rfind(".");
 
-        if(extOffset == std::string::npos) {
+        if(extOffset == string::npos) {
             std::cerr << "error loading image " << filename <<
                 " :unrecognized file format" << std::endl;
             return NULL;
         }
-        std::string ext = filename.substr(extOffset);
+        string ext = filename.substr(extOffset);
         if(ext == ".png" || ext == ".PNG") {
             return loadImagePNG(filename, width, height);
+#ifdef GOBLIN_ENABLE_EXR
+        } else if(ext == ".exr" || ext == ".EXR") {
+            return loadImageEXR(filename, width, height);
+#endif //GOBLIN_ENABLE_EXR
         } else {
             // TODO .exr .tiff .tga
             std::cerr << "error loading image " << filename <<
@@ -215,16 +365,20 @@ namespace Goblin {
     }
 
  
-    bool writeImage(const std::string& filename, const Color* colorBuffer,
+    bool writeImage(const string& filename, const Color* colorBuffer,
             int width, int height) {
 
         size_t extOffset = filename.rfind(".");
-        if(extOffset == std::string::npos) {
+        if(extOffset == string::npos) {
             return writeImagePNG(filename + ".png", colorBuffer, width, height);
         }
-        std::string ext = filename.substr(extOffset);
+        string ext = filename.substr(extOffset);
         if(ext == ".png" || ext == ".PNG") {
             return writeImagePNG(filename, colorBuffer, width, height);
+#ifdef GOBLIN_ENABLE_EXR
+        } else if(ext == ".exr" || ext == ".EXR") {
+            return writeImageEXR(filename, colorBuffer, width, height);
+#endif //GOBLIN_ENABLE_EXR
         } else {
             // TODO .exr .tiff .tga
             std::cerr << "format " << ext << "is not supported yet" << 

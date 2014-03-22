@@ -45,7 +45,7 @@ namespace Goblin {
             BSDFSampleIndex* bsdfSampleIndexes = NULL,
             BSDFType type = BSDFAll) const;
 
-        Color estimateLd(const ScenePtr& scene, const Ray& ray,
+        Color estimateLd(const ScenePtr& scene, const Vector3& wo,
             float epsilon, const Intersection& intersection, 
             const Light* light, const LightSample& ls,
             const BSDFSample& bs, BSDFType type = BSDFAll) const;
