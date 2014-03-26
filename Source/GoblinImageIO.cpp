@@ -67,7 +67,7 @@ namespace Goblin {
             file.readPixels(dw.min.y, dw.max.y);
 
             colorBuffer = new Color[(*width) * (*height)];
-            for(size_t i = 0; i < (*width) * (*height); ++i) {
+            for(int i = 0; i < (*width) * (*height); ++i) {
                 colorBuffer[i].r = rgba[4 * i];
                 colorBuffer[i].g = rgba[4 * i + 1];
                 colorBuffer[i].b = rgba[4 * i + 2];
@@ -96,7 +96,7 @@ namespace Goblin {
         Rgba* hrgba = NULL;
         try {
             hrgba = new Rgba[width * height];
-            for(size_t i = 0; i < width * height; ++i) {
+            for(int i = 0; i < width * height; ++i) {
                 hrgba[i] = Rgba(
                     colorBuffer[i].r,
                     colorBuffer[i].g,
@@ -303,10 +303,6 @@ namespace Goblin {
             PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
         png_write_info(pngPtr, infoPtr);
 
-        // TODO 
-        // add in tone mapping to make this float->byte
-        // conversion......less wasteful
-
         //write out image data
         png_bytep *rowPointers = new png_bytep[height];
         unsigned char* buffer = new unsigned char[width * height * 4];
@@ -365,8 +361,12 @@ namespace Goblin {
     }
 
  
-    bool writeImage(const string& filename, const Color* colorBuffer,
-            int width, int height) {
+    bool writeImage(const string& filename, Color* colorBuffer,
+            int width, int height, bool bloomImage) {
+
+        if(bloomImage) {
+            bloom(colorBuffer, width, height);
+        }
 
         size_t extOffset = filename.rfind(".");
         if(extOffset == string::npos) {
@@ -374,6 +374,7 @@ namespace Goblin {
         }
         string ext = filename.substr(extOffset);
         if(ext == ".png" || ext == ".PNG") {
+            toneMapping(colorBuffer, width, height);
             return writeImagePNG(filename, colorBuffer, width, height);
 #ifdef GOBLIN_ENABLE_EXR
         } else if(ext == ".exr" || ext == ".EXR") {
@@ -387,5 +388,76 @@ namespace Goblin {
         }
     }
 
+    void bloom(Color* colorBuffer, int width, int height,
+        float bloomRadius, float bloomWeight) {
+        if(bloomRadius <= 0.0f || bloomWeight <= 0.0f) {
+            return;
+        }
+        // build up filter lookup table
+        int filterWidth = ceilInt(bloomRadius * max(width, height)) / 2;
+        float* filter = new float[filterWidth * filterWidth];
+        for(int y = 0; y < filterWidth; ++y) {
+            for(int x = 0; x < filterWidth; ++x) {
+                float d = sqrtf((float)(x * x + y * y)) / (float)filterWidth;
+                filter[y * filterWidth + x] = powf(max(0.0f, 1.0f - d), 4.0f);
+            }
+        }
+
+        Color* bloomResult = new Color[width * height];
+        for(int i = 0; i < width * height; ++i) {
+            *bloomResult = Color::Black;
+        }
+        // apply filter result to result layer
+        for(int y = 0; y < height; ++y) {
+            for(int x = 0; x < width; ++x) {
+                int x0 = max(0, x - filterWidth + 1);
+                int x1 = min(x + filterWidth - 1, width - 1);
+                int y0 = max(0, y - filterWidth + 1);
+                int y1 = min(y + filterWidth - 1, height - 1);
+                int index = y * width + x;
+                float weightSum = 0.0f;
+                for(int py = y0; py <= y1; ++py) {
+                    for(int px = x0; px <= x1; ++px) {
+                        int fx = abs(px - x);
+                        int fy = abs(py - y);
+                        // only neighbor, exclude pixel(x, y) itself
+                        if(fx == 0 && fy == 0) {
+                            continue;
+                        }
+                        float weight = filter[fy * filterWidth + fx];
+                        bloomResult[index] += 
+                            weight * colorBuffer[py * width + px];
+                        weightSum += weight;
+                    }
+                }
+                bloomResult[index] /= weightSum;
+            }
+        }
+        // blend input layer with bloomResult
+        for(int i = 0; i < width * height; ++i) {
+            colorBuffer[i] = (1.0f - bloomWeight) * colorBuffer[i] +
+                bloomWeight * bloomResult[i];
+        }
+        delete [] filter;
+        delete [] bloomResult;
+    }
+
+    // based on Reinhard. E Siggraph 02
+    // Photographic Tone Reproduction for Digital Images
+    void toneMapping(Color* colorBuffer, int width, int height) {
+        // world adaptation luminance
+        float Ywa = 0.0f;
+        for(int i = 0; i < width * height; ++i) {
+            float y = colorBuffer[i].luminance();
+            Ywa += logf(1e4f + y);
+        }
+        Ywa = expf(Ywa / (width * height));
+        float invy2 = 1.0f / (Ywa * Ywa);
+        for(int i = 0; i < width * height; ++i) {
+            float y = colorBuffer[i].luminance();
+            float s = (1.0f + y * invy2) / (1.0f + y);
+            colorBuffer[i] *= s;
+        }
+    }
 }
 
