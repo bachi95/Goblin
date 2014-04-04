@@ -52,9 +52,9 @@ namespace Goblin {
     private:
         mutable Matrix4 mCachedMatrix;
         mutable Matrix4 mCachedInverse;
-
-        Quaternion mOrientation;
         Vector3 mPosition;
+        float mPad;
+        Quaternion mOrientation;
         Vector3 mScale;
         mutable bool mIsUpdated;
     };

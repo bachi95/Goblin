@@ -31,7 +31,8 @@ namespace Goblin {
         void allocateQuota(const SampleQuota& quota);
         // store film sample in image space (not NDC space)
         float imageX, imageY;
-
+        // used to sample lens for DOF
+        float lensU1, lensU2;
         vector<uint32_t> n1D;
         vector<uint32_t> n2D;
         float** u1D;
@@ -39,7 +40,8 @@ namespace Goblin {
     };
 
     inline Sample::Sample():
-        imageX(0), imageY(0), u1D(NULL), u2D(NULL) {
+        imageX(0.0f), imageY(0.0f), lensU1(0.0f), lensU2(0.0f), 
+        u1D(NULL), u2D(NULL) {
         n1D.clear();
         n2D.clear();
     }
@@ -63,7 +65,7 @@ namespace Goblin {
             int samplePerPixel);
         ~Sampler();
         int maxSamplesPerRequest() const;
-        int maxTotalSamples() const;
+        uint64_t maxTotalSamples() const;
         int requestSamples(Sample* samples);
 
         SampleIndex requestOneDQuota(uint32_t samplesNum);
@@ -76,8 +78,8 @@ namespace Goblin {
 
         void debugOutput(Sample* samples);
     private:
-        int mXStart, mYStart;
-        int mXEnd, mYEnd;
+        int mXStart, mXEnd;
+        int mYStart, mYEnd;
         int mCurrentX, mCurrentY;
         int mXPerPixel, mYPerPixel;
         int mSamplesPerPixel;

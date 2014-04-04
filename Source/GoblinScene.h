@@ -24,8 +24,8 @@ namespace Goblin {
         void getBoundingSphere(Vector3* center, float* radius) const;
     private:
         PrimitivePtr mAggregate;
-        vector<Light*> mLights;
         CameraPtr mCamera;
+        vector<Light*> mLights;
     };
 }
 

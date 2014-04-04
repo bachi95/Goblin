@@ -13,7 +13,9 @@ namespace Goblin {
     public:
         Camera();
         Camera(const Vector3& position, const Quaternion& orientation,
-            float fov, float zn, float zf, Film* film);
+            float fov, float zn, float zf, 
+            float lensRadius, float focalDistance, 
+            Film* film);
         ~Camera();
 
         void setPosition(const Vector3& position);
@@ -49,10 +51,12 @@ namespace Goblin {
     private:
         Vector3 mPosition;
         Quaternion mOrientation;
+        float mFOV;
         float mZNear;
         float mZFar;
-        float mFOV;
         float mAspectRatio;
+        float mLensRadius;
+        float mFocalDistance;
         Film* mFilm;
 
         Matrix4 mWorld;

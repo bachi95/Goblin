@@ -62,10 +62,10 @@ namespace Goblin {
         mSamples = mSampler->allocateSampleBuffer(batchAmount);
         // temp progress reporter so that waiting can be not that boring...
         // TODO make this something more elegant
-        unsigned long int accumulatedBuffer = 0;
-        unsigned long int accumulatedSamples = 0;
-        unsigned long int maxTotalSamples = mSampler->maxTotalSamples();
-        unsigned long int reportStep = maxTotalSamples / 100;
+        uint64_t accumulatedBuffer = 0;
+        uint64_t accumulatedSamples = 0;
+        uint64_t maxTotalSamples = mSampler->maxTotalSamples();
+        uint64_t reportStep = maxTotalSamples / 100;
         string backspace = "\b\b\b\b\b\b\b\b\b\b\b\b\b";
 
         int sampleNum = 0;
@@ -78,7 +78,7 @@ namespace Goblin {
             }
 
             // print out progress
-            accumulatedBuffer += sampleNum;
+            accumulatedBuffer += (uint64_t)sampleNum;
             if(accumulatedBuffer > reportStep) {
                 accumulatedSamples += accumulatedBuffer;
                 accumulatedBuffer = 0;

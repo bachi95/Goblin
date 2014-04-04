@@ -40,8 +40,8 @@ namespace Goblin {
     };
 
     ObjMesh::ObjMesh(const std::string& filename) :
-        mFilename(filename), mHasNormal(false), mHasTexCoord(false),
-        mArea(0.0f) {}
+        mFilename(filename), mArea(0.0f), 
+        mHasNormal(false), mHasTexCoord(false) {}
 
     ObjMesh::~ObjMesh() {
     }
@@ -289,8 +289,8 @@ namespace Goblin {
             size_t i1 = mTriangles[i].v[1];
             size_t i2 = mTriangles[i].v[2];
             Vector3 v0 = mVertices[i0].position;
-            Vector3 v1 = mVertices[i0].position;
-            Vector3 v2 = mVertices[i0].position;
+            Vector3 v1 = mVertices[i1].position;
+            Vector3 v2 = mVertices[i2].position;
             mArea += 0.5f * length(cross(v1 - v0, v2 - v0));
         }
     }

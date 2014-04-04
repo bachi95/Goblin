@@ -26,9 +26,9 @@ namespace Goblin {
         float deltaX = mFilter->getXWidth() / FILTER_TABLE_WIDTH;
         float deltaY = mFilter->getYWidth() / FILTER_TABLE_WIDTH;
         size_t index = 0;
-        for(size_t y = 0; y < FILTER_TABLE_WIDTH; ++y) {
+        for(int y = 0; y < FILTER_TABLE_WIDTH; ++y) {
             float fy = y * deltaY;
-            for(size_t x = 0; x < FILTER_TABLE_WIDTH; ++x) {
+            for(int x = 0; x < FILTER_TABLE_WIDTH; ++x) {
                 float fx = x * deltaX;
                 mFilterTable[index++] = mFilter->evaluate(fx, fy);
             }

@@ -74,8 +74,10 @@ namespace Goblin {
         return mSamplesPerPixel;
     }
 
-    int Sampler::maxTotalSamples() const {
-        return mSamplesPerPixel * (mXEnd - mXStart) * (mYEnd - mYStart);
+    uint64_t Sampler::maxTotalSamples() const {
+        return (uint64_t)mSamplesPerPixel * 
+            (uint64_t)(mXEnd - mXStart) * 
+            (uint64_t)(mYEnd - mYStart);
     }
 
     /* 
@@ -98,16 +100,19 @@ namespace Goblin {
             return 0;
         }
         if(mSampleBuffer == NULL) {
-            // 2(imageX, imageY) + quota size(extra requested 1/2D samples)
-            size_t bufferSize = mSamplesPerPixel * (2 + mSampleQuota.size());
+            // 4(imageX, imageY, lensU1, lensU2) + 
+            // quota size(extra requested 1/2D samples)
+            size_t bufferSize = mSamplesPerPixel * (4 + mSampleQuota.size());
             mSampleBuffer = new float[bufferSize];
         }
 
         float* imageBuffer = mSampleBuffer;
-        float* quotaBuffer = mSampleBuffer + 2 * mSamplesPerPixel;
+        float* lensBuffer = mSampleBuffer + 2 * mSamplesPerPixel;
+        float* quotaBuffer = mSampleBuffer + 4 * mSamplesPerPixel;
         // 1 pixel is 1 strata, gettting 2d stratified as 
         // mSamplesPerPixel sub strata
         stratifiedUniform2D(imageBuffer, 1);
+        stratifiedUniform2D(lensBuffer, 1);
         float* currentOffset = quotaBuffer;
         for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
             stratifiedUniform1D(currentOffset, mSampleQuota.n1D[i]);
@@ -118,6 +123,8 @@ namespace Goblin {
             currentOffset += 2 * mSampleQuota.n2D[i] * mSamplesPerPixel;
         }
         // shuffle the above stratified result
+        shuffle(lensBuffer, mSamplesPerPixel, 2);
+
         float* shuffleBuffer = quotaBuffer;
         for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
             for(uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
@@ -137,6 +144,10 @@ namespace Goblin {
             samples[i].imageX = mCurrentX + imageBuffer[2 * i];
             samples[i].imageY = mCurrentY + imageBuffer[2 * i + 1];
         }
+        for(int i = 0; i < mSamplesPerPixel; ++i) {
+            samples[i].lensU1 = lensBuffer[2 * i];
+            samples[i].lensU2 = lensBuffer[2 * i + 1];
+        } 
         float* fillinBuffer = quotaBuffer;
         for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
             for(uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
@@ -187,6 +198,14 @@ namespace Goblin {
                 float y = currentOffset[2 * i + 1];
                 std::cout << "(" << x << ", " << y << ") ";
             }
+            std::cout << "\nlens samples\n";
+            currentOffset += 2 * mSamplesPerPixel;
+            for(int i = 0; i < mSamplesPerPixel; ++i) {
+                float x = currentOffset[2 * i];
+                float y = currentOffset[2 * i + 1];
+                std::cout << "(" << x << ", " << y << ") ";
+            } 
+
             std::cout << "\nintegrator samples\n";
             currentOffset += 2 * mSamplesPerPixel;
 
@@ -202,7 +221,6 @@ namespace Goblin {
             }
 
             for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
-                int root = (int)sqrtf((float)mSampleQuota.n2D[i]);
                 for(size_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
                     for(int k = 0; k < mSamplesPerPixel; ++k) {
                         int index = 2 * k;

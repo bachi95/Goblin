@@ -107,7 +107,7 @@ namespace Goblin {
                 node.initLeaf(bbox, firstPrimIndex, primitivesNum);
                 return nodeOffset;
             }
-            int mid = (start + end) / 2; 
+            uint32_t mid = (start + end) / 2; 
             // split interior node by specified split method
             switch (mSplitMethod) {
             case Middle: {

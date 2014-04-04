@@ -48,8 +48,8 @@ namespace Goblin {
         float Mitchell(float x) const;
         float evaluate(float x, float y) const;
     private:
-        const float mB, mC;
         const float mInvWidthX, mInvWidthY;
+        const float mB, mC;
     };
 
 }

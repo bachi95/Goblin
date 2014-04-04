@@ -7,9 +7,12 @@
 namespace Goblin{
 
     Camera::Camera(const Vector3& position, const Quaternion& orientation,
-        float fov, float zn, float zf, Film* film):
+        float fov, float zn, float zf, 
+        float lensRadius, float focalDistance, Film* film):
         mPosition(position), mOrientation(orientation),
-        mFOV(fov), mZNear(zn), mZFar(zf), mFilm(film) {
+        mFOV(fov), mZNear(zn), mZFar(zf), 
+        mLensRadius(lensRadius), mFocalDistance(focalDistance), 
+        mFilm(film) {
         float xRes = static_cast<float>(film->getXResolution());
         float yRes = static_cast<float>(film->getYResolution());
         mAspectRatio = xRes / yRes; 
@@ -46,15 +49,24 @@ namespace Goblin{
         float zView = 1.0f;
         float xView = xNDC / mProj[0][0];
         float yView = yNDC / mProj[1][1];
-        ray->o = Vector3::Zero;
-        ray->d = normalize(Vector3(xView, yView, zView));
+        Vector3 viewDir = normalize(Vector3(xView, yView, zView));
+        if(mLensRadius == 0.0f) {
+            // view space to world space
+            ray->o = mPosition;
+            ray->d = mOrientation * viewDir;
+        } else {
+            // perturb the ray direction for DOF effect
+            float ft = mFocalDistance / viewDir.z;
+            Vector3 pFocus = viewDir * ft;
+            Vector2 lensSample = mLensRadius *
+                uniformSampleDisk(sample.lensU1, sample.lensU2);
+            Vector3 viewOrigin(lensSample.x, lensSample.y, 0.0f);
+            ray->o = mOrientation * viewOrigin + mPosition;
+            ray->d = mOrientation * normalize(pFocus - viewOrigin);
+        }
         ray->mint = 0.0f;
         ray->maxt = INFINITY;
         ray->depth = 0;
-
-        // view space to world space
-        ray->o = mPosition;
-        ray->d = mOrientation * ray->d; 
         return 1.0f;
     }
 

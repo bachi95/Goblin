@@ -26,7 +26,7 @@ namespace Goblin {
         int mXStart, mYStart, mXCount, mYCount;
         float mFilterTable[FILTER_TABLE_WIDTH * FILTER_TABLE_WIDTH];
         float mCrop[4];
-        std::string mFilename;
+
         class Pixel {
         public:
             Pixel(): color(Color::Black), weight(0.0f) {}
@@ -34,8 +34,10 @@ namespace Goblin {
             float weight;
             float pad[3];
         };
+
         Filter* mFilter;
         Pixel* mPixels;
+        std::string mFilename;
     };
 
     inline int Film::getXResolution() const { return mXRes; }

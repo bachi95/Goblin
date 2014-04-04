@@ -405,7 +405,7 @@ namespace Goblin {
 
         Color* bloomResult = new Color[width * height];
         for(int i = 0; i < width * height; ++i) {
-            *bloomResult = Color::Black;
+            bloomResult[i] = Color::Black;
         }
         // apply filter result to result layer
         for(int y = 0; y < height; ++y) {

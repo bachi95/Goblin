@@ -30,9 +30,12 @@ namespace Goblin {
     static const char* FOV = "fov";
     static const char* NEAR_PLANE = "near_plane";
     static const char* FAR_PLANE = "far_plane";
+    static const char* LENS_RADIUS = "lens_radius";
+    static const char* FOCAL_DISTANCE = "focal_distance";
     static const char* FILM = "film";
     static const char* RESOLUTION = "resolution";
     static const char* CROP = "crop";
+    // filter related keywords
     static const char* FILTER = "filter";
     static const char* BOX = "box";
     static const char* TRIANGLE = "triangle";
@@ -204,7 +207,8 @@ namespace Goblin {
         float zn = 0.1f;
         float zf = 1000.0f;
         float fov = 60.0f;
-
+        float lensRadius = 0.0f;
+        float focalDistance = 1e+10f;
         PropertyTree cameraTree;
         if(pt.getChild(CAMERA, &cameraTree)) {
             position = parseVector3(cameraTree, POSITION);
@@ -212,6 +216,9 @@ namespace Goblin {
             fov = cameraTree.parseFloat(FOV, fov);
             zn = cameraTree.parseFloat(NEAR_PLANE, zn);
             zf = cameraTree.parseFloat(FAR_PLANE, zf);
+            lensRadius = cameraTree.parseFloat(LENS_RADIUS, lensRadius);
+            focalDistance = cameraTree.parseFloat(FOCAL_DISTANCE, 
+                focalDistance);
         }
 
         std::cout << "\ncamera" << std::endl;
@@ -220,8 +227,10 @@ namespace Goblin {
         std::cout << "-fov: " << fov << std::endl;
         std::cout << "-near plane: " << zn << std::endl;
         std::cout << "-far plane: " << zf << std::endl;
+        std::cout << "-lens radius: " << lensRadius << std::endl;
+        std::cout << "-focal distance: " << focalDistance << std::endl;
         return CameraPtr(new Camera(position, orientation, radians(fov), 
-            zn, zf, film));
+            zn, zf, lensRadius, focalDistance, film));
     }
 
     static void parseGeometry(const PropertyTree& pt, GeometryMap* geometryMap) {
@@ -234,9 +243,12 @@ namespace Goblin {
         if(geometryType == MESH) {
             string file = pt.parseString(FILENAME);
             geometry = GeometryPtr(new ObjMesh(file));
-        } else {
+        } else if(geometryType == SPHERE){
             float radius = pt.parseFloat(RADIUS);
             geometry = GeometryPtr(new Sphere(radius));
+        } else {
+            std::cerr << "unknowened geometry type " << geometryType<< "\n";
+            return;
         }
         geometry->init();
         std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;

@@ -117,7 +117,7 @@ namespace Goblin {
     }
 
     GeometrySet::GeometrySet(const GeometryPtr& geometry):
-        mAreaDistribution(NULL), mSumArea(0.0f) {
+        mSumArea(0.0f), mAreaDistribution(NULL) {
         if(geometry->intersectable()) {
             mGeometries.push_back(geometry);
         } else {
