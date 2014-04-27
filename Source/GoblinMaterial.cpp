@@ -124,7 +124,7 @@ namespace Goblin {
         Color f(Color::Black);
         type = getType(wo, wi, fragment, type);
         if(matchType(type, BSDFType(BSDFDiffuse | BSDFReflection))) {
-            f += mDiffuseFactor * INV_PI;
+            f += mDiffuseFactor->lookup(fragment) * INV_PI;
         }
         return f;
     }
@@ -150,7 +150,7 @@ namespace Goblin {
         if(sampledType) {
             *sampledType = materialType;
         }
-        return mDiffuseFactor * INV_PI;
+        return mDiffuseFactor->lookup(fragment) * INV_PI;
     }
 
     float LambertMaterial::pdf(const Fragment& fragment,
@@ -177,13 +177,13 @@ namespace Goblin {
         Color f(Color::Black);
         if(nMatch == 1) {
             if(matchType(type, BSDFReflection)) {
-                f = mReflectFactor * 
+                f = mReflectFactor->lookup(fragment) * 
                     specularReflect(fragment, wo, wi, mEtai, mEtat);
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFReflection);
                 }
             } else {
-                f = mRefractFactor *
+                f = mRefractFactor->lookup(fragment) *
                     specularRefract(fragment, wo, wi, mEtai, mEtat);
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFTransmission);
@@ -203,14 +203,14 @@ namespace Goblin {
             bool doReflect = randomFloat() < reflectChance;
 
             if(doReflect) {
-                f = mReflectFactor * reflect;
+                f = mReflectFactor->lookup(fragment) * reflect;
                 *wi = wReflect;
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFReflection);
                 }
                 *pdf = reflectChance;
             } else {
-                f = mRefractFactor * refract;
+                f = mRefractFactor->lookup(fragment) * refract;
                     specularRefract(fragment, wo, wi, mEtai, mEtat);
                 *wi = wRefract;
                 if(sampledType) {

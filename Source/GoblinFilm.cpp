@@ -100,6 +100,7 @@ namespace Goblin {
                 colors[index] = mPixels[index].color / mPixels[index].weight;
             }
         }
+        std::cout << "write image to : " << mFilename << std::endl;
         Goblin::writeImage(mFilename, colors, mXRes, mYRes);
         delete [] colors;
     }

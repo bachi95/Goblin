@@ -62,6 +62,16 @@ namespace Goblin {
         else return f;
     }
 
+    inline int clamp(int f, int low, int high) {
+        if (f < low) {
+            return low;
+        }
+        else if (f > high) {
+            return high;
+        }
+        else return f;
+    }
+
     inline float lerp(float t, float v1, float v2) {
         return (1.0f - t) * v1 + t * v2;
     }

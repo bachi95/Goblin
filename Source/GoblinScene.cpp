@@ -1,4 +1,5 @@
 #include "GoblinScene.h"
+#include "GoblinTexture.h"
 
 namespace Goblin {
 
@@ -6,11 +7,12 @@ namespace Goblin {
         const vector<Light*>& lights):
         mAggregate(root), mCamera(camera), mLights(lights) {}
 
-    Scene::~Scene() {
+    Scene::~Scene() {        
         for(size_t i = 0; i < mLights.size(); ++i) {
             delete mLights[i];
             mLights[i] = NULL;
         }
+        ImageTexture::clearImageCache();
     }
 
     const CameraPtr Scene::getCamera() const {

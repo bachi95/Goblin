@@ -40,11 +40,8 @@ namespace Goblin {
             mSplitMethod = Middle;
         } else if(splitMethod == "equal_count") {
             mSplitMethod = EqualCount;
-        } else if(splitMethod == "sah") {
-            mSplitMethod = SAH;
-            std::cout << "sah split\n";
         } else {
-            mSplitMethod = SAH;
+            mSplitMethod = EqualCount;
         }
         // collect BVHPrimitiveInfo list for the recusive BVH construction
         std::vector<BVHPrimitiveInfo> buildInfoList;
@@ -122,15 +119,12 @@ namespace Goblin {
                     break;
                 }
             }
-            case EqualCount: {
+            case EqualCount: default: {
                 mid = (start + end) / 2;
                 std::nth_element(&buildData[start], &buildData[mid],
                     &buildData[end - 1] + 1, PointsComparator(dim));
                 break;
             }
-            case SAH: default:
-                //std::cout << "split by SAH\n";
-                break;
             }
             //splitSummary(buildData, start, end, mid, dim);
             buildLinearBVH(buildData, 

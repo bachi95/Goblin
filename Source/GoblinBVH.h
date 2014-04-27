@@ -55,8 +55,7 @@ namespace Goblin {
     private:
         enum SplitMethod {
             Middle, 
-            EqualCount,
-            SAH
+            EqualCount
         };
         int mMaxPrimitivesNum;
         SplitMethod mSplitMethod;

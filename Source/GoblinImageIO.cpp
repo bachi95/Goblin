@@ -316,13 +316,13 @@ namespace Goblin {
                 c.g = pow(c.g, invGama);
                 c.b = pow(c.b, invGama);
                 buffer[index * 4 + 0] = 
-                    static_cast<unsigned char>(clamp(c.r, 0, 1) * 255.0f);
+                    (unsigned char)(clamp(c.r, 0.0f, 1.0f) * 255.0f);
                 buffer[index * 4 + 1] =
-                    static_cast<unsigned char>(clamp(c.g, 0, 1) * 255.0f);
+                    (unsigned char)(clamp(c.g, 0.0f, 1.0f) * 255.0f);
                 buffer[index * 4 + 2] = 
-                    static_cast<unsigned char>(clamp(c.b, 0, 1) * 255.0f);
+                    (unsigned char)(clamp(c.b, 0.0f, 1.0f) * 255.0f);
                 buffer[index * 4 + 3] = 
-                    static_cast<unsigned char>(clamp(c.a, 0, 1) * 255.0f);
+                    (unsigned char)(clamp(c.a, 0.0f, 1.0f) * 255.0f);
             }
             rowPointers[y] = &buffer[y * width * 4];
         }
