@@ -22,6 +22,7 @@ namespace Goblin {
 
     public:
         Color();
+        explicit Color(float c);
         Color(float r, float g, float b, float a = 1.0f);
         Color operator+(const Color& rhs) const;
         Color& operator+=(const Color& rhs);
@@ -44,6 +45,8 @@ namespace Goblin {
     };
 
     inline Color::Color() {}
+
+    inline Color::Color(float c):r(c), g(c), b(c), a(1.0f) {}
 
     inline Color::Color(float r, float g, float b, float a) : 
         r(r), g(g), b(b), a(a) {}

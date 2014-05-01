@@ -83,7 +83,7 @@ namespace Goblin {
 
     class LambertMaterial : public Material {
     public:
-        LambertMaterial(const TexturePtr& Kd);
+        LambertMaterial(const ColorTexturePtr& Kd);
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
 
@@ -95,16 +95,16 @@ namespace Goblin {
             const Vector3& wo, const Vector3& wi, BSDFType type) const;
 
     private:
-        TexturePtr mDiffuseFactor;
+        ColorTexturePtr mDiffuseFactor;
     };
 
-    inline LambertMaterial::LambertMaterial(const TexturePtr& Kd):
+    inline LambertMaterial::LambertMaterial(const ColorTexturePtr& Kd):
         mDiffuseFactor(Kd) {}
 
 
     class TransparentMaterial : public Material {
     public:
-        TransparentMaterial(const TexturePtr& Kr, const TexturePtr& Kt, 
+        TransparentMaterial(const ColorTexturePtr& Kr, const ColorTexturePtr& Kt, 
             float index);
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
@@ -118,14 +118,14 @@ namespace Goblin {
             const Vector3& wo, const Vector3& wi, BSDFType type) const;
 
     private:
-        TexturePtr mReflectFactor;
-        TexturePtr mRefractFactor;
+        ColorTexturePtr mReflectFactor;
+        ColorTexturePtr mRefractFactor;
         float mEtai;
         float mEtat;
     };
 
-    inline TransparentMaterial::TransparentMaterial(const TexturePtr& Kr,
-        const TexturePtr& Kt, float index):
+    inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
+        const ColorTexturePtr& Kt, float index):
         mReflectFactor(Kr), mRefractFactor(Kt), mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection

@@ -24,7 +24,8 @@ namespace Goblin {
     typedef std::map<string, GeometryPtr> GeometryMap;
     typedef std::map<string, PrimitivePtr> PrimitiveMap;
     typedef std::map<string, MaterialPtr> MaterialMap;
-    typedef std::map<string, TexturePtr> TextureMap;
+    typedef std::map<string, ColorTexturePtr> ColorTextureMap;
+    typedef std::map<string, FloatTexturePtr> FloatTextureMap;
 
     // camera related keywords
     static const char* CAMERA = "camera";
@@ -79,8 +80,10 @@ namespace Goblin {
     static const char* DIFFUSE = "Kd";
     // texture related keywords:
     static const char* TEXTURE = "texture";
+    static const char* FORMAT = "format";
     static const char* CONSTANT = "constant";
     static const char* COLOR = "color";
+    static const char* FLOAT = "float";
     static const char* IMAGE = "image";
     static const char* MAPPING = "mapping";
     static const char* UV = "uv";
@@ -100,16 +103,18 @@ namespace Goblin {
     class SceneCache {
     public:
         SceneCache(const path& sceneRoot);
-        void addGeometry(const string& name, GeometryPtr g);
-        void addPrimitive(const string& name, PrimitivePtr p);
-        void addMaterial(const string& name, MaterialPtr m);
-        void addTexture(const string& name, TexturePtr t);
+        void addGeometry(const string& name, const GeometryPtr& g);
+        void addPrimitive(const string& name, const PrimitivePtr& p);
+        void addMaterial(const string& name, const MaterialPtr& m);
+        void addFloatTexture(const string& name, const FloatTexturePtr& t);
+        void addColorTexture(const string& name, const ColorTexturePtr& t);
         void addInstance(const PrimitivePtr& i);
         void addLight(Light* l);
         const GeometryPtr& getGeometry(const string& name) const;
         const PrimitivePtr& getPrimitive(const string& name) const;
         const MaterialPtr& getMaterial(const string& name) const;
-        const TexturePtr& getTexture(const string& name) const;
+        const FloatTexturePtr& getFloatTexture(const string& name) const;
+        const ColorTexturePtr& getColorTexture(const string& name) const;
         const PrimitiveList& getInstances() const;
         const vector<Light*>& getLights() const;
         string resolvePath(const string& filename) const;
@@ -119,7 +124,8 @@ namespace Goblin {
         GeometryMap mGeometryMap;
         PrimitiveMap mPrimitiveMap;
         MaterialMap mMaterialMap;
-        TextureMap mTextureMap;
+        FloatTextureMap mFloatTextureMap;
+        ColorTextureMap mColorTextureMap;
         PrimitiveList mInstances;
         vector<Light*> mLights;
         path mSceneRoot;
@@ -134,9 +140,11 @@ namespace Goblin {
 
     void SceneCache::initDefault() {
         Color errorColor = Color::Magenta;
-        TexturePtr errorTexture(new ConstantTexture(errorColor));
-        addTexture(mErrorCode, errorTexture);
-        MaterialPtr errorMaterial(new LambertMaterial(errorTexture));
+        ColorTexturePtr errorCTexture(new ConstantTexture<Color>(errorColor));
+        addColorTexture(mErrorCode, errorCTexture);
+        FloatTexturePtr errorFTexture(new ConstantTexture<float>(0.5f));
+        addFloatTexture(mErrorCode, errorFTexture); 
+        MaterialPtr errorMaterial(new LambertMaterial(errorCTexture));
         addMaterial(mErrorCode, errorMaterial);
         GeometryPtr errorGeometry(new Sphere(1.0f));
         addGeometry(mErrorCode, errorGeometry);
@@ -144,24 +152,31 @@ namespace Goblin {
         addPrimitive(mErrorCode, errorPrimitive);
     }
 
-    void SceneCache::addGeometry(const string& name, GeometryPtr g) {
+    void SceneCache::addGeometry(const string& name, const GeometryPtr& g) {
         std::pair<string, GeometryPtr> pair(name, g);
         mGeometryMap.insert(pair); 
     }
 
-    void SceneCache::addPrimitive(const string& name, PrimitivePtr p) {
+    void SceneCache::addPrimitive(const string& name, const PrimitivePtr& p) {
         std::pair<string, PrimitivePtr> pair(name, p);
         mPrimitiveMap.insert(pair); 
     }
 
-    void SceneCache::addMaterial(const string& name, MaterialPtr m) {
+    void SceneCache::addMaterial(const string& name, const MaterialPtr& m) {
         std::pair<string, MaterialPtr> pair(name, m);
         mMaterialMap.insert(pair); 
     }
 
-    void SceneCache::addTexture(const string& name, TexturePtr t) {
-        std::pair<string, TexturePtr> pair(name, t);
-        mTextureMap.insert(pair); 
+    void SceneCache::addFloatTexture(const string& name, 
+        const FloatTexturePtr& t) {
+        std::pair<string, FloatTexturePtr> pair(name, t);
+        mFloatTextureMap.insert(pair); 
+    }
+
+    void SceneCache::addColorTexture(const string& name, 
+        const ColorTexturePtr& t) {
+        std::pair<string, ColorTexturePtr> pair(name, t);
+        mColorTextureMap.insert(pair); 
     }
 
     void SceneCache::addInstance(const PrimitivePtr& i) {
@@ -199,11 +214,23 @@ namespace Goblin {
         return it->second;
     }
 
-    const TexturePtr& SceneCache::getTexture(const string& name) const {
-        TextureMap::const_iterator it = mTextureMap.find(name);
-        if(it == mTextureMap.end()) {
+    const FloatTexturePtr& SceneCache::getFloatTexture(
+        const string& name) const {
+        FloatTextureMap::const_iterator it = 
+            mFloatTextureMap.find(name);
+        if(it == mFloatTextureMap.end()) {
             std::cerr << "Texture " << name << " not defined!\n";
-            return mTextureMap.find(mErrorCode)->second;
+            return mFloatTextureMap.find(mErrorCode)->second;
+        }
+        return it->second;
+    }
+
+    const ColorTexturePtr& SceneCache::getColorTexture(
+        const string& name) const {
+        ColorTextureMap::const_iterator it = mColorTextureMap.find(name);
+        if(it == mColorTextureMap.end()) {
+            std::cerr << "Texture " << name << " not defined!\n";
+            return mColorTextureMap.find(mErrorCode)->second;
         }
         return it->second;
     }
@@ -492,7 +519,7 @@ namespace Goblin {
             // and we need to push this geometry into scene so that it can
             // be intersection tested.....this is gonna be messy for the 
             // current awkward parsing mechanics.......
-            TexturePtr white(new ConstantTexture(Color::White));
+            ColorTexturePtr white(new ConstantTexture<Color>(Color::White));
             MaterialPtr mtl(new LambertMaterial(white));
             PrimitivePtr model(new Model(geometry, mtl, areaLight));
             PrimitivePtr instance;
@@ -523,13 +550,15 @@ namespace Goblin {
         MaterialPtr material;
         if(materialType == LAMBERT) {
             string textureName = pt.parseString(DIFFUSE);
-            TexturePtr Kd = sceneCache->getTexture(textureName);
+            ColorTexturePtr Kd = sceneCache->getColorTexture(textureName);
             material = MaterialPtr(new LambertMaterial(Kd));
         } else if(materialType == TRANSPARENT) {
             string reflectTextureName = pt.parseString(REFLECTION);
             string refractTextureName = pt.parseString(REFRACTION);
-            TexturePtr Kr = sceneCache->getTexture(reflectTextureName);
-            TexturePtr Kt = sceneCache->getTexture(refractTextureName);
+            ColorTexturePtr Kr = 
+                sceneCache->getColorTexture(reflectTextureName);
+            ColorTexturePtr Kt = 
+                sceneCache->getColorTexture(refractTextureName);
             float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
             std::cout << "refraction index: " << index << std::endl;
             material = MaterialPtr(new TransparentMaterial(Kr, Kt, index));
@@ -558,23 +587,31 @@ namespace Goblin {
         return m;
     }
 
-    static void parseTexture(const PropertyTree& pt,
+    static void parseFloatTexture(const PropertyTree& pt,
         SceneCache* sceneCache) {
         string textureType = pt.parseString(TYPE);
         string name = pt.parseString(NAME);
         std::cout << textureType <<" texture " << name << std::endl;
-        TexturePtr texture;
+        FloatTexturePtr texture;
         if(textureType == CONSTANT) {
-            Color c = parseColor(pt, COLOR);
-            std::cout << "-color " << c << std::endl;
-            texture = TexturePtr(new ConstantTexture(c));
+            float f = pt.parseFloat(FLOAT, 0.5f);
+            std::cout << "-float " << f << std::endl;
+            texture = FloatTexturePtr(new ConstantTexture<float>(f));
+        } else if(textureType == SCALE) {
+            string textureName = pt.parseString(TEXTURE);
+            string scaleName = pt.parseString(SCALE);
+            std::cout << "-scale " << scaleName << std::endl;
+            FloatTexturePtr s = sceneCache->getFloatTexture(scaleName);
+            std::cout << "-texture " << textureName << std::endl;
+            FloatTexturePtr t = sceneCache->getFloatTexture(textureName);
+            texture = FloatTexturePtr(new ScaleTexture<float>(t, s));
         } else if(textureType == IMAGE) {
             TextureMapping* m = parseTextureMapping(pt);
             string filename = 
                 sceneCache->resolvePath(pt.parseString(FILENAME));
             float gamma = pt.parseFloat(GAMMA, 1.0f);
             string addressStr = pt.parseString(ADDRESS, REPEAT);
-            AddressMode addressMode;
+            AddressMode addressMode = AddressRepeat;
             if(addressStr == REPEAT) {
                 addressMode = AddressRepeat;
             } else if(addressStr == CLAMP) {
@@ -584,13 +621,69 @@ namespace Goblin {
             }
             std::cout << "-filename: " << filename << std::endl;
             std::cout << "-gamma: " << gamma << std::endl;
-            texture = TexturePtr(new ImageTexture(filename, m, 
+            texture = FloatTexturePtr(new ImageTexture<float>(filename, m, 
                 addressMode, gamma));
         } else {
             std::cerr << "undefined texture type " << textureType << std::endl;
             return;
         }
-        sceneCache->addTexture(name, texture);
+        sceneCache->addFloatTexture(name, texture);
+    }
+
+    static void parseColorTexture(const PropertyTree& pt,
+        SceneCache* sceneCache) {
+        string textureType = pt.parseString(TYPE);
+        string name = pt.parseString(NAME);
+        std::cout << textureType <<" texture " << name << std::endl;
+        ColorTexturePtr texture;
+        if(textureType == CONSTANT) {
+            Color c = parseColor(pt, COLOR);
+            std::cout << "-color " << c << std::endl;
+            texture = ColorTexturePtr(new ConstantTexture<Color>(c));
+        } else if(textureType == SCALE) {
+            string textureName = pt.parseString(TEXTURE);
+            string scaleName = pt.parseString(SCALE);
+            std::cout << "-scale " << scaleName << std::endl;
+            FloatTexturePtr s = sceneCache->getFloatTexture(scaleName);
+            std::cout << "-texture " << textureName << std::endl;
+            ColorTexturePtr t = sceneCache->getColorTexture(textureName);
+            texture = ColorTexturePtr(new ScaleTexture<Color>(t, s));
+        } else if(textureType == IMAGE) {
+            TextureMapping* m = parseTextureMapping(pt);
+            string filename = 
+                sceneCache->resolvePath(pt.parseString(FILENAME));
+            float gamma = pt.parseFloat(GAMMA, 1.0f);
+            string addressStr = pt.parseString(ADDRESS, REPEAT);
+            AddressMode addressMode = AddressRepeat;
+            if(addressStr == REPEAT) {
+                addressMode = AddressRepeat;
+            } else if(addressStr == CLAMP) {
+                addressMode = AddressClamp;
+            } else if(addressStr == BORDER) {
+                addressMode = AddressBorder;
+            }
+            std::cout << "-filename: " << filename << std::endl;
+            std::cout << "-gamma: " << gamma << std::endl;
+            texture = ColorTexturePtr(new ImageTexture<Color>(filename, m, 
+                addressMode, gamma));
+        } else {
+            std::cerr << "undefined texture type " << textureType << std::endl;
+            return;
+        }
+        sceneCache->addColorTexture(name, texture);
+    }
+
+    static void parseTexture(const PropertyTree& pt,
+        SceneCache* sceneCache) {
+        string textureFormat = pt.parseString(FORMAT, COLOR);
+        if(textureFormat == FLOAT) {
+            parseFloatTexture(pt, sceneCache);
+        } else if(textureFormat == COLOR) {
+            parseColorTexture(pt, sceneCache);
+        } else {
+            std::cerr << "unrecognize texture format" <<
+                textureFormat << std::endl;
+        }
     }
 
     static void parseRenderSetting(const PropertyTree& pt, 

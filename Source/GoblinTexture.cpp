@@ -4,7 +4,9 @@
 #include <cassert>
 
 namespace Goblin{
-    Color ImageBuffer::texel(int s, int t, AddressMode addressMode) {
+
+    template<typename T>
+    T ImageBuffer<T>::texel(int s, int t, AddressMode addressMode) {
         switch(addressMode) {
         case AddressClamp: {
             s = clamp(s, 0, width - 1);
@@ -13,7 +15,7 @@ namespace Goblin{
         }
         case AddressBorder: {
             if(s < 0 || t < 0 || s >= width || t >= height) {
-                return Color::Black;
+                return T(0.0f);
             }
             break;
         }
@@ -32,7 +34,8 @@ namespace Goblin{
         return image[t * width + s];
     }
 
-    Color ImageBuffer::lookup(float s, float t, AddressMode addressMode) {
+    template<typename T>
+    T ImageBuffer<T>::lookup(float s, float t, AddressMode addressMode) {
         float sRes = s * width - 0.5f;
         float tRes = t * height - 0.5f;
         int s0 = floorInt(sRes);
@@ -54,29 +57,44 @@ namespace Goblin{
         tc->st[1] = mScale[1] * uv[1] + mOffset[1];
     }
 
-    ConstantTexture::ConstantTexture(const Color& c): mValue(c) {}
+    template<typename T>
+    ConstantTexture<T>::ConstantTexture(const T& c): mValue(c) {}
 
-    Color ConstantTexture::lookup(const Fragment& f) const {
+    template<typename T>
+    T ConstantTexture<T>::lookup(const Fragment& f) const {
         return mValue;
     }
 
-    std::map<TextureId, ImageBuffer*> ImageTexture::imageCache;
+    template<typename T>
+    ScaleTexture<T>::ScaleTexture(const boost::shared_ptr<Texture<T> >& t, 
+        const FloatTexturePtr& s): mTexture(t), mScale(s) {}
 
-    ImageTexture::ImageTexture(const string& filename, TextureMapping* m,
+    template<typename T>
+    T ScaleTexture<T>::lookup(const Fragment& f) const {
+        return mScale->lookup(f) * mTexture->lookup(f);
+    }
+
+    template<typename T>
+    std::map<TextureId, ImageBuffer<T>* > ImageTexture<T>::imageCache;
+
+    template<typename T>
+    ImageTexture<T>::ImageTexture(const string& filename, TextureMapping* m,
         AddressMode address, float gamma): 
         mMapping(m), mAddressMode(address) {
         TextureId id(filename, gamma);
         mImageBuffer = getImageBuffer(id);
     }
 
-    ImageTexture::~ImageTexture() {
+    template<typename T>
+    ImageTexture<T>::~ImageTexture() {
         if(mMapping) {
             delete mMapping;
         }
         mMapping = NULL;
     }
 
-    Color ImageTexture::lookup(const Fragment& f) const {
+    template<typename T>
+    T ImageTexture<T>::lookup(const Fragment& f) const {
         TextureCoordinate tc;
         mMapping->map(f, &tc);
         float s = tc.st[0];
@@ -84,40 +102,54 @@ namespace Goblin{
         return mImageBuffer->lookup(s, t, mAddressMode);
     }
 
-    void ImageTexture::clearImageCache() {
-        std::map<TextureId, ImageBuffer*>::iterator it;
-        for(it = imageCache.begin(); it != imageCache.end(); ++it) {
-            std::cout << "clear image cache: " << it->first.filename << 
-                std::endl;
-            delete it->second;
-        }
-        imageCache.clear();
+    void gammaCorrect(const Color& in, float* out, float gamma) {
+        *out = pow(in.luminance(), gamma);
     }
 
-    ImageBuffer* ImageTexture::getImageBuffer(const TextureId& id) {
+    void gammaCorrect(const Color& in, Color* out, float gamma) {
+        (*out).r = gamma == 1.0f ? in.r : pow(in.r, gamma);
+        (*out).g = gamma == 1.0f ? in.g : pow(in.g, gamma);
+        (*out).b = gamma == 1.0f ? in.b : pow(in.b, gamma);
+        (*out).a = in.a;
+    }
+
+    template<typename T>
+    ImageBuffer<T>* ImageTexture<T>::getImageBuffer(const TextureId& id) {
         if(imageCache.find(id) != imageCache.end()) {
             return imageCache[id];
         }
         int width, height;
         Color* colorBuffer = Goblin::loadImage(id.filename, &width, &height);
+        T* texelBuffer;
         if(!colorBuffer) {
             std::cerr << "error loading image file " << 
                 id.filename << std::endl;
-            colorBuffer = new Color[1];
-            colorBuffer[0] = Color::Magenta;
+            texelBuffer = new T[1];
+            T texel;
+            gammaCorrect(Color::Magenta, &texel, id.gamma);
+            texelBuffer[0] = texel;
             width =  height = 1;
-        }
-
-        if(id.gamma != 1.0f) {
+        } else {
+            texelBuffer = new T[width * height];
             // gamma correct it back to linear
             for(int i = 0; i < width * height; ++i) {
-                colorBuffer[i].r = pow(colorBuffer[i].r, id.gamma);
-                colorBuffer[i].g = pow(colorBuffer[i].g, id.gamma);
-                colorBuffer[i].b = pow(colorBuffer[i].b, id.gamma);
+                gammaCorrect(colorBuffer[i], &texelBuffer[i], id.gamma);
             }
+            delete [] colorBuffer;
         }
-        ImageBuffer* ret = new ImageBuffer(colorBuffer, width, height); 
+        ImageBuffer<T>* ret = new ImageBuffer<T>(texelBuffer, width, height); 
         imageCache[id] = ret;
         return ret;
     }
+
+    template struct ImageBuffer<float>;
+    template struct ImageBuffer<Color>; 
+    template class Texture<float>;
+    template class Texture<Color>;
+    template class ConstantTexture<float>;
+    template class ConstantTexture<Color>;
+    template class ScaleTexture<float>;
+    template class ScaleTexture<Color>;
+    template class ImageTexture<float>;
+    template class ImageTexture<Color>;
 }

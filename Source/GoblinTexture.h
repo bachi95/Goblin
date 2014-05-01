@@ -20,12 +20,13 @@ namespace Goblin {
         Vector2 st;
     };
 
+    template<typename T>
     struct ImageBuffer {
-        ImageBuffer(Color* i, int w, int h): image(i), width(w), height(h) {}
+        ImageBuffer(T* i, int w, int h): image(i), width(w), height(h) {}
         ~ImageBuffer() { delete [] image; image = NULL; }
-        Color texel(int s, int t, AddressMode addressMode);
-        Color lookup(float s, float t, AddressMode addressMode);
-        Color* image;
+        T texel(int s, int t, AddressMode addressMode);
+        T lookup(float s, float t, AddressMode addressMode);
+        T* image;
         int width, height;
     };
 
@@ -44,20 +45,35 @@ namespace Goblin {
         Vector2 mOffset;
     };
 
+    template<typename T>
     class Texture {
     public:
         virtual ~Texture() {}
-        virtual Color lookup(const Fragment& f) const = 0;
+        virtual T lookup(const Fragment& f) const = 0;
     };
 
-    typedef boost::shared_ptr<Texture> TexturePtr;
+    typedef boost::shared_ptr<Texture<Color> > ColorTexturePtr;
+    typedef boost::shared_ptr<Texture<float> > FloatTexturePtr;
 
-    class ConstantTexture : public Texture {
+
+    template<typename T>
+    class ConstantTexture : public Texture<T> {
     public:
-        ConstantTexture(const Color& c);
-        Color lookup(const Fragment& f) const;
+        ConstantTexture(const T& c);
+        T lookup(const Fragment& f) const;
     private:
-        Color mValue;
+        T mValue;
+    };
+
+    template<typename T>
+    class ScaleTexture : public Texture<T> {
+    public:
+        ScaleTexture(const boost::shared_ptr<Texture<T> >& t, 
+            const FloatTexturePtr& s);
+        T lookup(const Fragment& f) const;
+    private:
+        boost::shared_ptr<Texture<T> > mTexture;
+        FloatTexturePtr mScale;
     };
 
     struct TextureId {
@@ -74,21 +90,38 @@ namespace Goblin {
         return filename < rhs.filename;
     }
 
-    class ImageTexture : public Texture {
+    template<typename T>
+    class ImageTexture : public Texture<T> {
     public:
         ImageTexture(const string& filename, TextureMapping* m, 
             AddressMode address= AddressRepeat, float gamma = 1.0f);
         ~ImageTexture();
-        Color lookup(const Fragment& f) const;
+        T lookup(const Fragment& f) const;
         static void clearImageCache();
     private:
-        ImageBuffer* getImageBuffer(const TextureId& id);
+        ImageBuffer<T>* getImageBuffer(const TextureId& id);
     private:
-        static std::map<TextureId, ImageBuffer*> imageCache;
+        static std::map<TextureId, ImageBuffer<T>* > imageCache;
         TextureMapping* mMapping;
         AddressMode mAddressMode;
-        ImageBuffer* mImageBuffer;
+        ImageBuffer<T>* mImageBuffer;
     };
+
+    template<typename T>
+    void ImageTexture<T>::clearImageCache() {
+        typename std::map<TextureId, ImageBuffer<T>* >::iterator it;
+        for(it = imageCache.begin(); it != imageCache.end(); ++it) {
+            std::cout << "clear image cache: " << it->first.filename << 
+                std::endl;
+            delete it->second;
+        }
+        imageCache.clear();
+    }
+
+
+    void gammaCorrect(const Color& in, float* out, float gamma);
+    void gammaCorrect(const Color& in, Color* out, float gamma);
+
 }
 
 #endif //GOBLIN_TEXTURE_H

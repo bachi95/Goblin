@@ -1,5 +1,6 @@
 #include "GoblinScene.h"
 #include "GoblinTexture.h"
+#include "GoblinColor.h"
 
 namespace Goblin {
 
@@ -12,7 +13,7 @@ namespace Goblin {
             delete mLights[i];
             mLights[i] = NULL;
         }
-        ImageTexture::clearImageCache();
+        ImageTexture<Color>::clearImageCache();
     }
 
     const CameraPtr Scene::getCamera() const {
