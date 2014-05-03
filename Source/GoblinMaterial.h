@@ -42,7 +42,10 @@ namespace Goblin {
     // calculate the bsdf value, hold the texture reference...etc
     class Material {
     public:
+        Material(const FloatTexturePtr& bump = FloatTexturePtr());
         virtual ~Material() {}
+
+        void perturb(Fragment* fragment) const;
 
         virtual Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type = BSDFAll) const = 0;
@@ -73,7 +76,12 @@ namespace Goblin {
 
         // material util to get the fresnel factor
         float fresnelDieletric(float cosi, float etai, float etat) const;
+
+    private:
+        FloatTexturePtr mBumpMap;
     };
+
+    inline Material::Material(const FloatTexturePtr& bump): mBumpMap(bump) {}
 
     inline bool Material::matchType(BSDFType type, BSDFType toMatch) const {
         return (type & toMatch) == toMatch;
@@ -83,7 +91,8 @@ namespace Goblin {
 
     class LambertMaterial : public Material {
     public:
-        LambertMaterial(const ColorTexturePtr& Kd);
+        LambertMaterial(const ColorTexturePtr& Kd,
+            const FloatTexturePtr& bump = FloatTexturePtr());
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
 
@@ -98,14 +107,15 @@ namespace Goblin {
         ColorTexturePtr mDiffuseFactor;
     };
 
-    inline LambertMaterial::LambertMaterial(const ColorTexturePtr& Kd):
-        mDiffuseFactor(Kd) {}
+    inline LambertMaterial::LambertMaterial(const ColorTexturePtr& Kd,
+        const FloatTexturePtr& bump):
+        Material(bump), mDiffuseFactor(Kd) {}
 
 
     class TransparentMaterial : public Material {
     public:
         TransparentMaterial(const ColorTexturePtr& Kr, const ColorTexturePtr& Kt, 
-            float index);
+            float index, const FloatTexturePtr& bump = FloatTexturePtr());
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
 
@@ -125,8 +135,9 @@ namespace Goblin {
     };
 
     inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
-        const ColorTexturePtr& Kt, float index):
-        mReflectFactor(Kr), mRefractFactor(Kt), mEtai(1.0f), mEtat(index) {}
+        const ColorTexturePtr& Kt, float index, const FloatTexturePtr& bump):
+        Material(bump), mReflectFactor(Kr), mRefractFactor(Kt), 
+        mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection
     // is a delta distribution function, we count on sample way to get

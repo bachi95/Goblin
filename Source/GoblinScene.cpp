@@ -13,6 +13,7 @@ namespace Goblin {
             delete mLights[i];
             mLights[i] = NULL;
         }
+        ImageTexture<float>::clearImageCache();
         ImageTexture<Color>::clearImageCache();
     }
 
@@ -34,7 +35,12 @@ namespace Goblin {
 
     bool Scene::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection) {
-        return mAggregate->intersect(ray, epsilon, intersection);
+        bool isIntersect = mAggregate->intersect(ray, epsilon, intersection);
+        if(isIntersect) {
+            const MaterialPtr& material = intersection->getMaterial();
+            material->perturb(&intersection->fragment);
+        }
+        return isIntersect;
     }
 
     void Scene::collectRenderList(RenderList& rList) {

@@ -11,6 +11,10 @@ namespace Goblin {
             Color::Black : areaLight->L(ps, ns, outDirection);
     }
 
+    const MaterialPtr& Intersection::getMaterial() const {
+        return primitive->getMaterial();
+    }
+
     InstancedPrimitive::InstancedPrimitive(const Transform& toWorld, 
         const PrimitivePtr& primitive):
         mToWorld(toWorld), mPrimitive(primitive) {}

@@ -78,6 +78,7 @@ namespace Goblin {
     static const char* REFRACTION = "Kt";
     static const char* REFRACTION_INDEX = "index";
     static const char* DIFFUSE = "Kd";
+    static const char* BUMPMAP = "bumpmap";
     // texture related keywords:
     static const char* TEXTURE = "texture";
     static const char* FORMAT = "format";
@@ -551,7 +552,12 @@ namespace Goblin {
         if(materialType == LAMBERT) {
             string textureName = pt.parseString(DIFFUSE);
             ColorTexturePtr Kd = sceneCache->getColorTexture(textureName);
-            material = MaterialPtr(new LambertMaterial(Kd));
+            FloatTexturePtr bump;
+            if(pt.hasChild(BUMPMAP)) {
+                string bumpmapName = pt.parseString(BUMPMAP);
+                bump = sceneCache->getFloatTexture(bumpmapName);
+            }
+            material = MaterialPtr(new LambertMaterial(Kd, bump));
         } else if(materialType == TRANSPARENT) {
             string reflectTextureName = pt.parseString(REFLECTION);
             string refractTextureName = pt.parseString(REFRACTION);
@@ -561,7 +567,12 @@ namespace Goblin {
                 sceneCache->getColorTexture(refractTextureName);
             float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
             std::cout << "refraction index: " << index << std::endl;
-            material = MaterialPtr(new TransparentMaterial(Kr, Kt, index));
+            FloatTexturePtr bump;
+            if(pt.hasChild(BUMPMAP)) {
+                string bumpmapName = pt.parseString(BUMPMAP);
+                bump = sceneCache->getFloatTexture(bumpmapName);
+            }
+            material = MaterialPtr(new TransparentMaterial(Kr, Kt, index, bump));
         } else {
             std::cerr << "undefined material type " << 
                 materialType << std::endl;

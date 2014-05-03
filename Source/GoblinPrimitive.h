@@ -47,6 +47,7 @@ namespace Goblin {
     struct Intersection {
         Intersection(): primitive(NULL) {}
         Color Le(const Vector3& outDirection);
+        const MaterialPtr& getMaterial() const;
         Fragment fragment;
         const Primitive* primitive;
     };

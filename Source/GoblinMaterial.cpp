@@ -36,6 +36,54 @@ namespace Goblin {
         return type;
     }
 
+    void Material::perturb(Fragment* fragment) const {
+        /*
+         * let bumpmap(u, v) be D
+         * p'(u, v) = p(u, v) + n(u, v) * D
+         * we want to get the new normal n'(u, v),
+         * which is cross(dp'du, dp'dv)
+         * dp'du = d(p'(u, v)/du = dp/du + dD/du * n d+ dn/du * D
+         * we have dp/du already
+         * dn/du * D can be ignored when D is small
+         * dD/du can be approximated by forward differential approximation
+         * (D(u + du, v) - D(u, v)) / du
+         * dp'dv is calculated with the same way above
+         */
+        if(mBumpMap) {
+            Vector3 p = fragment->getPosition();
+            Vector3 n = fragment->getNormal();
+            Vector2 uv = fragment->getUV();
+            float bumpD = mBumpMap->lookup(*fragment);
+
+            float du = 0.01f;
+            Fragment fdu = *fragment; 
+            fdu.setPosition(p + du * fragment->getDPDU());
+            fdu.setUV(uv + Vector2(du, 0.0f));
+            float bumpDdu = mBumpMap->lookup(fdu);
+            Vector3 bumpDPDU = fragment->getDPDU() + 
+                (bumpDdu - bumpD) / du * n;
+
+            float dv = 0.01f;
+            Fragment fdv = *fragment;
+            fdv.setPosition(p + dv * fragment->getDPDV());
+            fdv.setUV(uv + Vector2(0.0f, dv));
+            float bumpDdv = mBumpMap->lookup(fdv);
+            Vector3 bumpDPDV = fragment->getDPDV() +
+                (bumpDdv - bumpD) / dv * n;
+
+            Vector3 bumpN = normalize(cross(bumpDPDU, bumpDPDV));
+            // case that intersect back face
+            if(dot(bumpN, n) < 0.0f) {
+                bumpN *= -1.0f;
+            }
+            // now set back the bumped value
+            fragment->setNormal(bumpN);
+            fragment->setDPDU(bumpDPDU);
+            fragment->setDPDV(bumpDPDV);
+        }
+        return;
+    }
+
     bool Material::sameHemisphere(const Fragment& fragment,
         const Vector3& wo, const Vector3& wi) const {
         const Vector3& normal = fragment.getNormal();
@@ -58,7 +106,7 @@ namespace Goblin {
         }
         float f = fresnelDieletric(cosi, ei, et);
         // Wi = Wo - 2 * WoPerpN = Wo - 2(Wo - dot(N, Wo))N =
-        // 2(dot(N, Wo))N - Wo
+        // 4(dot(N, Wo))N - Wo
         *wi = 2 * cosi * n - wo;
         // specular reflection angle should be the same as input angle
         float cosr = cosi;

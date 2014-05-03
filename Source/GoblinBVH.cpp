@@ -35,6 +35,9 @@ namespace Goblin {
         const std::string& splitMethod):
         Aggregate(primitives),
         mMaxPrimitivesNum(maxPrimitivesNum) {
+        if(mRefinedPrimitives.size() == 0) {
+            return;
+        }
         std::cout << "specified split method " << splitMethod << std::endl;
         if(splitMethod == "middle") {
             mSplitMethod = Middle;
