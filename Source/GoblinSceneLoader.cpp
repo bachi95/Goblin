@@ -37,6 +37,9 @@ namespace Goblin {
     static const char* FILM = "film";
     static const char* RESOLUTION = "resolution";
     static const char* CROP = "crop";
+    static const char* TONE_MAPPING = "tone_mapping";
+    static const char* BLOOM_WEIGHT = "bloom_weight";
+    static const char* BLOOM_RADIUS = "bloom_radius";
     // filter related keywords
     static const char* FILTER = "filter";
     static const char* BOX = "box";
@@ -344,7 +347,9 @@ namespace Goblin {
         int yRes = 480;
         float crop[4] = {0.0f, 1.0f, 0.0f, 1.0f};
         string filename = "ray.png";
-
+        bool toneMapping = false;
+        float bloomWeight = 0.0f;
+        float bloomRadius = 0.0f;
         PropertyTree filmTree;
         if(pt.getChild(FILM, &filmTree)) {
             Vector2 res = parseVector2(filmTree, RESOLUTION);
@@ -359,6 +364,9 @@ namespace Goblin {
                 }
             }
             filename = filmTree.parseString(FILENAME, filename.c_str());
+            toneMapping = filmTree.parseBool(TONE_MAPPING);
+            bloomRadius = filmTree.parseFloat(BLOOM_RADIUS);
+            bloomWeight = filmTree.parseFloat(BLOOM_WEIGHT);
         }
         string filePath = sceneCache->resolvePath(filename);
 
@@ -367,9 +375,14 @@ namespace Goblin {
         std::cout << "-crop(" << crop[0] << " "<< crop[1] << " "<< 
             crop[2] << " "<< crop[3] << ")" << std::endl;
         std::cout << "-filepath: " << filePath << std::endl;
+        std::cout << "-tone mapping: " << toneMapping << std::endl;
+        std::cout << "-bloom radius: " << bloomRadius << std::endl;
+        std::cout << "-bloom weight: " << bloomWeight << std::endl;
+
         Filter* filter = parseFilter(pt);
 
-        return new Film(xRes, yRes, crop, filter, filePath);
+        return new Film(xRes, yRes, crop, filter, filePath, 
+            toneMapping, bloomRadius, bloomWeight);
     }
 
     static CameraPtr parseCamera(const PropertyTree& pt, Film* film) {

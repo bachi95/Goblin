@@ -112,11 +112,18 @@ namespace Goblin {
     // if it return true
     bool quadratic(float A, float B, float C, float* t1, float* t2);
 
-    float randomFloat();
+    // random number generator utils from boost
+    class RNGImp;
 
-    uint32_t randomUInt();
-
-
+    class RNG {
+    public:
+        RNG();
+        ~RNG();
+        float randomFloat() const;
+        uint32_t randomUInt() const;
+    private:
+        RNGImp* mRNGImp;
+    };
 }
 
 #endif // GOBLIN_UTILS_H

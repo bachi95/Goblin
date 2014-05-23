@@ -7,10 +7,52 @@
 
 namespace Goblin {
 
+    RenderTask::RenderTask(ImageTile* tile, Renderer* renderer,
+        const CameraPtr& camera, const ScenePtr& scene,
+        const SampleQuota& sampleQuota, int samplePerPixel): 
+        mTile(tile), mRenderer(renderer),
+        mCamera(camera), mScene(scene),
+        mSampleQuota(sampleQuota), 
+        mSamplePerPixel(samplePerPixel) {
+        mRNG = new RNG();
+    }
+
+    RenderTask::~RenderTask() {
+        if(mRNG) {
+            delete mRNG;
+            mRNG = NULL;
+        }
+    }
+
+    void RenderTask::run() {
+        int xStart, xEnd, yStart, yEnd;
+        mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
+
+        std::cout << "tiles " <<
+            " sampleXStart " << xStart << " sampleYStart " << yStart <<
+            " sampleXEnd " << xEnd << " sampleYEnd " << yEnd <<
+                std::endl;
+
+        Sampler sampler(xStart, xEnd, yStart, yEnd, 
+            mSamplePerPixel, mSampleQuota, mRNG);
+        int batchAmount = sampler.maxSamplesPerRequest();
+        Sample* samples = sampler.allocateSampleBuffer(batchAmount);
+        int sampleNum = 0;
+        while((sampleNum = sampler.requestSamples(samples)) > 0) {
+            for(int s = 0; s < sampleNum; ++s) {
+                Ray ray;
+                float w = mCamera->generateRay(samples[s], &ray);
+                Color L = w * mRenderer->Li(mScene, ray, samples[s], *mRNG);
+                mTile->addSample(samples[s], L);
+            }
+        }
+        delete [] samples;
+    }
+
     Renderer::Renderer(const RenderSetting& setting):
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mPickLightSampleIndexes(NULL),
-        mSamples(NULL), mSampler(NULL), mPowerDistribution(NULL), 
+        mPowerDistribution(NULL), 
         mSetting(setting) {
     }
 
@@ -27,14 +69,6 @@ namespace Goblin {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
-        if(mSamples) {
-            delete [] mSamples;
-            mSamples = NULL;
-        }
-        if(mSampler) {
-            delete mSampler;
-            mSampler = NULL;
-        }
         if(mPowerDistribution) {
             delete mPowerDistribution;
             mPowerDistribution = NULL;
@@ -44,51 +78,25 @@ namespace Goblin {
     void Renderer::render(const ScenePtr& scene) {
         const CameraPtr camera = scene->getCamera();
         Film* film = camera->getFilm();
-        int xStart, xEnd, yStart, yEnd;
-        film->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        if(mSampler != NULL) {
-            delete mSampler;
-        }
-        if(mSamples != NULL) {
-            delete [] mSamples;
-        }
+        SampleQuota sampleQuota;
+        querySampleQuota(scene, &sampleQuota);
         int samplePerPixel = mSetting.samplePerPixel;
-        mSampler = new Sampler(xStart, xEnd, yStart, yEnd, 
-            samplePerPixel);
-        // bluh....api dependency on the above sampler
-        // TODO wragle out the on APIdependency  
-        querySampleQuota(scene, mSampler);
-        int batchAmount = mSampler->maxSamplesPerRequest();
-        mSamples = mSampler->allocateSampleBuffer(batchAmount);
-        // temp progress reporter so that waiting can be not that boring...
-        // TODO make this something more elegant
-        uint64_t accumulatedBuffer = 0;
-        uint64_t accumulatedSamples = 0;
-        uint64_t maxTotalSamples = mSampler->maxTotalSamples();
-        uint64_t reportStep = maxTotalSamples / 100;
-        string backspace = "\b\b\b\b\b\b\b\b\b\b\b\b\b";
 
-        int sampleNum = 0;
-        while((sampleNum = mSampler->requestSamples(mSamples)) > 0) {
-            for(int i = 0; i < sampleNum; ++i) {
-                Ray ray;
-                float w = camera->generateRay(mSamples[i], &ray);
-                Color L = w * Li(scene, ray, mSamples[i]);
-                film->addSample(mSamples[i], L);
-            }
-
-            // print out progress
-            accumulatedBuffer += (uint64_t)sampleNum;
-            if(accumulatedBuffer > reportStep) {
-                accumulatedSamples += accumulatedBuffer;
-                accumulatedBuffer = 0;
-                std::cout << backspace;
-                std::cout << "progress %";
-                std::cout << 100 * accumulatedSamples / maxTotalSamples;
-                std::cout.flush();
-            }
+        vector<ImageTile*>& tiles = film->getTiles();
+        vector<Task*> renderTasks;
+        for(size_t i = 0; i < tiles.size(); ++i) {
+            renderTasks.push_back(new RenderTask(tiles[i], this, 
+                camera, scene, sampleQuota, samplePerPixel));
         }
-        std::cout << backspace;
+        
+        ThreadPool threadPool;
+        threadPool.enqueue(renderTasks);
+        threadPool.waitForAll();
+        //clean up
+        for(size_t i = 0; i < renderTasks.size(); ++i) {
+            delete renderTasks[i];
+        }
+        renderTasks.clear();
         film->writeImage();
     }
 
@@ -115,7 +123,7 @@ namespace Goblin {
 
     Color Renderer::multiSampleLd(const ScenePtr& scene, const Ray& ray,
         float epsilon, const Intersection& intersection,
-        const Sample& sample, 
+        const Sample& sample, const RNG& rng,
         LightSampleIndex* lightSampleIndexes,
         BSDFSampleIndex* bsdfSampleIndexes,
         BSDFType type) const {
@@ -126,8 +134,8 @@ namespace Goblin {
             uint32_t samplesNum = lightSampleIndexes[i].samplesNum;
             for(size_t n = 0; n < samplesNum; ++n) {
                 const Light* light = lights[i];
-                LightSample ls;
-                BSDFSample bs;
+                LightSample ls(rng);
+                BSDFSample bs(rng);
                 if(lightSampleIndexes != NULL && bsdfSampleIndexes != NULL) {
                     ls = LightSample(sample, lightSampleIndexes[i], n);
                     bs = BSDFSample(sample, bsdfSampleIndexes[i], n);
@@ -205,7 +213,7 @@ namespace Goblin {
 
     Color Renderer::specularReflect(const ScenePtr& scene, const Ray& ray, 
         float epsilon, const Intersection& intersection,
-        const Sample& sample) const {
+        const Sample& sample, const RNG& rng) const {
         Color L(Color::Black);
         const Vector3& n = intersection.fragment.getNormal();
         const Vector3& p = intersection.fragment.getPosition();
@@ -217,12 +225,12 @@ namespace Goblin {
         // fill in a random BSDFSample for api request, specular actually
         // don't need to do any monte carlo sampling(only one possible out dir)
         Color f = material->sampleBSDF(intersection.fragment, 
-            wo, BSDFSample(), &wi, &pdf, 
+            wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFReflection));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
             Ray reflectiveRay(p, wi, epsilon);
             reflectiveRay.depth = ray.depth + 1;
-            Color Lr = Li(scene, reflectiveRay, sample);
+            Color Lr = Li(scene, reflectiveRay, sample, rng);
             L += f * Lr * absdot(wi, n) / pdf;
         }
         return L;
@@ -230,7 +238,7 @@ namespace Goblin {
 
     Color Renderer::specularRefract(const ScenePtr& scene, const Ray& ray, 
         float epsilon, const Intersection& intersection,
-        const Sample& sample) const {
+        const Sample& sample, const RNG& rng) const {
         Color L(Color::Black);
         const Vector3& n = intersection.fragment.getNormal();
         const Vector3& p = intersection.fragment.getPosition();
@@ -242,12 +250,12 @@ namespace Goblin {
         // fill in a random BSDFSample for api request, specular actually
         // don't need to do any monte carlo sampling(only one possible out dir)
         Color f = material->sampleBSDF(intersection.fragment, 
-            wo, BSDFSample(), &wi, &pdf, 
+            wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFTransmission));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
             Ray refractiveRay(p, wi, epsilon);
             refractiveRay.depth = ray.depth + 1;
-            Color Lr = Li(scene, refractiveRay, sample);
+            Color Lr = Li(scene, refractiveRay, sample, rng);
             L += f * Lr * absdot(wi, n) / pdf;
         }
         return L;

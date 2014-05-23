@@ -10,7 +10,7 @@ namespace Goblin {
     class Fragment;
     class Vector3;
     class Matrix3;
-    class Sampler;
+    class SampleQuota;
     class Sample;
     
     enum BSDFType {
@@ -25,13 +25,13 @@ namespace Goblin {
 
     struct BSDFSampleIndex {
         BSDFSampleIndex() {}
-        BSDFSampleIndex(Sampler* sampler, int requestNum);
+        BSDFSampleIndex(SampleQuota* sampleQuota, int requestNum);
         uint32_t samplesNum;
         uint32_t directionIndex;
     };
 
     struct BSDFSample {
-        BSDFSample();
+        BSDFSample(const RNG& rng);
         BSDFSample(const Sample& sample,
             const BSDFSampleIndex& index, uint32_t n);
         float uDirection[2];
@@ -116,6 +116,7 @@ namespace Goblin {
     public:
         TransparentMaterial(const ColorTexturePtr& Kr, const ColorTexturePtr& Kt, 
             float index, const FloatTexturePtr& bump = FloatTexturePtr());
+        ~TransparentMaterial();
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
 
@@ -132,12 +133,20 @@ namespace Goblin {
         ColorTexturePtr mRefractFactor;
         float mEtai;
         float mEtat;
+        RNG* mRNG;
     };
 
     inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
         const ColorTexturePtr& Kt, float index, const FloatTexturePtr& bump):
         Material(bump), mReflectFactor(Kr), mRefractFactor(Kt), 
-        mEtai(1.0f), mEtat(index) {}
+        mEtai(1.0f), mEtat(index) { mRNG = new RNG(); }
+
+    inline TransparentMaterial::~TransparentMaterial() {
+        if(mRNG) {
+            delete mRNG;
+            mRNG = NULL;
+        }
+    }
 
     // there is only one possible wi for specified wo, specular reflection
     // is a delta distribution function, we count on sample way to get

@@ -362,19 +362,16 @@ namespace Goblin {
 
  
     bool writeImage(const string& filename, Color* colorBuffer,
-            int width, int height, bool bloomImage) {
-
-        if(bloomImage) {
-            bloom(colorBuffer, width, height);
-        }
-
+            int width, int height, bool doToneMapping) {
         size_t extOffset = filename.rfind(".");
         if(extOffset == string::npos) {
             return writeImagePNG(filename + ".png", colorBuffer, width, height);
         }
         string ext = filename.substr(extOffset);
         if(ext == ".png" || ext == ".PNG") {
-            toneMapping(colorBuffer, width, height);
+            if(doToneMapping) {
+                toneMapping(colorBuffer, width, height);
+            }
             return writeImagePNG(filename, colorBuffer, width, height);
 #ifdef GOBLIN_ENABLE_EXR
         } else if(ext == ".exr" || ext == ".EXR") {

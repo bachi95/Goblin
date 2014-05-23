@@ -14,20 +14,20 @@ namespace Goblin {
     class Ray;
     class Quaternion;
     class CDF1D;
-    class Sampler;
+    class SampleQuota;
     class Sample;
     struct SampleIndex;
 
     struct LightSampleIndex {
         LightSampleIndex() {}
-        LightSampleIndex(Sampler* sampler, int requestNum);
+        LightSampleIndex(SampleQuota* sampleQuota, int requestNum);
         uint32_t samplesNum;
         uint32_t componentIndex;
         uint32_t geometryIndex;
     };
 
     struct LightSample {
-        LightSample();
+        LightSample(const RNG& rng);
         LightSample(const Sample& sample, 
             const LightSampleIndex& index, uint32_t n);
         float uComponent;

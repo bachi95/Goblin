@@ -18,6 +18,18 @@ namespace Goblin {
         return totalSize;
     }
 
+    SampleIndex SampleQuota::requestOneDQuota(uint32_t samplesNum) {
+        int nSample = roundToSquare(samplesNum);
+        n1D.push_back(nSample);
+        return SampleIndex(n1D.size() - 1, nSample);
+    }
+
+    SampleIndex SampleQuota::requestTwoDQuota(uint32_t samplesNum) {
+        int nSample = roundToSquare(samplesNum);
+        n2D.push_back(roundToSquare(nSample));
+        return SampleIndex(n2D.size() - 1, nSample);
+    }
+
     void Sample::allocateQuota(const SampleQuota& quota) {
         n1D = quota.n1D;
         n2D = quota.n2D;
@@ -47,20 +59,17 @@ namespace Goblin {
 
 
     Sampler::Sampler(int xStart, int xEnd, int yStart, int yEnd,
-        int samplePerPixel):
+        int samplePerPixel, const SampleQuota& sampleQuota,
+        RNG* rng):
         mXStart(xStart), mXEnd(xEnd), 
         mYStart(yStart), mYEnd(yEnd),
         mCurrentX(xStart), mCurrentY(yStart),
-        mSampleBuffer(NULL), mJitter(true) {
+        mSampleBuffer(NULL), mJitter(true),
+        mSampleQuota(sampleQuota), mRNG(rng) {
 
         int root;
         mSamplesPerPixel = roundToSquare(samplePerPixel, &root);
         mXPerPixel = mYPerPixel = root;
-        std::cout << "round sample to " << mSamplesPerPixel << 
-            " per pixels\n";
-        std::cout << "(x, y) sample = (" << 
-            mXPerPixel << ", " << mYPerPixel << ")\n";
-        mSampleQuota.clear();
     }
 
     Sampler::~Sampler() {
@@ -254,17 +263,6 @@ namespace Goblin {
         }
     }
 
-    SampleIndex Sampler::requestOneDQuota(uint32_t samplesNum) {
-        int nSample = roundToSquare(samplesNum);
-        mSampleQuota.n1D.push_back(nSample);
-        return SampleIndex(mSampleQuota.n1D.size() - 1, nSample);
-    }
-
-    SampleIndex Sampler::requestTwoDQuota(uint32_t samplesNum) {
-        int nSample = roundToSquare(samplesNum);
-        mSampleQuota.n2D.push_back(roundToSquare(nSample));
-        return SampleIndex(mSampleQuota.n2D.size() - 1, nSample);
-    }
 
     Sample* Sampler::allocateSampleBuffer(size_t bufferSize) {
         Sample* samples = new Sample[bufferSize];
@@ -279,7 +277,7 @@ namespace Goblin {
         float subStrataSize = strataSize / mSamplesPerPixel;
         for(uint32_t i = 0; i < n1D; ++i) {
             for(int j = 0; j < mSamplesPerPixel; ++j) {
-                float nOffset = mJitter ? j + randomFloat() : j + 0.5f;
+                float nOffset = mJitter ? j + mRNG->randomFloat() : j + 0.5f;
                 int index = i * mSamplesPerPixel + j;
                 buffer[index] = i * strataSize + nOffset * subStrataSize;
             }
@@ -296,8 +294,8 @@ namespace Goblin {
             for(int p = 0; p < mSamplesPerPixel; ++p) {
                 int pX = p % mXPerPixel;
                 int pY = p / mXPerPixel;
-                float xOffset = mJitter ? pX + randomFloat() : pX + 0.5f;
-                float yOffset = mJitter ? pY + randomFloat() : pY + 0.5f;
+                float xOffset = mJitter ? pX + mRNG->randomFloat() : pX + 0.5f;
+                float yOffset = mJitter ? pY + mRNG->randomFloat() : pY + 0.5f;
                 int index = 2 * (n * mSamplesPerPixel + pY * mXPerPixel + pX);
                 buffer[index] = 
                     uX * strataSize + xOffset * subStrataSize; 
@@ -309,7 +307,7 @@ namespace Goblin {
 
     void Sampler::shuffle(float* buffer, uint32_t num, uint32_t dim) {
         for(uint32_t n = 0; n < num; ++n) {
-            size_t toShuffle = randomUInt() % num;
+            size_t toShuffle = mRNG->randomUInt() % num;
             for(uint32_t d = 0; d < dim; ++d) {
                 swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
             }

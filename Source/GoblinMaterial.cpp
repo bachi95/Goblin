@@ -7,16 +7,16 @@
 
 namespace Goblin {
 
-    BSDFSampleIndex::BSDFSampleIndex(Sampler* sampler, 
+    BSDFSampleIndex::BSDFSampleIndex(SampleQuota* sampleQuota, 
         int requestNum) {
-        SampleIndex twoDIndex = sampler->requestTwoDQuota(requestNum);
+        SampleIndex twoDIndex = sampleQuota->requestTwoDQuota(requestNum);
         samplesNum = twoDIndex.sampleNum;
         directionIndex = twoDIndex.offset;
     }
 
-    BSDFSample::BSDFSample() {
-        uDirection[0] = randomFloat();
-        uDirection[1] = randomFloat();
+    BSDFSample::BSDFSample(const RNG& rng) {
+        uDirection[0] = rng.randomFloat();
+        uDirection[1] = rng.randomFloat();
     }
 
     BSDFSample::BSDFSample(const Sample& sample,
@@ -55,7 +55,7 @@ namespace Goblin {
             Vector2 uv = fragment->getUV();
             float bumpD = mBumpMap->lookup(*fragment);
 
-            float du = 0.01f;
+            float du = 0.002f;
             Fragment fdu = *fragment; 
             fdu.setPosition(p + du * fragment->getDPDU());
             fdu.setUV(uv + Vector2(du, 0.0f));
@@ -63,7 +63,7 @@ namespace Goblin {
             Vector3 bumpDPDU = fragment->getDPDU() + 
                 (bumpDdu - bumpD) / du * n;
 
-            float dv = 0.01f;
+            float dv = 0.002f;
             Fragment fdv = *fragment;
             fdv.setPosition(p + dv * fragment->getDPDV());
             fdv.setUV(uv + Vector2(0.0f, dv));
@@ -248,7 +248,7 @@ namespace Goblin {
             // use fresnel factor to do importance sampling
             float fresnel = reflect * absdot(wReflect, fragment.getNormal());
             float reflectChance = fresnel;
-            bool doReflect = randomFloat() < reflectChance;
+            bool doReflect = mRNG->randomFloat() < reflectChance;
 
             if(doReflect) {
                 f = mReflectFactor->lookup(fragment) * reflect;

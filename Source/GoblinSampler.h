@@ -7,13 +7,6 @@ namespace Goblin {
     class Vector2;
     class Vector3;
 
-    struct SampleQuota {
-        void clear();
-        size_t size() const;
-        vector<uint32_t> n1D;
-        vector<uint32_t> n2D;
-    };
-
     // use for book keeping where and how many u1d/u2d can be
     // retrieved from Sample
     struct SampleIndex {
@@ -23,6 +16,17 @@ namespace Goblin {
         uint32_t offset;
         uint32_t sampleNum;
     };
+
+    class SampleQuota {
+    public:
+        void clear();
+        SampleIndex requestOneDQuota(uint32_t samplesNum);
+        SampleIndex requestTwoDQuota(uint32_t samplesNum);
+        size_t size() const;
+        vector<uint32_t> n1D;
+        vector<uint32_t> n2D;
+    };
+
 
     class Sample {
     public:
@@ -62,14 +66,13 @@ namespace Goblin {
     class Sampler {
     public:
         Sampler(int xStart, int xEnd, int yStart, int yEnd, 
-            int samplePerPixel);
+            int samplePerPixel, const SampleQuota& sampleQuota,
+            RNG* rng);
         ~Sampler();
         int maxSamplesPerRequest() const;
         uint64_t maxTotalSamples() const;
         int requestSamples(Sample* samples);
 
-        SampleIndex requestOneDQuota(uint32_t samplesNum);
-        SampleIndex requestTwoDQuota(uint32_t samplesNum);
         Sample* allocateSampleBuffer(size_t bufferSize);
     private:
         void stratifiedUniform1D(float* buffer, uint32_t n1D);
@@ -86,6 +89,7 @@ namespace Goblin {
         float* mSampleBuffer;
         bool mJitter;
         SampleQuota mSampleQuota;
+        RNG* mRNG;
     };
 
     /*

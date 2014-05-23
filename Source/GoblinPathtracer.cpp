@@ -14,7 +14,7 @@ namespace Goblin {
     }
 
     Color PathTracer::Li(const ScenePtr& scene, const Ray& ray, 
-        const Sample& sample) const {
+        const Sample& sample, const RNG& rng) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
@@ -58,7 +58,7 @@ namespace Goblin {
     }
 
     void PathTracer::querySampleQuota(const ScenePtr& scene, 
-            Sampler* sampler) {
+            SampleQuota* sampleQuota) {
         if(mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
@@ -86,10 +86,10 @@ namespace Goblin {
         mPathSampleIndexes = new BSDFSampleIndex[bounces];
         mPickLightSampleIndexes = new SampleIndex[bounces];
         for(int i = 0; i < bounces; ++i) {
-            mLightSampleIndexes[i] = LightSampleIndex(sampler, 1);
-            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampler, 1);
-            mPathSampleIndexes[i] = BSDFSampleIndex(sampler, 1);
-            mPickLightSampleIndexes[i] = sampler->requestOneDQuota(1);
+            mLightSampleIndexes[i] = LightSampleIndex(sampleQuota, 1);
+            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
+            mPathSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
+            mPickLightSampleIndexes[i] = sampleQuota->requestOneDQuota(1);
         }
 
         const vector<Light*>& lights = scene->getLights();

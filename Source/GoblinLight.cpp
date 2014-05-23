@@ -5,9 +5,10 @@
 
 namespace Goblin {
 
-    LightSampleIndex::LightSampleIndex(Sampler* sampler, int requestNum) {
-        SampleIndex oneDIndex = sampler->requestOneDQuota(requestNum);
-        SampleIndex twoDIndex = sampler->requestTwoDQuota(requestNum);
+    LightSampleIndex::LightSampleIndex(SampleQuota* sampleQuota, 
+        int requestNum) {
+        SampleIndex oneDIndex = sampleQuota->requestOneDQuota(requestNum);
+        SampleIndex twoDIndex = sampleQuota->requestTwoDQuota(requestNum);
         // theoretically this two should be the same...
         // this is just a paranoid double check
         samplesNum = min(oneDIndex.sampleNum, twoDIndex.sampleNum);
@@ -15,10 +16,10 @@ namespace Goblin {
         geometryIndex = twoDIndex.offset;
     }
 
-    LightSample::LightSample() {
-        uComponent = randomFloat();
-        uGeometry[0] = randomFloat();
-        uGeometry[1] = randomFloat();
+    LightSample::LightSample(const RNG& rng) {
+        uComponent = rng.randomFloat();
+        uGeometry[0] = rng.randomFloat();
+        uGeometry[1] = rng.randomFloat();
     }
 
     LightSample::LightSample(const Sample& sample, 

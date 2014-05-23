@@ -9,10 +9,10 @@ namespace Goblin {
         WhittedRenderer(const RenderSetting& setting);
         ~WhittedRenderer();
         Color Li(const ScenePtr& scene, const Ray& ray, 
-            const Sample& sample) const;
+            const Sample& sample, const RNG& rng) const;
     private:
         void querySampleQuota(const ScenePtr& scene, 
-            Sampler* sampler);
+            SampleQuota* sampleQuota);
     };
 }
 

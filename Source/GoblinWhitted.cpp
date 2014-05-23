@@ -9,7 +9,7 @@ namespace Goblin {
     WhittedRenderer::~WhittedRenderer() {}
 
     Color WhittedRenderer::Li(const ScenePtr& scene, const Ray& ray, 
-        const Sample& sample) const {
+        const Sample& sample, const RNG& rng) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
@@ -18,22 +18,22 @@ namespace Goblin {
             Li += intersection.Le(-ray.d);
             // direct light contribution, for specular part we let
             // specularReflect/specularRefract to deal with it
-            Li += multiSampleLd(scene, ray, epsilon, intersection, sample,
+            Li += multiSampleLd(scene, ray, epsilon, intersection, sample, rng,
                 mLightSampleIndexes, mBSDFSampleIndexes,
                 BSDFType(BSDFAll & ~BSDFSpecular)); 
             // reflection and refraction
             if(ray.depth < mSetting.maxRayDepth) {
                 Li += specularReflect(scene, ray, epsilon, intersection, 
-                    sample);
+                    sample, rng);
                 Li += specularRefract(scene, ray, epsilon, intersection,
-                    sample);
+                    sample, rng);
             }
         }
         return Li;        
     }
 
     void WhittedRenderer::querySampleQuota(const ScenePtr& scene, 
-            Sampler* sampler) {
+            SampleQuota* sampleQuota) {
         if(mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
@@ -55,12 +55,11 @@ namespace Goblin {
         mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
         for(size_t i = 0; i < lights.size(); ++i) {
             uint32_t samplesNum = lights[i]->getSamplesNum();
-            mLightSampleIndexes[i] = LightSampleIndex(sampler, samplesNum);
-            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampler, 
-                samplesNum);
+            mLightSampleIndexes[i] = LightSampleIndex(sampleQuota, samplesNum);
+            mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, samplesNum);
         }
         mPickLightSampleIndexes = new SampleIndex[1];
-        mPickLightSampleIndexes[0] = sampler->requestOneDQuota(1);
+        mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {
             lightPowers.push_back(lights[i]->power(scene).luminance());

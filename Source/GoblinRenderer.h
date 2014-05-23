@@ -4,11 +4,14 @@
 #include "GoblinMaterial.h"
 #include "GoblinScene.h"
 #include "GoblinSampler.h"
+#include "GoblinThreadPool.h"
 
 namespace Goblin {
     class Color;
+    class ImageTile;
     class Ray;
     class ParamSet;
+    class Renderer;
     struct BSDFSample;
     struct LightSample;
     struct BSDFSampleIndex;
@@ -21,16 +24,33 @@ namespace Goblin {
         int maxRayDepth;
     };
 
+    class RenderTask : public Task {
+    public:
+        RenderTask(ImageTile* tile, Renderer* mRenderer,
+            const CameraPtr& camera, const ScenePtr& scene,
+            const SampleQuota& sampleQuota, 
+            int samplePerPixel);
+        ~RenderTask();
+        void run();
+    private:
+        ImageTile* mTile;
+        Renderer* mRenderer;
+        const CameraPtr& mCamera;
+        const ScenePtr& mScene;
+        const SampleQuota& mSampleQuota;
+        int mSamplePerPixel;
+        RNG* mRNG;
+    };
+
     class Renderer {
     public:
         Renderer(const RenderSetting& setting);
         virtual ~Renderer();
         void render(const ScenePtr& scene);
+        virtual Color Li(const ScenePtr& scene, const Ray& ray, 
+            const Sample& sample, const RNG& rng) const = 0;
 
     protected:
-        virtual Color Li(const ScenePtr& scene, const Ray& ray, 
-            const Sample& sample) const = 0;
-
         Color singleSampleLd(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
             const Sample& sample, 
@@ -41,7 +61,8 @@ namespace Goblin {
 
         Color multiSampleLd(const ScenePtr& scene, const Ray& ray,
             float epsilon, const Intersection& intersection, 
-            const Sample& sample, LightSampleIndex* lightSampleIndexes = NULL,
+            const Sample& sample, const RNG& rng,
+            LightSampleIndex* lightSampleIndexes = NULL,
             BSDFSampleIndex* bsdfSampleIndexes = NULL,
             BSDFType type = BSDFAll) const;
 
@@ -52,21 +73,19 @@ namespace Goblin {
 
         Color specularReflect(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
-            const Sample& sample) const;
+            const Sample& sample, const RNG& rng) const;
 
         Color specularRefract(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
-            const Sample& sample) const;
+            const Sample& sample, const RNG& rng) const;
     private:
         virtual void querySampleQuota(const ScenePtr& scene, 
-            Sampler* sampler) = 0;
+            SampleQuota* sampleQuota) = 0;
 
     protected:
         LightSampleIndex* mLightSampleIndexes;
         BSDFSampleIndex* mBSDFSampleIndexes;
         SampleIndex* mPickLightSampleIndexes;
-        Sample* mSamples;
-        Sampler* mSampler;
         CDF1D* mPowerDistribution;
         RenderSetting mSetting;
     };
