@@ -19,17 +19,28 @@ namespace Goblin {
 
     struct RenderSetting {
         RenderSetting(): 
-            samplePerPixel(1), maxRayDepth(5) {}
+            samplePerPixel(1), threadNum(1), maxRayDepth(5) {}
         int samplePerPixel;
+        int threadNum;
         int maxRayDepth;
+    };
+
+    class RenderProgress {
+    public:
+        RenderProgress(int taskNum);
+        void reset();
+        void update();
+    private:
+        boost::mutex mUpdateMutex;
+        int mFinishedNum, mTasksNum;
     };
 
     class RenderTask : public Task {
     public:
         RenderTask(ImageTile* tile, Renderer* mRenderer,
             const CameraPtr& camera, const ScenePtr& scene,
-            const SampleQuota& sampleQuota, 
-            int samplePerPixel);
+            const SampleQuota& sampleQuota, int samplePerPixel, 
+            RenderProgress* renderProgress);
         ~RenderTask();
         void run();
     private:
@@ -39,6 +50,7 @@ namespace Goblin {
         const ScenePtr& mScene;
         const SampleQuota& mSampleQuota;
         int mSamplePerPixel;
+        RenderProgress* mRenderProgress;
         RNG* mRNG;
     };
 

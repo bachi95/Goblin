@@ -51,7 +51,7 @@ namespace Goblin {
     public:
         Film(int xRes, int yRes, const float crop[4], 
             Filter* filter, const std::string& filename, 
-            bool toneMapping = false, 
+            int tileWidth, bool toneMapping = false, 
             float bloomRadius = 0.0f, float bloomWeight = 0.0f);
         ~Film();
 
@@ -72,6 +72,7 @@ namespace Goblin {
         Pixel* mPixels;
         vector<ImageTile*> mTiles;
         std::string mFilename;
+        int mTileWidth;
         bool mToneMapping;
         float mBloomRadius;
         float mBloomWeight;

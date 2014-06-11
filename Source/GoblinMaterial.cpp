@@ -134,13 +134,15 @@ namespace Goblin {
         if(f == 1.0f) {
             return 0.0f;
         }
-        //Wi = -N * cost - WoPerpN * sint / sini =
-        //-N * cost - (sint / sini) * (Wo - dot(N, Wo) * N) =
-        //-N * sqrt(1 -(etai/etat)^2 * (1 - (dot(N, Wo))^2))) +
-        //etai/etat(Wo - dot(N, Wo) * N) =
-        //N * (etai/etat * dot(N, Wo) - 
-        //sqrt(1 - (etai/etat)^2(1 - (dot(N, Wo))^2)) -
-        //etai / etat * Wo
+        /*
+         * Wi = -N * cost - WoPerpN * sint / sini =
+         * -N * cost - (sint / sini) * (Wo - dot(N, Wo) * N) =
+         * -N * sqrt(1 - (etai / etat)^2 * (1 - (dot(N, Wo))^2))) +
+         * etai / etat * (Wo - dot(N, Wo) * N) =
+         * N * (etai/etat * dot(N, Wo) - 
+         * sqrt(1 - (etai/etat)^2(1 - (dot(N, Wo))^2)) -
+         * etai / etat * Wo
+         */
         float eta = ei / et;
         *wi = normalize(n * (eta * cosi - 
             sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - cosi * cosi)))) - 
@@ -166,6 +168,7 @@ namespace Goblin {
             ((etai * cosi) + (etat * cost));
         return (rParl * rParl + rPerp * rPerp) / 2.0f;
     }
+
 
     Color LambertMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
         const Vector3& wi, BSDFType type) const {
@@ -210,6 +213,165 @@ namespace Goblin {
         return sameHemisphere(fragment, wo, wi)? 
             absdot(fragment.getNormal(), wi) * INV_PI : 0.0f;
     }
+
+    /*
+     * implementation based on Torrance-Sparrow microfacet model with
+     * Blinn microfacet distribution
+     * Let wh = wi + wo (half-angle vector)
+     * Define D(wh) the probablility distribution function that gives
+     * possiblity microfacet facing wh
+     * 
+     * Differential Flux received by microfacets with half angle wh:
+     * dFlux = Li(wi) * dwi  * cos(thetah) * dA(wh)
+     * where dA(wh) is the area measure of the microfacets with orientation wh
+     * dA(wh) = (D(wh) * dwh) * dA =>
+     * dFlux = Li(wi) * dwi * cos(thetah) * D(wh) * dwh * dA
+     * 
+     * since in Torrance-Sparrow model we assume each microfacet 
+     * perfect specular, we apply fresnel factor on dFlux to get outgoing Flux
+     * dFluxO = Fr(wo)dFlux =>
+     * L(wo) = dFluxO / (dwo * cos(thetao) * dA) =
+     *     Fr(wo) * Li(wi) * dwi  * D(wh) * dwh * dA * cos(thetah) / 
+     *     (dwo * cos(thetao) * dA)
+     * 
+     * dwh / dwo = (sin(thetah) * dthetah * dphih) / 
+     *     (sin(thetao) * dthetao * dphio)
+     * because wo is computed by reflect wi about wh, thetao = 2thetah =>
+     * dwh / dwo = (sin(thetah) * dthetah * dphih) /
+     *     (sin(2thetah) * 2dthetah * dphio) =
+     *     1 / 4cos(thetah) = 1 / (4 * dot(wo, wh)) = 1 / (4 * dot(wi, wh)) =>
+     * dwh = dwo / 4cos(thetah)
+     * we can then substitute the above L(wo) to get: 
+     * L(wo) = Fr(wo) * Li(wi) * D(wh) * dwi / (4 * cos(thetao)) =>
+     * bsdf(wo, wi) = D(wh) * Fr(wo) / (4 * cos(thetao) * cos(thetai))
+     * 
+     * There is another geometric attenuation term that describes the fraction
+     * of reflected light without maked or shadowed by neighbor microfacet,
+     * the derivation assume microfacets as infinitely long v-shaped grooves, 
+     * the detail derivation can be seen at:
+     * Blinn J. F. 1977. 
+     * Models of light reflection for computer synthesized pictures
+     * we'll denote this geometry attenuation term as
+     * G(wo, wi) = min(
+     *     1, 
+     *     2 * dot(n, wh) * dot(n, wo) / dot(wo, wh),
+     *     2 * dot(n, wh) * dot(n, wi) / dot(wo, wh) )
+     *
+     * bsdf(wo, wi) = D(wh) * G(wo, wi) * Fr(wo) / 
+     *     (4 * cos(thetao) * cos(thetai))
+     *
+     * The D(wh) is a exponential falloff distribution
+     * D(wh) = c * pow(dot(wh, n), e)
+     * To make this distribution energy conserved, the integration of D(wh)
+     * over dwh projected to dA should be dA:
+     * integragte(c * pow(dot(wh, n), e) * cos(thetah), dwh) over hemisphere = 1
+     * 2 * c * PI * integrate(pow(cos(thetah), e + 1) * sin(thetah), dtheta) 
+     * over 0 to PI / 2 = 1 => substute cos(thetah) with u:
+     * 2 * c * PI * integrate(pow(u, e + 1), du) over 0 to 1 = 1 =>
+     * 2 * c * PI / (e + 2) = 1 => c = (e + 2) / 2PI =>
+     * D(wh) = (e + 2) / 2PI * pow(dot(wh, n), e)
+     *
+     */
+    Color BlinnMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
+        const Vector3& wi, BSDFType type) const {
+        type = getType(wo, wi, fragment, type);
+        if(matchType(type, BSDFType(BSDFGlossy | BSDFReflection))) {
+            Vector3 n = fragment.getNormal();
+            float cosi = absdot(n, wi);
+            float coso = absdot(n, wo);
+            if(cosi == 0.0f || coso == 0.0f) {
+                return Color::Black;
+            }
+            Vector3 wh = normalize(wo + wi);
+            float cosh = absdot(n, wh);
+            float exp = mExp->lookup(fragment);
+            // blinn distribution
+            float D = (exp + 2.0f) * INV_TWOPI * 
+                pow(cosh, exp);
+            float woDotWh = absdot(wo, wh);
+            // geometry attenuation term
+            float G = min(1.0f, min(2.0f * cosh * coso / woDotWh, 
+                2.0f * cosh * cosi / woDotWh));
+            // fresnel factor
+            float F = fresnelDieletric(woDotWh, 1.0f, mEta);
+            return mGlossyFactor->lookup(fragment) * D * G * F / 
+                (4.0f * cosi * coso);
+        }
+        return Color::Black;
+    }
+
+    /*
+     * first sample wh with Blinn distribution, then compute wi by reflect
+     * wo over wh
+     * pdf(thetah, phih) = c * D(wh) = c * pow(cos(thetah), e)
+     * integrate(D(wh), dw) over hemisphere = 1 =>
+     * 2 * c * PI * integrate(pow(cos(thetah), e) * sin(thetah), dw) over 
+     * 0-PI / 2 = 1 => substitute cos(thetah) with u
+     * 2 * c * PI * integrate(pow(u, e), du) over 0-1 = 1 =>
+     * c = (e + 1) / 2PI =>
+     * pdf(thetah, phih) = (e + 1) * pow(cos(thetah), e) / 2PI
+     * since phih doesn't affect D, pdf(phih) is a separable uniform pdf
+     * pdf(phih) = 1 / 2PI
+     * pdf(thetah) = pdf(cos(thetah)) = (e + 1) * pow(cos(tehtah), e)
+     * cdf(cos(thetah)) = pow(cos(tehtah), e + 1)
+     * inverse method:
+     * cos(thetah) = pow(u1, 1 / (e + 1))
+     * phi = 2PI * u2
+     * with the above cos(thetah) and phi we can get wh in shading space
+     * we can then transform it back to world space and get wi by:
+     * wi = -wo + 2 * dot(wo, wh) * wh
+     */
+    Color BlinnMaterial::sampleBSDF(const Fragment& fragment, 
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        BSDFType materialType = BSDFType(BSDFGlossy | BSDFReflection);
+        if(!matchType(type, materialType)) {
+            *pdf = 0.0f;
+            return Color::Black;
+        }
+        float u1 = bsdfSample.uDirection[0];
+        float u2 = bsdfSample.uDirection[1];
+        float exp = mExp->lookup(fragment);
+        float cosTheta = pow(u1, 1.0f / (exp + 1.0f));
+        float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+        float phi = u2 * TWO_PI; 
+
+        Vector3 whLocal(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+        // flip it if wo and normal at different sides of hemisphere
+        if(dot(wo, fragment.getNormal()) < 0.0f) {
+            whLocal *= -1.0f;
+        }
+        Matrix3 shadeToWorld = fragment.getWorldToShade().transpose();
+        Vector3 wh = shadeToWorld * whLocal;;
+        *wi = -wo + 2.0f * dot(wo, wh) * wh;
+        *pdf = this->pdf(fragment, wo, *wi, materialType);
+        if(sampledType) {
+            *sampledType = materialType;
+        }
+        return bsdf(fragment, wo, *wi, materialType);
+    }
+
+    /* 
+     * since dwh = dwo / (4 * dot(wo, wh))
+     * pdf(wo) = pdf(wh) / (4 * dot(wo, wh))
+     */
+    float BlinnMaterial::pdf(const Fragment& fragment,
+        const Vector3& wo, const Vector3& wi,
+        BSDFType type) const {
+        if(!matchType(type, BSDFType(BSDFGlossy | BSDFReflection))) {
+            return 0.0f;
+        }
+
+        if(!sameHemisphere(fragment, wo, wi)) {
+            return 0.0f;
+        }
+        Vector3 wh = normalize(wo + wi);
+        float cosThetah = absdot(wh, fragment.getNormal());
+        float exp = mExp->lookup(fragment);
+        return (exp + 1.0f) * pow(cosThetah, exp) / 
+            (TWO_PI * 4.0f * dot(wo, wh));
+    }
+
 
     Color TransparentMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 

@@ -31,7 +31,7 @@ namespace Goblin {
     };
 
     RNGImp::RNGImp() {
-        mEngine = new RNGType(static_cast<uint32_t>(time(NULL)));
+        mEngine = new RNGType(static_cast<uint32_t>(rand()));
         mRealDist = new boost::uniform_real<float>(0.0f, 1.0f);
         mUInt32Dist = new boost::uniform_int<uint32_t>(0, 
             numeric_limits<uint32_t>::max() );

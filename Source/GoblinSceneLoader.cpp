@@ -37,6 +37,7 @@ namespace Goblin {
     static const char* FILM = "film";
     static const char* RESOLUTION = "resolution";
     static const char* CROP = "crop";
+    static const char* TILE_WIDTH = "tile_width";
     static const char* TONE_MAPPING = "tone_mapping";
     static const char* BLOOM_WEIGHT = "bloom_weight";
     static const char* BLOOM_RADIUS = "bloom_radius";
@@ -76,11 +77,14 @@ namespace Goblin {
     // material related keywords;
     static const char* MATERIAL = "material";
     static const char* LAMBERT = "lambert";
+    static const char* BLINN = "blinn";
+    static const char* EXPONENT = "exponent";
     static const char* TRANSPARENT = "transparent";
     static const char* REFLECTION = "Kr";
     static const char* REFRACTION = "Kt";
     static const char* REFRACTION_INDEX = "index";
     static const char* DIFFUSE = "Kd";
+    static const char* GLOSSY = "Kg";
     static const char* BUMPMAP = "bumpmap";
     // texture related keywords:
     static const char* TEXTURE = "texture";
@@ -101,6 +105,7 @@ namespace Goblin {
     static const char* RENDER_SETTING = "render_setting";
     static const char* SAMPLE_PER_PIXEL = "sample_per_pixel";
     static const char* MAX_RAY_DEPTH = "max_ray_depth";
+    static const char* THREAD_NUM = "thread_num";
     static const char* SAMPLE_NUM = "sample_num";
 
 
@@ -350,6 +355,7 @@ namespace Goblin {
         bool toneMapping = false;
         float bloomWeight = 0.0f;
         float bloomRadius = 0.0f;
+        int tileWidth;
         PropertyTree filmTree;
         if(pt.getChild(FILM, &filmTree)) {
             Vector2 res = parseVector2(filmTree, RESOLUTION);
@@ -367,6 +373,7 @@ namespace Goblin {
             toneMapping = filmTree.parseBool(TONE_MAPPING);
             bloomRadius = filmTree.parseFloat(BLOOM_RADIUS);
             bloomWeight = filmTree.parseFloat(BLOOM_WEIGHT);
+            tileWidth = filmTree.parseInt(TILE_WIDTH, 16);
         }
         string filePath = sceneCache->resolvePath(filename);
 
@@ -378,11 +385,12 @@ namespace Goblin {
         std::cout << "-tone mapping: " << toneMapping << std::endl;
         std::cout << "-bloom radius: " << bloomRadius << std::endl;
         std::cout << "-bloom weight: " << bloomWeight << std::endl;
+        std::cout << "-tile width: " << tileWidth << std::endl;
 
         Filter* filter = parseFilter(pt);
 
         return new Film(xRes, yRes, crop, filter, filePath, 
-            toneMapping, bloomRadius, bloomWeight);
+            tileWidth, toneMapping, bloomRadius, bloomWeight);
     }
 
     static CameraPtr parseCamera(const PropertyTree& pt, Film* film) {
@@ -571,6 +579,20 @@ namespace Goblin {
                 bump = sceneCache->getFloatTexture(bumpmapName);
             }
             material = MaterialPtr(new LambertMaterial(Kd, bump));
+        } else if(materialType == BLINN) {
+            string glossyTextureName = pt.parseString(GLOSSY);
+            string expTextureName = pt.parseString(EXPONENT);
+            ColorTexturePtr Kg = 
+                sceneCache->getColorTexture(glossyTextureName);
+            FloatTexturePtr exp = 
+                sceneCache->getFloatTexture(expTextureName);
+            float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
+            FloatTexturePtr bump;
+            if(pt.hasChild(BUMPMAP)) {
+                string bumpmapName = pt.parseString(BUMPMAP);
+                bump = sceneCache->getFloatTexture(bumpmapName);
+            }
+            material = MaterialPtr(new BlinnMaterial(Kg, exp, index, bump));
         } else if(materialType == TRANSPARENT) {
             string reflectTextureName = pt.parseString(REFLECTION);
             string refractTextureName = pt.parseString(REFRACTION);
@@ -714,16 +736,20 @@ namespace Goblin {
         RenderSetting* setting) {
         int samplePerPixel = 1;
         int maxRayDepth = 5;
+        int threadNum = boost::thread::hardware_concurrency();
 
         PropertyTree rt;
         if(pt.getChild(RENDER_SETTING, &rt)) {
             samplePerPixel = rt.parseInt(SAMPLE_PER_PIXEL, samplePerPixel);
             maxRayDepth = rt.parseInt(MAX_RAY_DEPTH, maxRayDepth);
+            threadNum = min(rt.parseInt(THREAD_NUM, threadNum), threadNum);
         }
         setting->samplePerPixel = samplePerPixel;
         setting->maxRayDepth = maxRayDepth;
+        setting->threadNum = threadNum;
         std::cout << "\nrender setting" << std::endl;
         std::cout << "-sample per pixel " << samplePerPixel << std::endl;
+        std::cout << "-thread num " << threadNum << std::endl;
         std::cout << "-max ray depth " << maxRayDepth << std::endl;
     }
 

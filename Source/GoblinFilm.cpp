@@ -141,9 +141,10 @@ namespace Goblin {
 
     Film::Film(int xRes, int yRes, const float crop[4],
         Filter* filter, const std::string& filename,
-        bool toneMapping, float bloomRadius, float bloomWeight): 
+        int tileWidth, bool toneMapping, 
+        float bloomRadius, float bloomWeight): 
         mXRes(xRes), mYRes(yRes), mFilter(filter), mFilename(filename),
-        mToneMapping(toneMapping), 
+        mTileWidth(tileWidth), mToneMapping(toneMapping), 
         mBloomRadius(bloomRadius), mBloomWeight(bloomWeight) {
 
         memcpy(mCrop, crop, 4 * sizeof(float));
@@ -171,12 +172,11 @@ namespace Goblin {
 
         // construc image tiles
         ImageRect r(mXStart, mYStart, mXCount, mYCount);
-        int tileWidth = 160;
-        int colNum = ceilInt((float)mXCount / (float)tileWidth);
-        int rowNum = ceilInt((float)mYCount / (float)tileWidth);
+        int colNum = ceilInt((float)mXCount / (float)mTileWidth);
+        int rowNum = ceilInt((float)mYCount / (float)mTileWidth);
         for(int i = 0; i < rowNum; ++i) {
             for(int j = 0; j < colNum; ++j) {
-                ImageTile* tile = new ImageTile(tileWidth, 
+                ImageTile* tile = new ImageTile(mTileWidth, 
                     i, rowNum, j, colNum, r, mFilter, mFilterTable);
                 mTiles.push_back(tile);
             }

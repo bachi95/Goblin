@@ -9,11 +9,13 @@ namespace Goblin {
 
     RenderTask::RenderTask(ImageTile* tile, Renderer* renderer,
         const CameraPtr& camera, const ScenePtr& scene,
-        const SampleQuota& sampleQuota, int samplePerPixel): 
+        const SampleQuota& sampleQuota, int samplePerPixel,
+        RenderProgress* renderProgress): 
         mTile(tile), mRenderer(renderer),
         mCamera(camera), mScene(scene),
         mSampleQuota(sampleQuota), 
-        mSamplePerPixel(samplePerPixel) {
+        mSamplePerPixel(samplePerPixel),
+        mRenderProgress(renderProgress) {
         mRNG = new RNG();
     }
 
@@ -27,12 +29,6 @@ namespace Goblin {
     void RenderTask::run() {
         int xStart, xEnd, yStart, yEnd;
         mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-
-        std::cout << "tiles " <<
-            " sampleXStart " << xStart << " sampleYStart " << yStart <<
-            " sampleXEnd " << xEnd << " sampleYEnd " << yEnd <<
-                std::endl;
-
         Sampler sampler(xStart, xEnd, yStart, yEnd, 
             mSamplePerPixel, mSampleQuota, mRNG);
         int batchAmount = sampler.maxSamplesPerRequest();
@@ -47,6 +43,31 @@ namespace Goblin {
             }
         }
         delete [] samples;
+        mRenderProgress->update();
+    }
+
+    RenderProgress::RenderProgress(int taskNum): 
+        mFinishedNum(0), mTasksNum(taskNum) {
+    }
+
+    void RenderProgress::reset() {
+        boost::lock_guard<boost::mutex> lk(mUpdateMutex);
+        mFinishedNum = 0;
+    }
+
+    void RenderProgress::update() {
+        boost::lock_guard<boost::mutex> lk(mUpdateMutex);
+        mFinishedNum++;
+        std::cout.precision(3);
+        std::cout << "\rProgress: %" << 
+            (float)mFinishedNum / (float)mTasksNum * 100.0f <<
+            "                     ";
+
+        std::cout.flush();
+        if(mFinishedNum == mTasksNum) {
+            std::cout << "\rRender Complete!         " << std::endl;
+            std::cout.flush();
+        }
     }
 
     Renderer::Renderer(const RenderSetting& setting):
@@ -84,12 +105,13 @@ namespace Goblin {
 
         vector<ImageTile*>& tiles = film->getTiles();
         vector<Task*> renderTasks;
+        RenderProgress progress((int)tiles.size());
         for(size_t i = 0; i < tiles.size(); ++i) {
             renderTasks.push_back(new RenderTask(tiles[i], this, 
-                camera, scene, sampleQuota, samplePerPixel));
+                camera, scene, sampleQuota, samplePerPixel, &progress));
         }
         
-        ThreadPool threadPool;
+        ThreadPool threadPool(mSetting.threadNum);
         threadPool.enqueue(renderTasks);
         threadPool.waitForAll();
         //clean up

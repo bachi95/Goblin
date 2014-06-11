@@ -111,6 +111,32 @@ namespace Goblin {
         const FloatTexturePtr& bump):
         Material(bump), mDiffuseFactor(Kd) {}
 
+    class BlinnMaterial : public Material {
+    public:
+        BlinnMaterial(const ColorTexturePtr& Kg, const FloatTexturePtr& exp, 
+            float index, const FloatTexturePtr& bump = FloatTexturePtr());
+
+        Color bsdf(const Fragment& fragment, const Vector3& wo, 
+            const Vector3& wi, BSDFType type) const;
+
+        Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type, BSDFType* sampledType) const;
+
+        float pdf(const Fragment& fragment, 
+            const Vector3& wo, const Vector3& wi, BSDFType type) const;
+           
+    private:
+        ColorTexturePtr mGlossyFactor;
+        FloatTexturePtr mExp;
+        float mEta;
+    };
+
+    inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
+        const FloatTexturePtr& exponent, float index, 
+        const FloatTexturePtr& bump): 
+        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index) {}
+
 
     class TransparentMaterial : public Material {
     public:
