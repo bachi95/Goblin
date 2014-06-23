@@ -23,6 +23,11 @@ namespace Goblin {
             BSDFDiffuse | BSDFGlossy | BSDFSpecular
     };
 
+    enum FresnelType {
+        Dieletric,
+        Conductor
+    };
+
     struct BSDFSampleIndex {
         BSDFSampleIndex() {}
         BSDFSampleIndex(SampleQuota* sampleQuota, int requestNum);
@@ -68,14 +73,19 @@ namespace Goblin {
         bool sameHemisphere(const Fragment& fragment,
             const Vector3& wo, const Vector3& wi) const;
 
-        float specularReflect(const Fragment& fragment, const Vector3& wo,
-            Vector3* wi, float etai, float etat) const;
+        float specularReflectDieletric(const Fragment& fragment, 
+            const Vector3& wo, Vector3* wi, float etai, float etat) const;
+
+        float specularReflectConductor(const Fragment& fragment,
+            const Vector3& wo, Vector3* wi, float eta, float k) const;
 
         float specularRefract(const Fragment& fragment, const Vector3& wo,
             Vector3* wi, float etai, float etat) const;
 
         // material util to get the fresnel factor
         float fresnelDieletric(float cosi, float etai, float etat) const;
+
+        float fresnelConductor(float cosi, float eta, float k) const;
 
     private:
         FloatTexturePtr mBumpMap;
@@ -116,6 +126,10 @@ namespace Goblin {
         BlinnMaterial(const ColorTexturePtr& Kg, const FloatTexturePtr& exp, 
             float index, const FloatTexturePtr& bump = FloatTexturePtr());
 
+        BlinnMaterial(const ColorTexturePtr& Kg, const FloatTexturePtr& exp, 
+            float index, float absorption, 
+            const FloatTexturePtr& bump = FloatTexturePtr());
+
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
 
@@ -129,13 +143,21 @@ namespace Goblin {
     private:
         ColorTexturePtr mGlossyFactor;
         FloatTexturePtr mExp;
-        float mEta;
+        float mEta, mK;
+        FresnelType mFresnelType;
     };
 
     inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
         const FloatTexturePtr& exponent, float index, 
         const FloatTexturePtr& bump): 
-        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index) {}
+        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        mFresnelType(Dieletric) {}
+
+    inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
+        const FloatTexturePtr& exponent, float index, float absorption,
+        const FloatTexturePtr& bump): 
+        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        mK(absorption), mFresnelType(Conductor) {}
 
 
     class TransparentMaterial : public Material {
@@ -183,6 +205,42 @@ namespace Goblin {
     }
 
     inline float TransparentMaterial::pdf(const Fragment& fragment,
+        const Vector3& wo, const Vector3& wi, BSDFType type) const {
+        return 0.0f;
+    }
+
+
+    class MirrorMaterial : public Material {
+    public:
+        MirrorMaterial(const ColorTexturePtr& Kr, float index, 
+            float absorption, const FloatTexturePtr& bump = FloatTexturePtr());
+        Color bsdf(const Fragment& fragment, const Vector3& wo,
+            const Vector3& wi, BSDFType type) const;
+
+        // given wo sample a wi and corresponding bsdf value to return
+        Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type, BSDFType* sampledType) const;
+
+        float pdf(const Fragment& fragment, 
+            const Vector3& wo, const Vector3& wi, BSDFType type) const;
+
+    private:
+        ColorTexturePtr mReflectFactor;
+        float mEta;
+        float mK;
+    };
+
+    inline MirrorMaterial::MirrorMaterial(const ColorTexturePtr& Kr, 
+        float index, float absorption, const FloatTexturePtr& bump):
+        Material(bump), mReflectFactor(Kr), mEta(index), mK(absorption) {}
+
+    inline Color MirrorMaterial::bsdf(const Fragment& fragment, 
+        const Vector3& wo, const Vector3& wi, BSDFType type) const {
+        return Color::Black;
+    }
+
+    inline float MirrorMaterial::pdf(const Fragment& fragment,
         const Vector3& wo, const Vector3& wi, BSDFType type) const {
         return 0.0f;
     }

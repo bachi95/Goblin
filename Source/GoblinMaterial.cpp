@@ -90,7 +90,7 @@ namespace Goblin {
         return dot(wo, normal) * dot(wi, normal) > 0.0f;
     }
 
-    float Material::specularReflect(const Fragment& fragment, 
+    float Material::specularReflectDieletric(const Fragment& fragment, 
         const Vector3& wo, Vector3* wi, float etai, float etat) const {
         Vector3 n = fragment.getNormal();
         // wo(face outward) is the input ray(with n form angle i), 
@@ -106,9 +106,23 @@ namespace Goblin {
         }
         float f = fresnelDieletric(cosi, ei, et);
         // Wi = Wo - 2 * WoPerpN = Wo - 2(Wo - dot(N, Wo))N =
-        // 4(dot(N, Wo))N - Wo
+        // 2(dot(N, Wo))N - Wo
         *wi = 2 * cosi * n - wo;
         // specular reflection angle should be the same as input angle
+        float cosr = cosi;
+        return f / cosr;
+    }
+
+    float Material::specularReflectConductor(const Fragment& fragment, 
+        const Vector3& wo, Vector3* wi, float eta, float k) const {
+        Vector3 n = fragment.getNormal();
+        float cosi = dot(n, wo);
+        // back facing
+        if(cosi <= 0.0f) {
+            return 0.0f;
+        }
+        float f = fresnelConductor(cosi, eta, k);
+        *wi = 2 * cosi * n - wo;
         float cosr = cosi;
         return f / cosr;
     }
@@ -167,6 +181,16 @@ namespace Goblin {
         float rPerp = ((etai * cosi) - (etat * cost)) /
             ((etai * cosi) + (etat * cost));
         return (rParl * rParl + rPerp * rPerp) / 2.0f;
+    }
+
+    float Material::fresnelConductor(float cosi, float eta, float k) const {
+        float tmp = (eta * eta + k * k);
+        float cosi2 = cosi * cosi;
+        float rParl2 = (tmp * cosi2 - 2.0f * eta * cosi + 1.0f) /
+            (tmp * cosi2 + 2.0f * eta * cosi + 1.0f);
+        float rPerp2 = (tmp - 2.0f * eta * cosi + cosi2) /
+            (tmp + 2.0f * eta * cosi + cosi2);
+        return (rParl2 + rPerp2) * 0.5f;
     }
 
 
@@ -293,7 +317,12 @@ namespace Goblin {
             float G = min(1.0f, min(2.0f * cosh * coso / woDotWh, 
                 2.0f * cosh * cosi / woDotWh));
             // fresnel factor
-            float F = fresnelDieletric(woDotWh, 1.0f, mEta);
+            float F = 1.0f;
+            if(mFresnelType == Dieletric) {
+                F = fresnelDieletric(woDotWh, 1.0f, mEta);
+            } else if(mFresnelType == Conductor) {
+                F = fresnelConductor(woDotWh, mEta, mK);
+            }
             return mGlossyFactor->lookup(fragment) * D * G * F / 
                 (4.0f * cosi * coso);
         }
@@ -388,7 +417,7 @@ namespace Goblin {
         if(nMatch == 1) {
             if(matchType(type, BSDFReflection)) {
                 f = mReflectFactor->lookup(fragment) * 
-                    specularReflect(fragment, wo, wi, mEtai, mEtat);
+                    specularReflectDieletric(fragment, wo, wi, mEtai, mEtat);
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFReflection);
                 }
@@ -403,7 +432,7 @@ namespace Goblin {
         } else if(nMatch == 2) {
             Vector3 wReflect;
             Vector3 wRefract;
-            float reflect = specularReflect(fragment, wo, 
+            float reflect = specularReflectDieletric(fragment, wo, 
                 &wReflect, mEtai, mEtat);
             float refract = specularRefract(fragment, wo, 
                 &wRefract, mEtai, mEtat);
@@ -434,4 +463,22 @@ namespace Goblin {
         return f;
     }
 
+
+    Color MirrorMaterial::sampleBSDF(const Fragment& fragment, 
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        BSDFType materialType = BSDFType(BSDFSpecular | BSDFReflection);
+        if(!matchType(type, materialType)) {
+            *pdf = 0.0f;
+            return Color::Black;
+        }
+
+        Color f = mReflectFactor->lookup(fragment) * 
+            specularReflectConductor(fragment, wo, wi, mEta, mK);
+        *pdf = 1.0f;
+        if(sampledType) {
+            *sampledType = materialType;
+        }
+        return f;
+    }
 }

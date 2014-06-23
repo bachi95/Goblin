@@ -252,7 +252,6 @@ namespace Goblin {
             mTiles[i]->getImageRange(&xStart, &xEnd, &yStart, &yEnd);
             const Pixel* tileBuffer = mTiles[i]->getTileBuffer();
             int tileWidth = xEnd - xStart;
-            int tileHeight = yEnd - yStart;
             for(int y = yStart; y < yEnd; ++y) {
                 for(int x = xStart; x < xEnd; ++x) {
                     int tileIndex = (y - yStart) * tileWidth + (x - xStart);

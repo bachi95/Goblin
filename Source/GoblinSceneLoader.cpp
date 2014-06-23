@@ -71,6 +71,7 @@ namespace Goblin {
     static const char* POINT = "point";
     static const char* DIRECTIONAL = "directional";
     static const char* AREA = "area";
+    static const char* IBL = "ibl";
     static const char* INTENSITY = "intensity";
     static const char* RADIANCE = "radiance";
     static const char* DIRECTION = "direction";
@@ -78,13 +79,15 @@ namespace Goblin {
     static const char* MATERIAL = "material";
     static const char* LAMBERT = "lambert";
     static const char* BLINN = "blinn";
-    static const char* EXPONENT = "exponent";
     static const char* TRANSPARENT = "transparent";
+    static const char* MIRROR = "mirror";
+    static const char* EXPONENT = "exponent";
     static const char* REFLECTION = "Kr";
     static const char* REFRACTION = "Kt";
     static const char* REFRACTION_INDEX = "index";
     static const char* DIFFUSE = "Kd";
     static const char* GLOSSY = "Kg";
+    static const char* ABSORPTION = "k";
     static const char* BUMPMAP = "bumpmap";
     // texture related keywords:
     static const char* TEXTURE = "texture";
@@ -355,7 +358,7 @@ namespace Goblin {
         bool toneMapping = false;
         float bloomWeight = 0.0f;
         float bloomRadius = 0.0f;
-        int tileWidth;
+        int tileWidth = 16;
         PropertyTree filmTree;
         if(pt.getChild(FILM, &filmTree)) {
             Vector2 res = parseVector2(filmTree, RESOLUTION);
@@ -373,7 +376,7 @@ namespace Goblin {
             toneMapping = filmTree.parseBool(TONE_MAPPING);
             bloomRadius = filmTree.parseFloat(BLOOM_RADIUS);
             bloomWeight = filmTree.parseFloat(BLOOM_WEIGHT);
-            tileWidth = filmTree.parseInt(TILE_WIDTH, 16);
+            tileWidth = filmTree.parseInt(TILE_WIDTH, tileWidth);
         }
         string filePath = sceneCache->resolvePath(filename);
 
@@ -556,6 +559,15 @@ namespace Goblin {
                     PrimitivePtr(new InstancedPrimitive(toWorld, model)); 
             }
             sceneCache->addInstance(instance);
+        } else if(lightType == IBL) {
+            string filename = 
+                sceneCache->resolvePath(pt.parseString(FILENAME));
+            Color filter = parseColor(pt, FILTER);
+            Quaternion orientation = parseQuaternion(pt, ORIENTATION);
+            std::cout << "-radiance map: " << filename << std::endl;
+            std::cout << "-filter: " << filter << std::endl;
+            std::cout << "-orientation: " << orientation << std::endl;
+            light = new ImageBasedLight(filename, filter, orientation);
         } else {
             std::cerr << "unrecognized light type " << lightType << std::endl;
             return;
@@ -587,12 +599,20 @@ namespace Goblin {
             FloatTexturePtr exp = 
                 sceneCache->getFloatTexture(expTextureName);
             float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
+            float absorption = pt.parseFloat(ABSORPTION, -1.0f);
             FloatTexturePtr bump;
             if(pt.hasChild(BUMPMAP)) {
                 string bumpmapName = pt.parseString(BUMPMAP);
                 bump = sceneCache->getFloatTexture(bumpmapName);
             }
-            material = MaterialPtr(new BlinnMaterial(Kg, exp, index, bump));
+            if(absorption > 0.0f) {
+                // conductor
+                material = MaterialPtr(new BlinnMaterial(Kg, exp, index, 
+                    absorption, bump));
+            } else {
+                // dieletric
+                material = MaterialPtr(new BlinnMaterial(Kg, exp, index, bump));
+            }
         } else if(materialType == TRANSPARENT) {
             string reflectTextureName = pt.parseString(REFLECTION);
             string refractTextureName = pt.parseString(REFRACTION);
@@ -608,6 +628,22 @@ namespace Goblin {
                 bump = sceneCache->getFloatTexture(bumpmapName);
             }
             material = MaterialPtr(new TransparentMaterial(Kr, Kt, index, bump));
+        } else if(materialType == MIRROR) {
+            string reflectTextureName = pt.parseString(REFLECTION);
+            ColorTexturePtr Kr = 
+                sceneCache->getColorTexture(reflectTextureName);
+            // use aluminium by default
+            float index = pt.parseFloat(REFRACTION_INDEX, 0.8f);
+            float absorption = pt.parseFloat(ABSORPTION, 6.0f);
+            std::cout << "-refraction index: " << index << std::endl;
+            std::cout << "-absorption: " << absorption << std::endl;
+            FloatTexturePtr bump;
+            if(pt.hasChild(BUMPMAP)) {
+                string bumpmapName = pt.parseString(BUMPMAP);
+                bump = sceneCache->getFloatTexture(bumpmapName);
+            }
+            material = MaterialPtr(new MirrorMaterial(Kr, index, 
+                absorption, bump));
         } else {
             std::cerr << "undefined material type " << 
                 materialType << std::endl;

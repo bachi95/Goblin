@@ -1,6 +1,8 @@
 #include "GoblinSampler.h"
 #include "GoblinVector.h"
 
+#include <cassert>
+
 namespace Goblin {
     void SampleQuota::clear() {
         n1D.clear();
@@ -316,8 +318,17 @@ namespace Goblin {
 
 
     CDF1D::CDF1D(const vector<float>& f1D): mFunction(f1D) {
-        size_t n = f1D.size();
+        init();
+    }
+
+    CDF1D::CDF1D(const float* f1D, int n): mFunction(f1D, f1D + n) {
+        init();
+    }
+
+    void CDF1D::init() {
+        size_t n = mFunction.size();
         mDx = 1.0f / n;
+        mCount = n;
         mCDF.resize(n + 1);
         mCDF[0] = 0.0f;
         // accumulate up the integral
@@ -332,6 +343,7 @@ namespace Goblin {
     }
 
     int CDF1D::sampleDiscrete(float u , float* pdf) {
+        assert(u >= 0.0f && u <= 1.0f);
         vector<float>::iterator lowBound;
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
         int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
@@ -339,6 +351,70 @@ namespace Goblin {
             *pdf = (mFunction[offset] / mIntegral) * mDx;
         }
         return offset;
+    }
+
+    float CDF1D::sampleContinuous(float u, float* pdf, int* index) {
+        assert(u >= 0.0f && u <= 1.0f);
+        vector<float>::iterator lowBound;
+        lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
+        int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
+        float d = (u - mCDF[offset]) / (mCDF[offset + 1] - mCDF[offset]);
+        if(pdf) {
+            *pdf = mFunction[offset] / mIntegral;
+        }
+        if(index) {
+            *index = offset;
+        }
+        return (static_cast<float>(offset) + d) / mFunction.size();
+    }
+
+
+    CDF2D::CDF2D(const float* f2D, int width, int height) {
+        vector<float> rowIntegrals;
+        for(int i = 0; i < height; ++i) {
+            CDF1D* colCDF = new CDF1D(f2D + i * width, width);
+            rowIntegrals.push_back(colCDF->mIntegral);
+            mConditionalDist.push_back(colCDF);
+        }
+        mMarginalDist = new CDF1D(rowIntegrals);
+    }
+
+    CDF2D::~CDF2D() {
+        for(size_t i = 0; i < mConditionalDist.size(); ++i) {
+            delete mConditionalDist[i];
+            mConditionalDist[i] = NULL;
+        }
+        delete mMarginalDist;
+        mMarginalDist = NULL;
+    }
+    
+    Vector2 CDF2D::sampleContinuous(float u1, float u2, float* pdf) {
+        // first pick up the row based on marginal pdf alone rows
+        float pdfRow;
+        int row;
+        float v = mMarginalDist->sampleContinuous(u2, &pdfRow, &row);
+        // the conditional pdf under the condition that we pick row from above
+        float pdfCol;
+        float u = mConditionalDist[row]->sampleContinuous(u1, &pdfCol);
+        if(pdf) {
+            *pdf = pdfRow * pdfCol;
+        }
+        return Vector2(u, v);
+    }
+
+    float CDF2D::pdf(float u, float v) {
+        int row = clamp(floorInt(mMarginalDist->mCount * v), 
+            0, mMarginalDist->mCount - 1);
+        int col = clamp(floorInt(mConditionalDist[row]->mCount * u), 
+            0, mConditionalDist[row]->mCount - 1);
+        float integral = 
+            mMarginalDist->mIntegral * mConditionalDist[row]->mIntegral;
+        if(integral == 0.0f) {
+            return 0.0f;
+        }
+        float pdf = mMarginalDist->mFunction[row] * 
+            mConditionalDist[row]->mFunction[col] / integral;
+        return pdf;
     }
 
     /*

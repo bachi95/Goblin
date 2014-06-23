@@ -227,6 +227,9 @@ namespace Goblin {
                         Ld += f * Li * absdot(wi, n) * fWeight / bsdfPdf;
                     }
                 }
+            } else {
+                // the radiance contribution from IBL
+                Ld += f * light->Le(r) * fWeight / bsdfPdf;
             }
         }
 

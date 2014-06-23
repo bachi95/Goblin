@@ -28,6 +28,13 @@ namespace Goblin {
                 Li += specularRefract(scene, ray, epsilon, intersection,
                     sample, rng);
             }
+        } else {
+            // get image based lighting if ray didn't hit anything
+            const vector<Light*>& lights = scene->getLights();
+            for(size_t i = 0; i < lights.size(); ++i) {
+                Li += lights[i]->Le(ray);
+            }
+            return Li;
         }
         return Li;        
     }

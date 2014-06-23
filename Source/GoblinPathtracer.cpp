@@ -19,7 +19,12 @@ namespace Goblin {
         float epsilon;
         Intersection intersection;
         if(!scene->intersect(ray, &epsilon, &intersection)) {
-            return Color::Black;
+            // get image based lighting if ray didn't hit anything
+            const vector<Light*>& lights = scene->getLights();
+            for(size_t i = 0; i < lights.size(); ++i) {
+                Li += lights[i]->Le(ray);
+            }
+            return Li;
         }
         // if intersect an area light
         Li += intersection.Le(-ray.d);

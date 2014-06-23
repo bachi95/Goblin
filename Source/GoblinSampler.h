@@ -6,6 +6,7 @@
 namespace Goblin {
     class Vector2;
     class Vector3;
+    class CDF2D;
 
     // use for book keeping where and how many u1d/u2d can be
     // retrieved from Sample
@@ -107,12 +108,29 @@ namespace Goblin {
     class CDF1D {
     public:
         CDF1D(const vector<float>& f1D);
+        CDF1D(const float* f1D, int n);
         int sampleDiscrete(float u, float* pdf = NULL);
+        float sampleContinuous(float u, float* pdf = NULL, int *index = NULL);
+    private:
+        void init();
     private:
         vector<float> mFunction;
         vector<float> mCDF;
         float mIntegral;
         float mDx;
+        int mCount;
+        friend class CDF2D;
+    };
+
+    class CDF2D {
+    public:
+        CDF2D(const float* f2D, int width, int height);
+        ~CDF2D();
+        Vector2 sampleContinuous(float u1, float u2, float* pdf = NULL);
+        float pdf(float u, float v);
+    private:
+        CDF1D* mMarginalDist;
+        vector<CDF1D*> mConditionalDist;
     };
 
 

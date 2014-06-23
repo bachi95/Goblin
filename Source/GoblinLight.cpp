@@ -1,3 +1,4 @@
+#include "GoblinImageIO.h"
 #include "GoblinLight.h"
 #include "GoblinRay.h"
 #include "GoblinSampler.h"
@@ -249,5 +250,149 @@ namespace Goblin {
         Vector3 wiLocal = mToWorld.invertVector(wi);
         return mGeometrySet->pdf(pLocal, wiLocal);
     }
-}
 
+
+    ImageBasedLight::ImageBasedLight(const string& radianceMap, 
+        const Color& filter, const Quaternion& orientation): 
+        mRadiance(NULL), mDistribution(NULL) {
+        // Make default orientation facing the center of
+        // environment map since spherical coordinate is z-up
+        mToWorld.rotateX(-0.5f * PI);
+        mToWorld.rotateY(-0.5f * PI);
+        mToWorld.setOrientation(orientation * mToWorld.getOrientation());
+        int width, height;
+        Color* buffer = loadImage(radianceMap, &width, &height);
+        if(buffer == NULL) {
+            std::cerr << "errror loading image " << radianceMap << std::endl;
+            width = 1;
+            height = 1;
+            buffer = new Color[1];
+            buffer[0] = Color::Magenta;
+        }
+        for(int i = 0; i < width * height; ++i) {
+            buffer[i] *= filter;
+            mAverageRadiance += buffer[i];
+        }
+        mAverageRadiance /= (float)(width * height);
+        mRadiance = new ImageBuffer<Color>(buffer, width, height);
+        float* dist = new float[width * height];
+        for(int i = 0; i < height; ++i) {
+            float sinTheta = sin(((float)i + 0.5f) / (float)height * PI);
+            for(int j = 0; j < width; ++j) {
+                int index = i * width + j;
+                dist[index] = buffer[index].luminance() * sinTheta;
+            }
+        }
+        mDistribution = new CDF2D(dist, width, height);
+        delete [] dist;
+    }
+
+    ImageBasedLight::~ImageBasedLight() {
+        if(mRadiance != NULL) {
+            delete mDistribution;
+            mDistribution = NULL;
+        }
+        if(mDistribution != NULL) {
+            delete mDistribution;
+            mDistribution = NULL;
+        }
+    }
+
+    Color ImageBasedLight::Le(const Ray& ray) const {
+        const Vector3& w = mToWorld.invertVector(ray.d);
+        float theta = acos(w.z);
+        float phi = atan2(w.y, w.x);
+        if(phi < 0.0f) {
+            phi += TWO_PI;
+        }
+        float s = phi * INV_TWOPI;
+        float t = theta * INV_PI;
+        return mRadiance->lookup(s, t);
+    }
+
+    Color ImageBasedLight::sampleL(const Vector3& p, float epsilon,
+        const LightSample& lightSample,
+        Vector3* wi, float* pdf, Ray* shadowRay) const {
+        float pdfST;
+        Vector2 st = mDistribution->sampleContinuous(
+            lightSample.uGeometry[0], lightSample.uGeometry[1], &pdfST);
+        float theta = st[1] * PI;
+        float phi = st[0] * TWO_PI;
+        float cosTheta = cos(theta);
+        float sinTheta = sin(theta);
+        float cosPhi = cos(phi);
+        float sinPhi = sin(phi);
+        Vector3 wLocal(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+        *wi = mToWorld.onVector(wLocal);
+
+        if(sinTheta == 0.0f) {
+            *pdf = 0.0f;
+        }
+        *pdf = pdfST / (TWO_PI * PI * sinTheta);
+
+        shadowRay->o = p;
+        shadowRay->d = *wi;
+        shadowRay->mint = epsilon;
+
+        return mRadiance->lookup(st[0], st[1]);
+    }
+
+    Color ImageBasedLight::sampleL(const ScenePtr& scene, 
+        const LightSample& ls, float u1, float u2, 
+        Ray* ray, float* pdf) const {
+
+        float pdfST;
+        Vector2 st = mDistribution->sampleContinuous(
+            ls.uGeometry[0], ls.uGeometry[1], &pdfST);
+        float theta = st[1] * PI;
+        float phi = st[0] * TWO_PI;
+        float cosTheta = cos(theta);
+        float sinTheta = sin(theta);
+        float cosPhi = cos(phi);
+        float sinPhi = sin(phi);
+        Vector3 w = mToWorld.onVector(
+            Vector3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta));
+
+        Vector3 worldCenter;
+        float worldRadius;
+        scene->getBoundingSphere(&worldCenter, &worldRadius);
+        Vector3 xAxis, yAxis;
+        coordinateAxises(-w, &xAxis, &yAxis);
+        Vector2 diskXY = uniformSampleDisk(u1, u2);
+        Vector3 worldDiskSample = worldCenter + 
+            worldRadius * (diskXY.x * xAxis + diskXY.y * yAxis);
+        Vector3 origin = worldRadius * w;
+        Vector3 direction = normalize(worldDiskSample - origin);
+        *ray = Ray(origin, direction, 0.0f);
+        if(pdf) {
+            *pdf = pdfST / (TWO_PI * PI * sinTheta);
+        }
+        return mRadiance->lookup(st[0], st[1]);
+    }
+
+    Color ImageBasedLight::power(const ScenePtr& scene) const {
+        Vector3 center;
+        float radius;
+        scene->getBoundingSphere(&center, &radius);
+        // raough power estimation, assume radiance in world sphere
+        // diffuse distribution
+        return mAverageRadiance * PI * (4.0f * PI * radius * radius);
+    }
+
+    float ImageBasedLight::pdf(const Vector3& p, const Vector3& wi) const {
+        Vector3 wiLocal = mToWorld.invertVector(wi);
+        float theta = acos(wiLocal.z);
+        float sinTheta = sin(theta);
+        if(sinTheta == 0.0f) {
+            return 0.0f;
+        }
+
+        float phi = atan2(wi.y, wi.x);
+        if(phi < 0.0f) {
+            phi += TWO_PI;
+        }
+        float pdf = mDistribution->pdf(phi * INV_TWOPI, theta * INV_PI) / 
+            (TWO_PI * PI * sinTheta);
+        return pdf;
+    }
+}

@@ -7,6 +7,7 @@
 #include "GoblinUtils.h"
 #include "GoblinGeometry.h"
 #include "GoblinTransform.h"
+#include "GoblinTexture.h"
 
 #include <vector>
 
@@ -14,6 +15,7 @@ namespace Goblin {
     class Ray;
     class Quaternion;
     class CDF1D;
+    class CDF2D;
     class SampleQuota;
     class Sample;
     struct SampleIndex;
@@ -39,9 +41,13 @@ namespace Goblin {
         enum Type {
             Point = 0,
             Directional = 1,
-            Area = 2
+            Area = 2,
+            IBL = 3
         };
         virtual ~Light() {};
+        // this one is only usable for IBL for now...
+        // when ray doesn't intersect scene
+        virtual Color Le(const Ray& ray) const;
         virtual Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const = 0;
@@ -56,6 +62,10 @@ namespace Goblin {
     protected:
         ParamSet mParams;
     };
+
+    inline Color Light::Le(const Ray& ray) const {
+        return Color::Black;
+    }
 
     inline bool Light::isDelta() const {
         return true;
@@ -158,6 +168,32 @@ namespace Goblin {
 
     inline uint32_t AreaLight::getSamplesNum() const {
         return mSamplesNum;
+    }
+
+
+    class ImageBasedLight : public Light {
+    public:
+        ImageBasedLight(const string& radianceMap, const Color& filter,
+            const Quaternion& orientation = Quaternion::Identity);
+        ~ImageBasedLight();
+        Color Le(const Ray& ray) const;
+        Color sampleL(const Vector3& p, float epsilon,
+            const LightSample& lightSample,
+            Vector3* wi, float* pdf, Ray* shadowRay) const;
+        Color sampleL(const ScenePtr& scene, const LightSample& ls,
+            float u1, float u2, Ray* ray, float* pdf = NULL) const;
+        float pdf(const Vector3& p, const Vector3& wi) const;
+        bool isDelta() const;
+        Color power(const ScenePtr& scene) const;
+    private:
+        ImageBuffer<Color>* mRadiance;
+        CDF2D* mDistribution;
+        Color mAverageRadiance;
+        Transform mToWorld;
+    };
+
+    inline bool ImageBasedLight::isDelta() const {
+        return false;
     }
 }
 #endif //GOBLIN_LIGHT_H

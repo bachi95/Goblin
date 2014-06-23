@@ -25,7 +25,7 @@ namespace Goblin {
         ImageBuffer(T* i, int w, int h): image(i), width(w), height(h) {}
         ~ImageBuffer() { delete [] image; image = NULL; }
         T texel(int s, int t, AddressMode addressMode);
-        T lookup(float s, float t, AddressMode addressMode);
+        T lookup(float s, float t, AddressMode addressMode = AddressRepeat);
         T* image;
         int width, height;
     };

@@ -37,4 +37,4 @@ namespace Goblin {
     };
 }
 
-#endif GOBLIN_THREAD_POOL_H
+#endif //GOBLIN_THREAD_POOL_H
