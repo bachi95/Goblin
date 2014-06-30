@@ -52,6 +52,25 @@ namespace Goblin {
 	    return f != f;
     }
 
+    inline bool isPowerOf2(uint32_t n) {
+        return (n & (n - 1)) == 0;
+    }
+
+    inline uint32_t roundUpPow2(uint32_t n) {
+        n--;
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        return n + 1;
+    }
+
+    inline float log2(float n) {
+        static float invLog2 = 1.0f / logf(2.0f);
+        return logf(n) * invLog2;
+    }
+
     inline float clamp(float f, float low, float high) {
         if (f < low) {
             return low;

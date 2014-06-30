@@ -6,6 +6,7 @@
 #include "GoblinParamSet.h"
 #include "GoblinUtils.h"
 #include "GoblinGeometry.h"
+#include "GoblinMaterial.h"
 #include "GoblinTransform.h"
 #include "GoblinTexture.h"
 
@@ -47,7 +48,8 @@ namespace Goblin {
         virtual ~Light() {};
         // this one is only usable for IBL for now...
         // when ray doesn't intersect scene
-        virtual Color Le(const Ray& ray) const;
+        virtual Color Le(const Ray& ray, float pdf = INFINITY, 
+            BSDFType type = BSDFAll) const;
         virtual Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const = 0;
@@ -63,7 +65,7 @@ namespace Goblin {
         ParamSet mParams;
     };
 
-    inline Color Light::Le(const Ray& ray) const {
+    inline Color Light::Le(const Ray& ray, float pdf, BSDFType type) const {
         return Color::Black;
     }
 
@@ -174,9 +176,11 @@ namespace Goblin {
     class ImageBasedLight : public Light {
     public:
         ImageBasedLight(const string& radianceMap, const Color& filter,
-            const Quaternion& orientation = Quaternion::Identity);
+            const Quaternion& orientation = Quaternion::Identity,
+            int samplePerPixel = 1);
         ~ImageBasedLight();
-        Color Le(const Ray& ray) const;
+        Color Le(const Ray& ray, float pdf = INFINITY, 
+            BSDFType type = BSDFAll) const;
         Color sampleL(const Vector3& p, float epsilon,
             const LightSample& lightSample,
             Vector3* wi, float* pdf, Ray* shadowRay) const;
@@ -186,10 +190,13 @@ namespace Goblin {
         bool isDelta() const;
         Color power(const ScenePtr& scene) const;
     private:
-        ImageBuffer<Color>* mRadiance;
+        int getLodLevel(float pdfUV) const;
+    private:
+        vector<ImageBuffer<Color>* > mRadiance;
         CDF2D* mDistribution;
         Color mAverageRadiance;
         Transform mToWorld;
+        int mSamplePerPixel;
     };
 
     inline bool ImageBasedLight::isDelta() const {

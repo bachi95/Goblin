@@ -142,6 +142,86 @@ namespace Goblin{
         return ret;
     }
 
+    float gaussian(float x, float w, float falloff = 2.0f) {
+        return max(0.0f, expf(-falloff * x * x) - expf(-falloff * w * w));
+    }
+
+    template<typename T>
+    T* resizeImage(const T* srcBuffer, int srcWidth, int srcHeight,
+        int dstWidth, int dstHeight) {
+        float filterWidth = floor(max(2.0f, max(
+            (float)srcWidth/(float)dstWidth,
+            (float)srcHeight/(float)dstHeight)));
+        int nSamples = floorInt(filterWidth) * 2;
+
+        float* sSampleWeight = new float[dstWidth * nSamples];
+        int* sSampleIndex = new int[dstWidth];
+        for(int s = 0; s < dstWidth; ++s) {
+            float center = ((float)s + 0.5f) / dstWidth * srcWidth;
+            // the subtle from continuous space to discrete space offset...
+            // if center at 2.75 (discrete space 2.25) you should sample
+            // 1, 2, 3, 4, without that +0.5 offset would resolve to 0, 1, 2, 3
+            sSampleIndex[s] = 
+                floorInt(center - filterWidth + 0.5f);
+            float weightSum = 0.0f;
+            int wOffset = s * nSamples;
+            for(int i = 0; i < nSamples; ++i) {
+                float p = sSampleIndex[s] + 0.5f + i;
+                sSampleWeight[wOffset + i] = gaussian(p - center, filterWidth);
+                weightSum += sSampleWeight[wOffset + i];
+            }
+            float invW = 1.0f / weightSum;
+            for(int i = 0; i < nSamples; ++i) {
+                sSampleWeight[wOffset + i] *= invW;
+            }
+        }
+
+        float* tSampleWeight = new float[dstHeight * nSamples];
+        int* tSampleIndex = new int[dstHeight];
+        for(int t = 0; t < dstHeight; ++t) {
+            float center = ((float)t + 0.5f) / dstHeight * srcHeight;
+            tSampleIndex[t] = 
+                floorInt(center - filterWidth + 0.5f);
+            float weightSum = 0.0f;
+            int wOffset = t * nSamples;
+            for(int i = 0; i < nSamples; ++i) {
+                float p = tSampleIndex[t] + 0.5f + i;
+                tSampleWeight[wOffset + i] = gaussian(p - center, filterWidth);
+                weightSum += tSampleWeight[wOffset + i];
+            }
+            float invW = 1.0f / weightSum;
+            for(int i = 0; i < nSamples; ++i) {
+                tSampleWeight[wOffset + i] *= invW;
+            }
+        }
+
+        T* dstBuffer = new T[dstWidth * dstHeight];
+        for(int t = 0; t < dstHeight; ++t) {
+            for(int s = 0; s < dstWidth; ++s) {
+                int index = t * dstWidth + s;
+                dstBuffer[index] = T(0.0f);
+                for(int i = 0; i < nSamples; ++i) {
+                    int srcT = clamp(tSampleIndex[t] + i, 0,
+                        srcHeight - 1);
+                    for(int j = 0; j < nSamples; ++j) {
+                        int srcS = clamp(sSampleIndex[s] + j, 0,
+                            srcWidth - 1);
+                        float w = tSampleWeight[t * nSamples + i] * 
+                            sSampleWeight[s * nSamples + j];
+                        dstBuffer[index] += 
+                            w * srcBuffer[srcT * srcWidth + srcS];
+                    }
+                }
+            }
+        }
+
+        delete[] sSampleIndex;
+        delete[] sSampleWeight;
+        delete[] tSampleIndex;
+        delete[] tSampleWeight;
+        return dstBuffer;
+    }
+
     template struct ImageBuffer<float>;
     template struct ImageBuffer<Color>; 
     template class Texture<float>;
@@ -152,4 +232,9 @@ namespace Goblin{
     template class ScaleTexture<Color>;
     template class ImageTexture<float>;
     template class ImageTexture<Color>;
+
+    template Color* resizeImage<Color>(const Color* srcBuffer, int srcWidth, int srcHeight,
+        int dstWidth, int dstHeight);
+    template float* resizeImage<float>(const float* srcBuffer, int srcWidth, int srcHeight,
+        int dstWidth, int dstHeight);
 }

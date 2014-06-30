@@ -122,12 +122,14 @@ namespace Goblin {
         void addColorTexture(const string& name, const ColorTexturePtr& t);
         void addInstance(const PrimitivePtr& i);
         void addLight(Light* l);
+        void addRenderSetting(const RenderSetting& setting);
         const GeometryPtr& getGeometry(const string& name) const;
         const PrimitivePtr& getPrimitive(const string& name) const;
         const MaterialPtr& getMaterial(const string& name) const;
         const FloatTexturePtr& getFloatTexture(const string& name) const;
         const ColorTexturePtr& getColorTexture(const string& name) const;
         const PrimitiveList& getInstances() const;
+        const RenderSetting& getRenderSetting() const;
         const vector<Light*>& getLights() const;
         string resolvePath(const string& filename) const;
 
@@ -142,6 +144,7 @@ namespace Goblin {
         vector<Light*> mLights;
         path mSceneRoot;
         string mErrorCode;
+        RenderSetting mSetting;
     };
 
     SceneCache::SceneCache(const path& sceneRoot): 
@@ -197,6 +200,10 @@ namespace Goblin {
 
     void SceneCache::addLight(Light* l) {
         mLights.push_back(l);
+    }
+
+    void SceneCache::addRenderSetting(const RenderSetting& setting) {
+        mSetting = setting;
     }
 
     const GeometryPtr& SceneCache::getGeometry(const string& name) const {
@@ -262,6 +269,10 @@ namespace Goblin {
         } else {
             return (mSceneRoot / filename).generic_string();
         }
+    }
+
+    const RenderSetting& SceneCache::getRenderSetting() const {
+        return mSetting;
     }
 
     static Vector2 parseVector2(const PropertyTree& pt, const char* key,
@@ -564,10 +575,12 @@ namespace Goblin {
                 sceneCache->resolvePath(pt.parseString(FILENAME));
             Color filter = parseColor(pt, FILTER);
             Quaternion orientation = parseQuaternion(pt, ORIENTATION);
+            int samplePerPixel = sceneCache->getRenderSetting().samplePerPixel;
             std::cout << "-radiance map: " << filename << std::endl;
             std::cout << "-filter: " << filter << std::endl;
             std::cout << "-orientation: " << orientation << std::endl;
-            light = new ImageBasedLight(filename, filter, orientation);
+            light = new ImageBasedLight(filename, filter, orientation, 
+                samplePerPixel);
         } else {
             std::cerr << "unrecognized light type " << lightType << std::endl;
             return;
@@ -801,9 +814,9 @@ namespace Goblin {
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));
 
-        if(setting) {
-            parseRenderSetting(pt, setting);
-        }
+        parseRenderSetting(pt, setting);
+        sceneCache.addRenderSetting(*setting);
+
         Film* film = parseFilm(pt, &sceneCache);
         CameraPtr camera = parseCamera(pt, film);
 

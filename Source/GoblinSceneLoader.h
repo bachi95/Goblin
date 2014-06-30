@@ -9,7 +9,7 @@ namespace Goblin {
     class SceneLoader {
     public:
         ScenePtr load(const std::string& filename, 
-            RenderSetting* setting = NULL);
+            RenderSetting* setting);
     };
 }
 

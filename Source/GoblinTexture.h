@@ -119,6 +119,10 @@ namespace Goblin {
     }
 
 
+    template<typename T>
+    T* resizeImage(const T* srcBuffer, int srcWidth, int srcHeight, 
+        int dstWidth, int dstHeight);
+
     void gammaCorrect(const Color& in, float* out, float gamma);
     void gammaCorrect(const Color& in, Color* out, float gamma);
 
