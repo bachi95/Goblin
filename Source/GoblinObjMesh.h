@@ -3,6 +3,8 @@
 
 #include "GoblinGeometry.h"
 #include "GoblinBBox.h"
+#include "GoblinFactory.h"
+
 #include <string>
 
 namespace Goblin {
@@ -34,9 +36,23 @@ namespace Goblin {
     };
 
     inline float ObjMesh::area() const { return mArea; }
+
     inline bool ObjMesh::intersectable() const { return false; }
+
     inline bool ObjMesh::hasNormal() const { return mHasNormal; }
+
     inline bool ObjMesh::hasTexCoord() const { return mHasTexCoord; }
+
+
+    class ParamSet;
+    class SceneCache;
+
+    class MeshGeometryCreator : 
+        public Creator<Geometry, const ParamSet&, const SceneCache&> {
+    public:
+        Geometry* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
 }
 
 #endif //GOBLIN_OBJ_MESH

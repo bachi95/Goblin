@@ -1,285 +1,19 @@
 #include "GoblinSceneLoader.h"
 #include "GoblinBBox.h"
 #include "GoblinBVH.h"
-#include "GoblinCamera.h"
-#include "GoblinFilm.h"
-#include "GoblinFilter.h"
-#include "GoblinLight.h"
-#include "GoblinMaterial.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinPropertyTree.h"
 #include "GoblinRenderer.h"
 #include "GoblinSphere.h"
-#include "GoblinTexture.h"
 #include "GoblinUtils.h"
 
-#include <cassert>
-#include <iostream>
-#include <map>
-#include <boost/filesystem.hpp>
-
 namespace Goblin {
-    using boost::filesystem::path;
-    typedef std::map<string, GeometryPtr> GeometryMap;
-    typedef std::map<string, PrimitivePtr> PrimitiveMap;
-    typedef std::map<string, MaterialPtr> MaterialMap;
-    typedef std::map<string, ColorTexturePtr> ColorTextureMap;
-    typedef std::map<string, FloatTexturePtr> FloatTextureMap;
-
-    // camera related keywords
-    static const char* CAMERA = "camera";
-    static const char* FOV = "fov";
-    static const char* NEAR_PLANE = "near_plane";
-    static const char* FAR_PLANE = "far_plane";
-    static const char* LENS_RADIUS = "lens_radius";
-    static const char* FOCAL_DISTANCE = "focal_distance";
-    static const char* FILM = "film";
-    static const char* RESOLUTION = "resolution";
-    static const char* CROP = "crop";
-    static const char* TILE_WIDTH = "tile_width";
-    static const char* TONE_MAPPING = "tone_mapping";
-    static const char* BLOOM_WEIGHT = "bloom_weight";
-    static const char* BLOOM_RADIUS = "bloom_radius";
-    // filter related keywords
-    static const char* FILTER = "filter";
-    static const char* BOX = "box";
-    static const char* TRIANGLE = "triangle";
-    static const char* GAUSSIAN = "gaussian";
-    static const char* FALLOFF = "falloff";
-    static const char* MITCHELL = "mitchell";
-    static const char* B = "b";
-    static const char* C = "c";
-    static const char* FILTER_WIDTH = "width";
-    // geometry related keywords
-    static const char* GEOMETRY = "geometry";
-    static const char* NAME = "name";
-    static const char* TYPE = "type";
-    static const char* MESH = "mesh";
-    static const char* SPHERE = "sphere";
-    static const char* RADIUS = "radius";
-    static const char* FILENAME = "file";
-    // model related keywords
-    static const char* MODEL = "model";
-    // instance related keywords
-    static const char* INSTANCE = "instance";
-    static const char* POSITION = "position";
-    static const char* ORIENTATION = "orientation";
-    static const char* SCALE = "scale";
-    // light related keywords
-    static const char* LIGHT = "light";
-    static const char* POINT = "point";
-    static const char* DIRECTIONAL = "directional";
-    static const char* AREA = "area";
-    static const char* IBL = "ibl";
-    static const char* INTENSITY = "intensity";
-    static const char* RADIANCE = "radiance";
-    static const char* DIRECTION = "direction";
-    // material related keywords;
-    static const char* MATERIAL = "material";
-    static const char* LAMBERT = "lambert";
-    static const char* BLINN = "blinn";
-    static const char* TRANSPARENT = "transparent";
-    static const char* MIRROR = "mirror";
-    static const char* EXPONENT = "exponent";
-    static const char* REFLECTION = "Kr";
-    static const char* REFRACTION = "Kt";
-    static const char* REFRACTION_INDEX = "index";
-    static const char* DIFFUSE = "Kd";
-    static const char* GLOSSY = "Kg";
-    static const char* ABSORPTION = "k";
-    static const char* BUMPMAP = "bumpmap";
-    // texture related keywords:
-    static const char* TEXTURE = "texture";
-    static const char* FORMAT = "format";
-    static const char* CONSTANT = "constant";
-    static const char* COLOR = "color";
-    static const char* FLOAT = "float";
-    static const char* IMAGE = "image";
-    static const char* MAPPING = "mapping";
-    static const char* UV = "uv";
-    static const char* OFFSET = "offset";
-    static const char* GAMMA = "gamma";
-    static const char* ADDRESS = "address";
-    static const char* REPEAT = "repeat";
-    static const char* CLAMP = "clamp";
-    static const char* BORDER = "border";
-    // render setting related keywords;
-    static const char* RENDER_SETTING = "render_setting";
-    static const char* SAMPLE_PER_PIXEL = "sample_per_pixel";
-    static const char* MAX_RAY_DEPTH = "max_ray_depth";
-    static const char* THREAD_NUM = "thread_num";
-    static const char* SAMPLE_NUM = "sample_num";
-
-
-    class SceneCache {
-    public:
-        SceneCache(const path& sceneRoot);
-        void addGeometry(const string& name, const GeometryPtr& g);
-        void addPrimitive(const string& name, const PrimitivePtr& p);
-        void addMaterial(const string& name, const MaterialPtr& m);
-        void addFloatTexture(const string& name, const FloatTexturePtr& t);
-        void addColorTexture(const string& name, const ColorTexturePtr& t);
-        void addInstance(const PrimitivePtr& i);
-        void addLight(Light* l);
-        void addRenderSetting(const RenderSetting& setting);
-        const GeometryPtr& getGeometry(const string& name) const;
-        const PrimitivePtr& getPrimitive(const string& name) const;
-        const MaterialPtr& getMaterial(const string& name) const;
-        const FloatTexturePtr& getFloatTexture(const string& name) const;
-        const ColorTexturePtr& getColorTexture(const string& name) const;
-        const PrimitiveList& getInstances() const;
-        const RenderSetting& getRenderSetting() const;
-        const vector<Light*>& getLights() const;
-        string resolvePath(const string& filename) const;
-
-    private:
-        void initDefault();
-        GeometryMap mGeometryMap;
-        PrimitiveMap mPrimitiveMap;
-        MaterialMap mMaterialMap;
-        FloatTextureMap mFloatTextureMap;
-        ColorTextureMap mColorTextureMap;
-        PrimitiveList mInstances;
-        vector<Light*> mLights;
-        path mSceneRoot;
-        string mErrorCode;
-        RenderSetting mSetting;
-    };
-
-    SceneCache::SceneCache(const path& sceneRoot): 
-        mSceneRoot(sceneRoot),
-        mErrorCode("error") {
-        initDefault();
-    }
-
-    void SceneCache::initDefault() {
-        Color errorColor = Color::Magenta;
-        ColorTexturePtr errorCTexture(new ConstantTexture<Color>(errorColor));
-        addColorTexture(mErrorCode, errorCTexture);
-        FloatTexturePtr errorFTexture(new ConstantTexture<float>(0.5f));
-        addFloatTexture(mErrorCode, errorFTexture); 
-        MaterialPtr errorMaterial(new LambertMaterial(errorCTexture));
-        addMaterial(mErrorCode, errorMaterial);
-        GeometryPtr errorGeometry(new Sphere(1.0f));
-        addGeometry(mErrorCode, errorGeometry);
-        PrimitivePtr errorPrimitive(new Model(errorGeometry, errorMaterial));
-        addPrimitive(mErrorCode, errorPrimitive);
-    }
-
-    void SceneCache::addGeometry(const string& name, const GeometryPtr& g) {
-        std::pair<string, GeometryPtr> pair(name, g);
-        mGeometryMap.insert(pair); 
-    }
-
-    void SceneCache::addPrimitive(const string& name, const PrimitivePtr& p) {
-        std::pair<string, PrimitivePtr> pair(name, p);
-        mPrimitiveMap.insert(pair); 
-    }
-
-    void SceneCache::addMaterial(const string& name, const MaterialPtr& m) {
-        std::pair<string, MaterialPtr> pair(name, m);
-        mMaterialMap.insert(pair); 
-    }
-
-    void SceneCache::addFloatTexture(const string& name, 
-        const FloatTexturePtr& t) {
-        std::pair<string, FloatTexturePtr> pair(name, t);
-        mFloatTextureMap.insert(pair); 
-    }
-
-    void SceneCache::addColorTexture(const string& name, 
-        const ColorTexturePtr& t) {
-        std::pair<string, ColorTexturePtr> pair(name, t);
-        mColorTextureMap.insert(pair); 
-    }
-
-    void SceneCache::addInstance(const PrimitivePtr& i) {
-        mInstances.push_back(i);
-    }
-
-    void SceneCache::addLight(Light* l) {
-        mLights.push_back(l);
-    }
-
-    void SceneCache::addRenderSetting(const RenderSetting& setting) {
-        mSetting = setting;
-    }
-
-    const GeometryPtr& SceneCache::getGeometry(const string& name) const {
-        GeometryMap::const_iterator it = mGeometryMap.find(name);
-        if(it == mGeometryMap.end()) {
-            std::cerr << "Geometry " << name << " not defined!\n";
-            return mGeometryMap.find(mErrorCode)->second;
-        }
-        return it->second;
-    }
-
-    const PrimitivePtr& SceneCache::getPrimitive(const string& name) const {
-        PrimitiveMap::const_iterator it = mPrimitiveMap.find(name);
-        if(it == mPrimitiveMap.end()) {
-            std::cerr << "Primitive " << name << " not defined!\n";
-            return mPrimitiveMap.find(mErrorCode)->second;
-        }
-        return it->second;
-    }
-
-    const MaterialPtr& SceneCache::getMaterial(const string& name) const {
-        MaterialMap::const_iterator it = mMaterialMap.find(name);
-        if(it == mMaterialMap.end()) {
-            std::cerr << "Material " << name << " not defined!\n";
-            return mMaterialMap.find(mErrorCode)->second;
-        }
-        return it->second;
-    }
-
-    const FloatTexturePtr& SceneCache::getFloatTexture(
-        const string& name) const {
-        FloatTextureMap::const_iterator it = 
-            mFloatTextureMap.find(name);
-        if(it == mFloatTextureMap.end()) {
-            std::cerr << "Texture " << name << " not defined!\n";
-            return mFloatTextureMap.find(mErrorCode)->second;
-        }
-        return it->second;
-    }
-
-    const ColorTexturePtr& SceneCache::getColorTexture(
-        const string& name) const {
-        ColorTextureMap::const_iterator it = mColorTextureMap.find(name);
-        if(it == mColorTextureMap.end()) {
-            std::cerr << "Texture " << name << " not defined!\n";
-            return mColorTextureMap.find(mErrorCode)->second;
-        }
-        return it->second;
-    }
-
-    const PrimitiveList& SceneCache::getInstances() const {
-        return mInstances;
-    }
-
-    const vector<Light*>& SceneCache::getLights() const {
-        return mLights;
-    }
-
-    string SceneCache::resolvePath(const string& filename) const {
-        path filePath(filename);
-        if(filePath.is_absolute()) {
-            return filePath.generic_string();
-        } else {
-            return (mSceneRoot / filename).generic_string();
-        }
-    }
-
-    const RenderSetting& SceneCache::getRenderSetting() const {
-        return mSetting;
-    }
-
     static Vector2 parseVector2(const PropertyTree& pt, const char* key,
         const Vector2& fallback = Vector2::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 2) {
-            std::cerr << "invalid value for Vector2 " << key << std::endl;
+            std::cerr << "invalid value for Vector2 " << key << endl;
             return fallback;
         }
         return Vector2(rv[0], rv[1]);
@@ -289,7 +23,7 @@ namespace Goblin {
         const Vector3& fallback = Vector3::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 3) {
-            std::cerr << "invalid value for Vector3 " << key << std::endl;
+            std::cerr << "invalid value for Vector3 " << key << endl;
             return fallback;
         }
         return Vector3(rv[0], rv[1], rv[2]);
@@ -299,7 +33,7 @@ namespace Goblin {
         const Vector4& fallback = Vector4::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 4) {
-            std::cerr << "invalid value for Vector4 " << key << std::endl;
+            std::cerr << "invalid value for Vector4 " << key << endl;
             return fallback;
         }
         return Vector4(rv[0], rv[1], rv[2], rv[3]);
@@ -309,249 +43,291 @@ namespace Goblin {
         const Color& fallback = Color::White) {
         std::vector<float> rv = pt.parseFloatArray(key);
         if(rv.size() != 3) {
-            std::cerr << "invalid value for Color " << key << std::endl;
+            std::cerr << "invalid value for Color " << key << endl;
             return fallback;
         }
         return Color(rv[0], rv[1], rv[2], 1.0f);
     }
 
-    static Quaternion parseQuaternion(const PropertyTree& pt, const char* key,
-        const Quaternion& fallback = Quaternion::Identity) {
-        std::vector<float> rv = pt.parseFloatArray(key);
-        if(rv.size() != 4) {
-            std::cerr << "invalid value for Quaternion " << key << std::endl;
-            return fallback;
-        }
-        return Quaternion(rv[0], rv[1], rv[2], rv[3]);
-    }
-
-    static Filter* parseFilter(const PropertyTree& pt) {
-        float xWidth = 2;
-        float yWidth = 2;
-        string filterType = BOX;
-        PropertyTree filterTree;
-        if(pt.getChild(FILTER, &filterTree)) {
-            Vector2 filterWidth = parseVector2(filterTree, FILTER_WIDTH);
-            if(filterWidth != Vector2::Zero) {
-                xWidth = filterWidth.x;
-                yWidth = filterWidth.y;
-            }
-            filterType = filterTree.parseString(TYPE, BOX);
-        }
-
-        std::cout << "\nfilter " << filterType << std::endl;
-        std::cout << "-width(" << xWidth << ", " << yWidth << ")" << std::endl;
-        Filter* filter;
-        if(filterType == BOX) {
-            filter = new BoxFilter(xWidth, yWidth);
-        } else if(filterType == TRIANGLE) {
-            filter = new TriangleFilter(xWidth, yWidth);
-        } else if(filterType == GAUSSIAN) {
-            float falloff = filterTree.parseFloat(FALLOFF, 2.0f);
-            std::cout << "-falloff " << falloff << std::endl;
-            filter = new GaussianFilter(xWidth, yWidth, falloff);
-        } else if(filterType == MITCHELL) {
-            float b = filterTree.parseFloat(B, 1.0f / 3.0f);
-            float c = filterTree.parseFloat(C, 1.0f / 3.0f);
-            std::cout << "b " << b << " c " << c << std::endl;
-            filter = new MitchellFilter(xWidth, yWidth, b, c);
-        } else {
-            filter = new BoxFilter(xWidth, yWidth);
-        }
-        return filter;
-    }
-
-    static Film* parseFilm(const PropertyTree& pt, SceneCache* sceneCache) {
-        int xRes = 640;
-        int yRes = 480;
-        float crop[4] = {0.0f, 1.0f, 0.0f, 1.0f};
-        string filename = "ray.png";
-        bool toneMapping = false;
-        float bloomWeight = 0.0f;
-        float bloomRadius = 0.0f;
-        int tileWidth = 16;
-        PropertyTree filmTree;
-        if(pt.getChild(FILM, &filmTree)) {
-            Vector2 res = parseVector2(filmTree, RESOLUTION);
-            if(res != Vector2::Zero) {
-                xRes = static_cast<int>(res.x);
-                yRes = static_cast<int>(res.y);
-            }
-            Vector4 windowCrop = parseVector4(filmTree, CROP);
-            if(windowCrop != Vector4::Zero) {
-                for(int i = 0; i < 4; ++i) {
-                    crop[i] = windowCrop[i];
+    static void parseParamSet(const PropertyTree& pt, ParamSet* params) {
+        const PtreeList& nodes = pt.getChildren(); 
+        cout << "---------------------------------" << endl;
+        for(PtreeList::const_iterator it = nodes.begin(); 
+            it != nodes.end(); it++) {
+            std::string type(it->first);
+            const PtreeList& keyValuePairs = it->second.getChildren();
+            for(PtreeList::const_iterator kv = keyValuePairs.begin(); 
+                kv != keyValuePairs.end(); kv++) {
+                std::string key(kv->first);
+                cout << type << " " << key << " ";
+                if(type == "bool") {
+                    bool v = it->second.parseBool(key.c_str());
+                    params->setBool(key, v);
+                    cout << v << endl; 
+                } else if(type == "int") {
+                    int v = it->second.parseInt(key.c_str());
+                    params->setInt(key, v);
+                    cout << v << endl;
+                } else if(type == "float") {
+                    float v = it->second.parseFloat(key.c_str());
+                    params->setFloat(key, v);
+                    cout << v << endl;
+                } else if(type == "string") {
+                    std::string v = it->second.parseString(key.c_str());
+                    params->setString(key, v);
+                    cout << v << endl;
+                }  else if(type == "vec2") {
+                    Vector2 v = parseVector2(it->second, key.c_str());
+                    params->setVector2(key, v);
+                    cout << v << endl;
+                }  else if(type == "vec3") {
+                    Vector3 v = parseVector3(it->second, key.c_str());
+                    params->setVector3(key, v);
+                    cout << v << endl;
+                }  else if(type == "vec4") {
+                    Vector4 v = parseVector4(it->second, key.c_str());
+                    params->setVector4(key, v);
+                    cout << v << endl;
+                } else if(type == "color") {
+                    Color v = parseColor(it->second, key.c_str());
+                    params->setColor(key, v);
+                    cout << v << endl;
                 }
             }
-            filename = filmTree.parseString(FILENAME, filename.c_str());
-            toneMapping = filmTree.parseBool(TONE_MAPPING);
-            bloomRadius = filmTree.parseFloat(BLOOM_RADIUS);
-            bloomWeight = filmTree.parseFloat(BLOOM_WEIGHT);
-            tileWidth = filmTree.parseInt(TILE_WIDTH, tileWidth);
         }
-        string filePath = sceneCache->resolvePath(filename);
-
-        std::cout << "\nfilm" << std::endl;
-        std::cout << "-res(" << xRes << ", " << yRes << ")" << std::endl;
-        std::cout << "-crop(" << crop[0] << " "<< crop[1] << " "<< 
-            crop[2] << " "<< crop[3] << ")" << std::endl;
-        std::cout << "-filepath: " << filePath << std::endl;
-        std::cout << "-tone mapping: " << toneMapping << std::endl;
-        std::cout << "-bloom radius: " << bloomRadius << std::endl;
-        std::cout << "-bloom weight: " << bloomWeight << std::endl;
-        std::cout << "-tile width: " << tileWidth << std::endl;
-
-        Filter* filter = parseFilter(pt);
-
-        return new Film(xRes, yRes, crop, filter, filePath, 
-            tileWidth, toneMapping, bloomRadius, bloomWeight);
+        cout << "---------------------------------" << endl;
     }
 
-    static CameraPtr parseCamera(const PropertyTree& pt, Film* film) {
-        Vector3 position =  Vector3::Zero;
-        Quaternion orientation = Quaternion::Identity;
-        float zn = 0.1f;
-        float zf = 1000.0f;
-        float fov = 60.0f;
-        float lensRadius = 0.0f;
-        float focalDistance = 1e+10f;
-        PropertyTree cameraTree;
-        if(pt.getChild(CAMERA, &cameraTree)) {
-            position = parseVector3(cameraTree, POSITION);
-            orientation = parseQuaternion(cameraTree, ORIENTATION);
-            fov = cameraTree.parseFloat(FOV, fov);
-            zn = cameraTree.parseFloat(NEAR_PLANE, zn);
-            zf = cameraTree.parseFloat(FAR_PLANE, zf);
-            lensRadius = cameraTree.parseFloat(LENS_RADIUS, lensRadius);
-            focalDistance = cameraTree.parseFloat(FOCAL_DISTANCE, 
-                focalDistance);
-        }
+    static void parseRenderSetting(const PropertyTree& pt, 
+        RenderSetting* setting) {
+        int samplePerPixel = 1;
+        int maxRayDepth = 5;
+        int threadNum = boost::thread::hardware_concurrency();
 
-        std::cout << "\ncamera" << std::endl;
-        std::cout << "-position: " << position << std::endl;
-        std::cout << "-orientation: " << orientation << std::endl;
-        std::cout << "-fov: " << fov << std::endl;
-        std::cout << "-near plane: " << zn << std::endl;
-        std::cout << "-far plane: " << zf << std::endl;
-        std::cout << "-lens radius: " << lensRadius << std::endl;
-        std::cout << "-focal distance: " << focalDistance << std::endl;
-        return CameraPtr(new Camera(position, orientation, radians(fov), 
-            zn, zf, lensRadius, focalDistance, film));
+        PropertyTree settingPt;
+        pt.getChild("render_setting", &settingPt);
+        ParamSet settingParams;
+        parseParamSet(settingPt, &settingParams);
+        samplePerPixel = 
+            settingParams.getInt("sample_per_pixel", samplePerPixel);
+        maxRayDepth = settingParams.getInt("max_ray_depth", maxRayDepth);
+        threadNum = min(settingParams.getInt("thread_num", threadNum), 
+            threadNum);
+
+        setting->samplePerPixel = samplePerPixel;
+        setting->maxRayDepth = maxRayDepth;
+        setting->threadNum = threadNum;
+        cout << "\nrender setting" << endl;
+        cout << "-sample per pixel " << samplePerPixel << endl;
+        cout << "-thread num " << threadNum << endl;
+        cout << "-max ray depth " << maxRayDepth << endl;
     }
 
-    static void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache) {
-        string geometryType = pt.parseString(TYPE);
-        string name = pt.parseString(NAME);
-        std::cout <<"\ngeometry " << name << std::endl;
-        GeometryPtr geometry;
-        if(geometryType == MESH) {
-            string filename = pt.parseString(FILENAME);
-            string filePath = sceneCache->resolvePath(filename);
-            geometry = GeometryPtr(new ObjMesh(filePath));
-        } else if(geometryType == SPHERE){
-            float radius = pt.parseFloat(RADIUS);
-            geometry = GeometryPtr(new Sphere(radius));
-        } else {
-            std::cerr << "unknowened geometry type " << geometryType<< "\n";
-            return;
-        }
+    SceneLoader::SceneLoader():
+        mFilterFactory(new Factory<Filter, const ParamSet&>()),
+        mFilmFactory(new Factory<Film, const ParamSet&, Filter*>()),
+        mCameraFactory(new Factory<Camera, const ParamSet&, Film*>()),
+        mGeometryFactory(
+            new Factory<Geometry, const ParamSet&, const SceneCache&>()),
+        mFloatTextureFactory(
+            new Factory<Texture<float>, const ParamSet&, const SceneCache&>()),
+        mColorTextureFactory(
+            new Factory<Texture<Color>, const ParamSet&, const SceneCache&>()),
+        mMaterialFactory(
+            new Factory<Material, const ParamSet&, const SceneCache&>()),
+        mPrimitiveFactory(
+            new Factory<Primitive, const ParamSet&, const SceneCache&>()),
+        mLightFactory(
+            new Factory<Light, const ParamSet&, const SceneCache&>()) {
+
+        // filter
+        mFilterFactory->registerCreator("box", new BoxFilterCreator);
+        mFilterFactory->registerCreator("triangle", new TriangleFilterCreator);
+        mFilterFactory->registerCreator("gaussian", new GaussianFilterCreator);
+        mFilterFactory->registerCreator("mitchell", new MitchellFilterCreator);
+        mFilterFactory->setDefault("gaussian");
+        // film
+        mFilmFactory->registerCreator("image", new ImageFilmCreator);
+        mFilmFactory->setDefault("image");
+        // camera
+        mCameraFactory->registerCreator("perspective", 
+            new PerspectiveCameraCreator);
+        mCameraFactory->setDefault("perspective");
+        // geometry
+        mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);
+        mGeometryFactory->registerCreator("mesh", new MeshGeometryCreator);
+        mGeometryFactory->setDefault("sphere");
+        // texture
+        mFloatTextureFactory->registerCreator("constant", 
+            new FloatConstantTextureCreator);
+        mFloatTextureFactory->registerCreator("scale", 
+            new FloatScaleTextureCreator);
+        mFloatTextureFactory->registerCreator("image", 
+            new FloatImageTextureCreator);
+        mFloatTextureFactory->setDefault("constant");
+
+        mColorTextureFactory->registerCreator("constant", 
+            new ColorConstantTextureCreator);
+        mColorTextureFactory->registerCreator("scale", 
+            new ColorScaleTextureCreator);
+        mColorTextureFactory->registerCreator("image", 
+            new ColorImageTextureCreator);
+        mColorTextureFactory->setDefault("constant");
+        // material
+        mMaterialFactory->registerCreator("lambert", 
+            new LambertMaterialCreator);
+        mMaterialFactory->registerCreator("blinn", 
+            new BlinnMaterialCreator);
+        mMaterialFactory->registerCreator("transparent", 
+            new TransparentMaterialCreator);
+        mMaterialFactory->registerCreator("mirror", 
+            new MirrorMaterialCreator);
+        mMaterialFactory->setDefault("lambert");
+        // primitive
+        mPrimitiveFactory->registerCreator("model", 
+            new ModelPrimitiveCreator);
+        mPrimitiveFactory->registerCreator("instance", 
+            new InstancePrimitiveCreator);
+        mPrimitiveFactory->setDefault("model");
+        // light
+        mLightFactory->registerCreator("point",
+            new PointLightCreator);
+        mLightFactory->registerCreator("directional",
+            new DirectionalLightCreator);
+        mLightFactory->registerCreator("ibl",
+            new ImageBasedLightCreator);
+        mLightFactory->setDefault("point");
+    }
+
+    Filter* SceneLoader::parseFilter(const PropertyTree& pt) {
+        cout << "filter" << endl;
+        PropertyTree filterPt;
+        pt.getChild("filter", &filterPt);
+        ParamSet filterParams;
+        parseParamSet(filterPt, &filterParams);
+        string type = filterParams.getString("type");
+        return mFilterFactory->create(type, filterParams);
+    }
+
+    Film* SceneLoader::parseFilm(const PropertyTree& pt, Filter* filter) {
+        cout << "film" << endl;
+        PropertyTree filmPt;
+        pt.getChild("film", &filmPt);
+        ParamSet filmParams;
+        parseParamSet(filmPt, &filmParams);
+        string type = filmParams.getString("type");
+        return mFilmFactory->create(type, filmParams, filter);
+    }
+
+    CameraPtr SceneLoader::parseCamera(const PropertyTree& pt, Film* film) {
+        cout << "camera" << endl;
+        PropertyTree cameraPt;
+        pt.getChild("camera", &cameraPt);
+        ParamSet cameraParams;
+        parseParamSet(cameraPt, &cameraParams);
+        string type = cameraParams.getString("type");
+        return CameraPtr(mCameraFactory->create(type, cameraParams, film));
+    }
+
+    void SceneLoader::parseGeometry(const PropertyTree& pt, 
+        SceneCache* sceneCache) {
+        cout << "geometry" <<endl;
+        ParamSet geometryParams;
+        parseParamSet(pt, &geometryParams);
+        string type = geometryParams.getString("type");
+        string name = geometryParams.getString("name");
+        GeometryPtr geometry(mGeometryFactory->create(type, geometryParams,
+            *sceneCache));
         geometry->init();
-        std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
-        std::cout << "face num: " << geometry->getFaceNum() << std::endl;
+        cout << "vertex num: " << geometry->getVertexNum() << endl;
+        cout << "face num: " << geometry->getFaceNum() << endl;
         BBox bbox = geometry->getObjectBound();
-        std::cout << "BBox min: " << bbox.pMin << std::endl;
-        std::cout << "BBox max: " << bbox.pMax << std::endl;
+        cout << "BBox min: " << bbox.pMin << endl;
+        cout << "BBox max: " << bbox.pMax << endl;
+
         sceneCache->addGeometry(name, geometry);
     }
 
-    static void parseModel(const PropertyTree& pt, SceneCache* sceneCache) {
-        string name = pt.parseString(NAME);
-
-        std::cout << "\nmodel " << name << std::endl;
-        string geoName = pt.parseString(GEOMETRY);
-        GeometryPtr geometry = sceneCache->getGeometry(geoName);
-
-        string materialName = pt.parseString(MATERIAL);
-        MaterialPtr material = sceneCache->getMaterial(materialName);
-
-        PrimitivePtr model(new Model(geometry, material));
-
-        if(!model->intersectable()) {
-            std::vector<PrimitivePtr> primitives;
-            primitives.push_back(model);
-            PrimitivePtr aggregate(new BVH(primitives, 1, "equal_count"));
-            sceneCache->addPrimitive(name, aggregate);
+    void SceneLoader::parseTexture(const PropertyTree& pt,
+        SceneCache* sceneCache) {
+        cout << "texture" <<endl;
+        ParamSet textureParams;
+        parseParamSet(pt, &textureParams);
+        string textureFormat = textureParams.getString("format", "color");
+        string type = textureParams.getString("type");
+        string name = textureParams.getString("name");
+        if(textureFormat == "float") {
+            FloatTexturePtr texture(mFloatTextureFactory->create(type, 
+                textureParams, *sceneCache));
+            sceneCache->addFloatTexture(name, texture);
+        } else if(textureFormat == "color") {
+            ColorTexturePtr texture(mColorTextureFactory->create(type, 
+                textureParams, *sceneCache));
+            sceneCache->addColorTexture(name, texture);
         } else {
-            sceneCache->addPrimitive(name, model);
+            cerr << "unrecognize texture format" <<
+                textureFormat << endl;
         }
     }
 
-    static void parseInstance(const PropertyTree& pt, SceneCache* sceneCache) {
-        string name = pt.parseString(NAME);
-        std::cout << "\ninstance " << name <<std::endl;
-
-        string primitiveName = pt.parseString(MODEL);
-        PrimitivePtr primitive = sceneCache->getPrimitive(primitiveName);
-
-        Vector3 position = parseVector3(pt, POSITION);
-        std::cout << "-position: " << position << std::endl;
-        Quaternion orientation = parseQuaternion(pt, ORIENTATION);
-        std::cout << "-orientation: " << orientation << std::endl;
-        Vector3 scale = parseVector3(pt, SCALE);
-        std::cout << "-scale: " << scale << std::endl;
-        Transform toWorld(position, orientation, scale);
-        PrimitivePtr instance(new InstancedPrimitive(toWorld, primitive));
-        BBox bbox = instance->getAABB();
-        std::cout << "BBox min: " << bbox.pMin << std::endl;
-        std::cout << "BBox max: " << bbox.pMax << std::endl;
-
-        sceneCache->addInstance(instance);
+    void SceneLoader::parseMaterial(const PropertyTree& pt,
+        SceneCache* sceneCache) {
+        cout << "material" <<endl;
+        ParamSet materialParams;
+        parseParamSet(pt, &materialParams);
+        string type = materialParams.getString("type");
+        string name = materialParams.getString("name");
+        MaterialPtr material(mMaterialFactory->create(type, materialParams,
+            *sceneCache));
+        sceneCache->addMaterial(name, material);
     }
 
-    static void parseLight(const PropertyTree& pt, SceneCache* sceneCache) {
-        string lightType = pt.parseString(TYPE);
+    void SceneLoader::parsePrimitive(const PropertyTree& pt,
+        SceneCache* sceneCache) {
+        cout << "primitive" <<endl;
+        ParamSet primitiveParams;
+        parseParamSet(pt, &primitiveParams);
+        string type = primitiveParams.getString("type");
+        string name = primitiveParams.getString("name");
+        PrimitivePtr primitive(mPrimitiveFactory->create(type, primitiveParams,
+            *sceneCache));
+        sceneCache->addPrimitive(name, primitive);
 
-        string name = pt.parseString(NAME);
+        if(type == "instance") {
+            sceneCache->addInstance(primitive);
+        }
+    }
 
-        std::cout <<"\nlight " << name << std::endl;
+    void SceneLoader::parseLight(const PropertyTree& pt, SceneCache* sceneCache,
+        int samplePerPixel) {
+        cout << "light" << endl;
+        ParamSet lightParams;
+        parseParamSet(pt, &lightParams);
+        lightParams.setInt("sample_per_pixel", samplePerPixel);
+        string type = lightParams.getString("type");
+        string name = lightParams.getString("name");
         Light* light;
-        if(lightType == POINT) {
-            Color intensity = parseColor(pt, INTENSITY);
-            Vector3 position = parseVector3(pt, POSITION);
-            std::cout << "-intensity: " << intensity << std::endl;
-            std::cout << "-position: " << position << std::endl;
-            light = new PointLight(intensity, position);
-
-        } else if(lightType == DIRECTIONAL) {
-            Color radiance = parseColor(pt, RADIANCE);
-            Vector3 direction = parseVector3(pt, DIRECTION);
-            std::cout << "-radiance: " << radiance << std::endl;
-            std::cout << "-direction: " << direction << std::endl;
-            light = new DirectionalLight(radiance, direction);
-
-        } else if(lightType == AREA) {
-            Color radiance = parseColor(pt, RADIANCE);
-            Vector3 position = parseVector3(pt, POSITION);
-            Quaternion orientation = parseQuaternion(pt, ORIENTATION);
-            Vector3 scale = parseVector3(pt, SCALE, Vector3(1.0f, 1.0f, 1.0f));
-            string geoName = pt.parseString(GEOMETRY);
-            int sampleNum = pt.parseInt(SAMPLE_NUM);
-            std::cout << "-radiance: " << radiance << std::endl;
-            std::cout << "-position: " << position << std::endl;
-            std::cout << "-scale: " << scale << std::endl;
-            std::cout << "-orientation: " << orientation << std::endl;
-            std::cout << "-geometry: " << geoName << std::endl;
-            std::cout << "-samples: " << sampleNum << std::endl;
+        // TODO figure out a way to get this misfit to generic factory.....
+        if(type == "area") {
+            Color radiance = lightParams.getColor("radiance");
+            Vector3 position = lightParams.getVector3("position");
+            Vector4 v = lightParams.getVector4("orientation", 
+                Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+            Quaternion orientation(v[0], v[1], v[2], v[3]);
+            Vector3 scale = lightParams.getVector3("scale", 
+                Vector3(1.0f, 1.0f, 1.0f));
+            string geoName = lightParams.getString("geometry");
             GeometryPtr geometry = sceneCache->getGeometry(geoName);
             // TODO: this cause a problem that we can't run time modify
             // the transform for area light since it's not tied in between
             // instance in scene and the transform in area light itself..
             // need to find a way to improve this part
             Transform toWorld(position, orientation, scale);
-
+            int sampleNum = lightParams.getInt("sample_num", 1);
             AreaLight* areaLight = new AreaLight(radiance, geometry, 
                 toWorld, sampleNum);
             light = areaLight;
+
             // and we need to push this geometry into scene so that it can
             // be intersection tested.....this is gonna be messy for the 
             // current awkward parsing mechanics.......
@@ -570,273 +346,52 @@ namespace Goblin {
                     PrimitivePtr(new InstancedPrimitive(toWorld, model)); 
             }
             sceneCache->addInstance(instance);
-        } else if(lightType == IBL) {
-            string filename = 
-                sceneCache->resolvePath(pt.parseString(FILENAME));
-            Color filter = parseColor(pt, FILTER);
-            Quaternion orientation = parseQuaternion(pt, ORIENTATION);
-            int samplePerPixel = sceneCache->getRenderSetting().samplePerPixel;
-            std::cout << "-radiance map: " << filename << std::endl;
-            std::cout << "-filter: " << filter << std::endl;
-            std::cout << "-orientation: " << orientation << std::endl;
-            light = new ImageBasedLight(filename, filter, orientation, 
-                samplePerPixel);
         } else {
-            std::cerr << "unrecognized light type " << lightType << std::endl;
-            return;
+            light = mLightFactory->create(type, lightParams,
+                *sceneCache);
         }
         sceneCache->addLight(light);
     }
-
-    static void parseMaterial(const PropertyTree& pt,
-        SceneCache* sceneCache) {
-        string materialType = pt.parseString(TYPE);
-        string name = pt.parseString(NAME);
-
-        std::cout <<"\n" << materialType <<" material " << name << std::endl;
-        MaterialPtr material;
-        if(materialType == LAMBERT) {
-            string textureName = pt.parseString(DIFFUSE);
-            ColorTexturePtr Kd = sceneCache->getColorTexture(textureName);
-            FloatTexturePtr bump;
-            if(pt.hasChild(BUMPMAP)) {
-                string bumpmapName = pt.parseString(BUMPMAP);
-                bump = sceneCache->getFloatTexture(bumpmapName);
-            }
-            material = MaterialPtr(new LambertMaterial(Kd, bump));
-        } else if(materialType == BLINN) {
-            string glossyTextureName = pt.parseString(GLOSSY);
-            string expTextureName = pt.parseString(EXPONENT);
-            ColorTexturePtr Kg = 
-                sceneCache->getColorTexture(glossyTextureName);
-            FloatTexturePtr exp = 
-                sceneCache->getFloatTexture(expTextureName);
-            float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
-            float absorption = pt.parseFloat(ABSORPTION, -1.0f);
-            FloatTexturePtr bump;
-            if(pt.hasChild(BUMPMAP)) {
-                string bumpmapName = pt.parseString(BUMPMAP);
-                bump = sceneCache->getFloatTexture(bumpmapName);
-            }
-            if(absorption > 0.0f) {
-                // conductor
-                material = MaterialPtr(new BlinnMaterial(Kg, exp, index, 
-                    absorption, bump));
-            } else {
-                // dieletric
-                material = MaterialPtr(new BlinnMaterial(Kg, exp, index, bump));
-            }
-        } else if(materialType == TRANSPARENT) {
-            string reflectTextureName = pt.parseString(REFLECTION);
-            string refractTextureName = pt.parseString(REFRACTION);
-            ColorTexturePtr Kr = 
-                sceneCache->getColorTexture(reflectTextureName);
-            ColorTexturePtr Kt = 
-                sceneCache->getColorTexture(refractTextureName);
-            float index = pt.parseFloat(REFRACTION_INDEX, 1.5f);
-            std::cout << "refraction index: " << index << std::endl;
-            FloatTexturePtr bump;
-            if(pt.hasChild(BUMPMAP)) {
-                string bumpmapName = pt.parseString(BUMPMAP);
-                bump = sceneCache->getFloatTexture(bumpmapName);
-            }
-            material = MaterialPtr(new TransparentMaterial(Kr, Kt, index, bump));
-        } else if(materialType == MIRROR) {
-            string reflectTextureName = pt.parseString(REFLECTION);
-            ColorTexturePtr Kr = 
-                sceneCache->getColorTexture(reflectTextureName);
-            // use aluminium by default
-            float index = pt.parseFloat(REFRACTION_INDEX, 0.8f);
-            float absorption = pt.parseFloat(ABSORPTION, 6.0f);
-            std::cout << "-refraction index: " << index << std::endl;
-            std::cout << "-absorption: " << absorption << std::endl;
-            FloatTexturePtr bump;
-            if(pt.hasChild(BUMPMAP)) {
-                string bumpmapName = pt.parseString(BUMPMAP);
-                bump = sceneCache->getFloatTexture(bumpmapName);
-            }
-            material = MaterialPtr(new MirrorMaterial(Kr, index, 
-                absorption, bump));
-        } else {
-            std::cerr << "undefined material type " << 
-                materialType << std::endl;
-            return;
-        }
-        sceneCache->addMaterial(name, material);
-    }
-
-    static TextureMapping* parseTextureMapping(const PropertyTree& pt) {
-        TextureMapping* m;
-        string type = pt.parseString(MAPPING);
-        std::cout << type << " texture mapping" << std::endl;
-        if(type == UV) {
-            Vector2 scale = parseVector2(pt, SCALE, Vector2(1.0f, 1.0f));
-            Vector2 offset = parseVector2(pt, OFFSET, Vector2::Zero);
-            std::cout << "-scale: " << scale << std::endl;
-            std::cout << "-offset: " << offset << std::endl;
-            m = new UVMapping(scale, offset);
-        } else {
-            std::cerr << "undefined mapping type " << type << std::endl;
-            m = new UVMapping(Vector2(1.0f, 1.0f), Vector2::Zero);
-        }
-        return m;
-    }
-
-    static void parseFloatTexture(const PropertyTree& pt,
-        SceneCache* sceneCache) {
-        string textureType = pt.parseString(TYPE);
-        string name = pt.parseString(NAME);
-        std::cout << textureType <<" texture " << name << std::endl;
-        FloatTexturePtr texture;
-        if(textureType == CONSTANT) {
-            float f = pt.parseFloat(FLOAT, 0.5f);
-            std::cout << "-float " << f << std::endl;
-            texture = FloatTexturePtr(new ConstantTexture<float>(f));
-        } else if(textureType == SCALE) {
-            string textureName = pt.parseString(TEXTURE);
-            string scaleName = pt.parseString(SCALE);
-            std::cout << "-scale " << scaleName << std::endl;
-            FloatTexturePtr s = sceneCache->getFloatTexture(scaleName);
-            std::cout << "-texture " << textureName << std::endl;
-            FloatTexturePtr t = sceneCache->getFloatTexture(textureName);
-            texture = FloatTexturePtr(new ScaleTexture<float>(t, s));
-        } else if(textureType == IMAGE) {
-            TextureMapping* m = parseTextureMapping(pt);
-            string filename = 
-                sceneCache->resolvePath(pt.parseString(FILENAME));
-            float gamma = pt.parseFloat(GAMMA, 1.0f);
-            string addressStr = pt.parseString(ADDRESS, REPEAT);
-            AddressMode addressMode = AddressRepeat;
-            if(addressStr == REPEAT) {
-                addressMode = AddressRepeat;
-            } else if(addressStr == CLAMP) {
-                addressMode = AddressClamp;
-            } else if(addressStr == BORDER) {
-                addressMode = AddressBorder;
-            }
-            std::cout << "-filename: " << filename << std::endl;
-            std::cout << "-gamma: " << gamma << std::endl;
-            texture = FloatTexturePtr(new ImageTexture<float>(filename, m, 
-                addressMode, gamma));
-        } else {
-            std::cerr << "undefined texture type " << textureType << std::endl;
-            return;
-        }
-        sceneCache->addFloatTexture(name, texture);
-    }
-
-    static void parseColorTexture(const PropertyTree& pt,
-        SceneCache* sceneCache) {
-        string textureType = pt.parseString(TYPE);
-        string name = pt.parseString(NAME);
-        std::cout << textureType <<" texture " << name << std::endl;
-        ColorTexturePtr texture;
-        if(textureType == CONSTANT) {
-            Color c = parseColor(pt, COLOR);
-            std::cout << "-color " << c << std::endl;
-            texture = ColorTexturePtr(new ConstantTexture<Color>(c));
-        } else if(textureType == SCALE) {
-            string textureName = pt.parseString(TEXTURE);
-            string scaleName = pt.parseString(SCALE);
-            std::cout << "-scale " << scaleName << std::endl;
-            FloatTexturePtr s = sceneCache->getFloatTexture(scaleName);
-            std::cout << "-texture " << textureName << std::endl;
-            ColorTexturePtr t = sceneCache->getColorTexture(textureName);
-            texture = ColorTexturePtr(new ScaleTexture<Color>(t, s));
-        } else if(textureType == IMAGE) {
-            TextureMapping* m = parseTextureMapping(pt);
-            string filename = 
-                sceneCache->resolvePath(pt.parseString(FILENAME));
-            float gamma = pt.parseFloat(GAMMA, 1.0f);
-            string addressStr = pt.parseString(ADDRESS, REPEAT);
-            AddressMode addressMode = AddressRepeat;
-            if(addressStr == REPEAT) {
-                addressMode = AddressRepeat;
-            } else if(addressStr == CLAMP) {
-                addressMode = AddressClamp;
-            } else if(addressStr == BORDER) {
-                addressMode = AddressBorder;
-            }
-            std::cout << "-filename: " << filename << std::endl;
-            std::cout << "-gamma: " << gamma << std::endl;
-            texture = ColorTexturePtr(new ImageTexture<Color>(filename, m, 
-                addressMode, gamma));
-        } else {
-            std::cerr << "undefined texture type " << textureType << std::endl;
-            return;
-        }
-        sceneCache->addColorTexture(name, texture);
-    }
-
-    static void parseTexture(const PropertyTree& pt,
-        SceneCache* sceneCache) {
-        string textureFormat = pt.parseString(FORMAT, COLOR);
-        if(textureFormat == FLOAT) {
-            parseFloatTexture(pt, sceneCache);
-        } else if(textureFormat == COLOR) {
-            parseColorTexture(pt, sceneCache);
-        } else {
-            std::cerr << "unrecognize texture format" <<
-                textureFormat << std::endl;
-        }
-    }
-
-    static void parseRenderSetting(const PropertyTree& pt, 
-        RenderSetting* setting) {
-        int samplePerPixel = 1;
-        int maxRayDepth = 5;
-        int threadNum = boost::thread::hardware_concurrency();
-
-        PropertyTree rt;
-        if(pt.getChild(RENDER_SETTING, &rt)) {
-            samplePerPixel = rt.parseInt(SAMPLE_PER_PIXEL, samplePerPixel);
-            maxRayDepth = rt.parseInt(MAX_RAY_DEPTH, maxRayDepth);
-            threadNum = min(rt.parseInt(THREAD_NUM, threadNum), threadNum);
-        }
-        setting->samplePerPixel = samplePerPixel;
-        setting->maxRayDepth = maxRayDepth;
-        setting->threadNum = threadNum;
-        std::cout << "\nrender setting" << std::endl;
-        std::cout << "-sample per pixel " << samplePerPixel << std::endl;
-        std::cout << "-thread num " << threadNum << std::endl;
-        std::cout << "-max ray depth " << maxRayDepth << std::endl;
-    }
-
 
     ScenePtr SceneLoader::load(const string& filename, 
         RenderSetting* setting) {
         ScenePtr scene;
         PropertyTree pt;
         path scenePath(filename);
-
         if(!exists(scenePath) || !pt.read(filename)) {
             return scene;
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));
-
         parseRenderSetting(pt, setting);
-        sceneCache.addRenderSetting(*setting);
-
-        Film* film = parseFilm(pt, &sceneCache);
+        Filter* filter = parseFilter(pt);
+        Film* film = parseFilm(pt, filter);
         CameraPtr camera = parseCamera(pt, film);
 
-        const PtreeList& nodes = pt.getChildren(); 
-        for(PtreeList::const_iterator it = nodes.begin(); 
-            it != nodes.end(); it++) {
-            std::string key(it->first);
-            if(key == MODEL) {
-                parseModel(it->second, &sceneCache);
-            } else if(key == GEOMETRY) {
-                parseGeometry(it->second, &sceneCache);
-            } else if(key == INSTANCE) {
-                parseInstance(it->second, &sceneCache);
-            } else if(key == LIGHT) {
-                parseLight(it->second, &sceneCache);
-            } else if(key == MATERIAL) {
-                parseMaterial(it->second, &sceneCache);
-            } else if(key == TEXTURE) {
-                parseTexture(it->second, &sceneCache);
-            }
+        PtreeList geometryNodes;
+        pt.getChildren("geometry", &geometryNodes);
+        for(size_t i = 0; i < geometryNodes.size(); ++i) {
+            parseGeometry(geometryNodes[i].second, &sceneCache);
+        }
+        PtreeList textureNodes;
+        pt.getChildren("texture", &textureNodes);
+        for(size_t i = 0; i < textureNodes.size(); ++i) {
+            parseTexture(textureNodes[i].second, &sceneCache);
+        }
+        PtreeList materialNodes;
+        pt.getChildren("material", &materialNodes);
+        for(size_t i = 0; i < materialNodes.size(); ++i) {
+            parseMaterial(materialNodes[i].second, &sceneCache);
+        }
+        PtreeList primitiveNodes;
+        pt.getChildren("primitive", &primitiveNodes);
+        for(size_t i = 0; i < primitiveNodes.size(); ++i) {
+            parsePrimitive(primitiveNodes[i].second, &sceneCache);
+        }
+        PtreeList lightNodes;
+        pt.getChildren("light", &lightNodes);
+        for(size_t i = 0; i < lightNodes.size(); ++i) {
+            parseLight(lightNodes[i].second, &sceneCache, 
+                setting->samplePerPixel);
         }
 
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),

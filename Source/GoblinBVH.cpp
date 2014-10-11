@@ -38,7 +38,6 @@ namespace Goblin {
         if(mRefinedPrimitives.size() == 0) {
             return;
         }
-        std::cout << "specified split method " << splitMethod << std::endl;
         if(splitMethod == "middle") {
             mSplitMethod = Middle;
         } else if(splitMethod == "equal_count") {

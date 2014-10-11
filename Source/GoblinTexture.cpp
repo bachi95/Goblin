@@ -1,3 +1,5 @@
+#include "GoblinScene.h"
+#include "GoblinParamSet.h"
 #include "GoblinTexture.h"
 #include "GoblinGeometry.h"
 #include "GoblinImageIO.h"
@@ -220,6 +222,87 @@ namespace Goblin{
         delete[] tSampleIndex;
         delete[] tSampleWeight;
         return dstBuffer;
+    }
+
+    static TextureMapping* getTextureMapping(const ParamSet& params) {
+        TextureMapping* m;
+        string type = params.getString("mapping");
+        if(type == "uv") {
+            Vector2 scale = params.getVector2("scale", Vector2(1.0f, 1.0f));
+            Vector2 offset = params.getVector2("offset", Vector2::Zero);
+            m = new UVMapping(scale, offset);
+        } else {
+            cerr << "undefined mapping type " << type << endl;
+            m = new UVMapping(Vector2(1.0f, 1.0f), Vector2::Zero);
+        }
+        return m;
+    }
+
+    static AddressMode getAddressMode(const ParamSet& params) {
+        string addressStr = params.getString("address", "repeat");
+        AddressMode addressMode = AddressRepeat;
+        if(addressStr == "repeat") {
+            addressMode = AddressRepeat;
+        } else if(addressStr == "clamp") {
+            addressMode = AddressClamp;
+        } else if(addressStr == "border") {
+            addressMode = AddressBorder;
+        }
+        return addressMode;
+    }
+
+    Texture<float>* FloatConstantTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        float f = params.getFloat("float", 0.5f);
+        return new ConstantTexture<float>(f);
+    }
+
+    Texture<float>* FloatScaleTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        string textureName = params.getString("texture");
+        string scaleName = params.getString("scale");
+        FloatTexturePtr s = sceneCache.getFloatTexture(scaleName);
+        FloatTexturePtr t = sceneCache.getFloatTexture(textureName);
+        return new ScaleTexture<float>(t, s);
+    }
+
+    Texture<float>* FloatImageTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        TextureMapping* m = getTextureMapping(params);
+        string filename = params.getString("file");
+        string filePath = sceneCache.resolvePath(filename);
+        float gamma = params.getFloat("gamma", 1.0f);
+        string addressStr = params.getString("address", "repeat");
+        AddressMode addressMode = getAddressMode(params);
+        return new ImageTexture<float>(filePath, m, 
+            addressMode, gamma);
+    }
+
+    Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        Color c = params.getColor("color", Color::Magenta);
+        return new ConstantTexture<Color>(c);
+    }
+
+    Texture<Color>* ColorScaleTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        string textureName = params.getString("texture");
+        string scaleName = params.getString("scale");
+        FloatTexturePtr s = sceneCache.getFloatTexture(scaleName);
+        ColorTexturePtr t = sceneCache.getColorTexture(textureName);
+        return new ScaleTexture<Color>(t, s);
+    }
+
+    Texture<Color>* ColorImageTextureCreator::create(const ParamSet& params,
+            const SceneCache& sceneCache) const {
+        TextureMapping* m = getTextureMapping(params);
+        string filename = params.getString("file");
+        string filePath = sceneCache.resolvePath(filename);
+        float gamma = params.getFloat("gamma", 1.0f);
+        string addressStr = params.getString("address", "repeat");
+        AddressMode addressMode = getAddressMode(params);
+        return new ImageTexture<Color>(filePath, m, 
+            addressMode, gamma);
     }
 
     template struct ImageBuffer<float>;

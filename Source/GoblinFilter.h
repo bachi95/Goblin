@@ -2,6 +2,8 @@
 #define GOBLIN_FILTER_H
 
 #include "GoblinUtils.h"
+#include "GoblinFactory.h"
+#include "GoblinParamSet.h"
 
 namespace Goblin {
     class Filter {
@@ -52,6 +54,40 @@ namespace Goblin {
         const float mB, mC;
     };
 
+    class BoxFilterCreator : public Creator<Filter, const ParamSet&> {
+    public:
+        Filter* create(const ParamSet& params) const {
+            Vector2 width = params.getVector2("width", Vector2(1.0f, 1.0f));
+            return new BoxFilter(width.x, width.y);
+        }
+    };
+
+    class TriangleFilterCreator : public Creator<Filter, const ParamSet&> {
+    public:
+        Filter* create(const ParamSet& params) const {
+            Vector2 width = params.getVector2("width", Vector2(1.0f, 1.0f));
+            return new TriangleFilter(width.x, width.y);
+        }
+    };
+
+    class GaussianFilterCreator : public Creator<Filter, const ParamSet&> {
+    public:
+        Filter* create(const ParamSet& params) const {
+            Vector2 width = params.getVector2("width", Vector2(1.0f, 1.0f));
+            float falloff = params.getFloat("falloff", 2.0f);
+            return new GaussianFilter(width.x, width.y, falloff);
+        }
+    };
+
+    class MitchellFilterCreator : public Creator<Filter, const ParamSet&> {
+    public:
+        Filter* create(const ParamSet& params) const {
+            Vector2 width = params.getVector2("width", Vector2(1.0f, 1.0f));
+            float b = params.getFloat("b", 2.0f);
+            float c = params.getFloat("c", 2.0f);
+            return new MitchellFilter(width.x, width.y, b, c);
+        }
+    };
 }
 
 #endif //GOBLIN_FILTER_H

@@ -4,6 +4,8 @@
 #include "GoblinVertex.h"
 #include "GoblinGeometry.h"
 #include "GoblinSampler.h"
+#include "GoblinParamSet.h"
+#include "GoblinScene.h"
 
 namespace Goblin {
 
@@ -481,4 +483,81 @@ namespace Goblin {
         }
         return f;
     }
+
+
+    Material* LambertMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        string textureName = params.getString("Kd");
+        ColorTexturePtr Kd = sceneCache.getColorTexture(textureName);
+        FloatTexturePtr bump;
+        string bumpmapName = params.getString("bumpmap");
+        if(bumpmapName != "") {
+            bump = sceneCache.getFloatTexture(bumpmapName);
+        }
+        return new LambertMaterial(Kd, bump);
+    }
+
+
+    Material* BlinnMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        string glossyTextureName = params.getString("Kg");
+        string expTextureName = params.getString("exponent");
+        ColorTexturePtr Kg = 
+            sceneCache.getColorTexture(glossyTextureName);
+        FloatTexturePtr exp = 
+            sceneCache.getFloatTexture(expTextureName);
+        float index = params.getFloat("index", 1.5f);
+        float absorption = params.getFloat("k", -1.0f);
+        FloatTexturePtr bump;
+        string bumpmapName = params.getString("bumpmap");
+        if(bumpmapName != "") {
+            bump = sceneCache.getFloatTexture(bumpmapName);
+        }
+        Material* material;
+        if(absorption > 0.0f) {
+            // conductor
+            material = new BlinnMaterial(Kg, exp, index, absorption, bump);
+        } else {
+            // dieletric
+            material = new BlinnMaterial(Kg, exp, index, bump);
+        }
+        return material;
+    }
+
+
+    Material* TransparentMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        string reflectTextureName = params.getString("Kr");
+        string refractTextureName = params.getString("Kt");
+        ColorTexturePtr Kr = 
+            sceneCache.getColorTexture(reflectTextureName);
+        ColorTexturePtr Kt = 
+            sceneCache.getColorTexture(refractTextureName);
+        float index = params.getFloat("index", 1.5f);
+        FloatTexturePtr bump;
+        string bumpmapName = params.getString("bumpmap");
+        if(bumpmapName != "") {
+            bump = sceneCache.getFloatTexture(bumpmapName);
+        }
+        return new TransparentMaterial(Kr, Kt, index, bump);
+    }
+
+
+    Material* MirrorMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+
+        string reflectTextureName = params.getString("Kr");
+        ColorTexturePtr Kr = 
+            sceneCache.getColorTexture(reflectTextureName);
+        // use aluminium by default
+        float index = params.getFloat("index", 0.8f);
+        float absorption = params.getFloat("k", 6.0f);
+        FloatTexturePtr bump;
+        string bumpmapName = params.getString("bumpmap");
+        if(bumpmapName != "") {
+            bump = sceneCache.getFloatTexture(bumpmapName);
+        }
+        return new MirrorMaterial(Kr, index, absorption, bump);
+    }
+
 }

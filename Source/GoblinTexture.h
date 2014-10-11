@@ -4,6 +4,7 @@
 #include "GoblinColor.h"
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
+#include "GoblinFactory.h"
 
 #include <map>
 
@@ -117,6 +118,56 @@ namespace Goblin {
         }
         imageCache.clear();
     }
+
+    class ParamSet;
+    class SceneCache;
+
+    class FloatConstantTextureCreator : public 
+        Creator<Texture<float> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<float>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class FloatScaleTextureCreator : public 
+        Creator<Texture<float> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<float>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class FloatImageTextureCreator : public 
+        Creator<Texture<float> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<float>* create(const ParamSet& params, 
+            const SceneCache&) const;
+    };
+
+
+    class ColorConstantTextureCreator : public 
+        Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<Color>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class ColorScaleTextureCreator : public 
+        Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<Color>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class ColorImageTextureCreator : public 
+        Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<Color>* create(const ParamSet& params, 
+            const SceneCache&) const;
+    };
 
 
     template<typename T>

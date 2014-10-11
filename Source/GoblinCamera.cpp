@@ -160,4 +160,18 @@ namespace Goblin{
         mIsUpdated = true;
     }
 
+
+    Camera* PerspectiveCameraCreator::create(const ParamSet& params, 
+        Film* film) const {
+        Vector3 position = params.getVector3("position");
+        Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+        Quaternion orientation(q[0], q[1], q[2], q[2]);
+        float fov = params.getFloat("fov", 60.0f);
+        float zn = params.getFloat("near_plane", 0.1f);
+        float zf = params.getFloat("far_plane", 1000.0f);
+        float lensRadius = params.getFloat("lens_radius", 0.0f);
+        float focalDistance = params.getFloat("focal_distance", 1e+10f);
+        return new Camera(position, orientation, radians(fov), 
+            zn, zf, lensRadius, focalDistance, film);
+    }
 }

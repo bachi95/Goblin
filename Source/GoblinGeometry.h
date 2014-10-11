@@ -106,8 +106,8 @@ namespace Goblin {
 
         const size_t getVertexNum() const;
         const size_t getFaceNum() const;
-        const void* getVertexPtr(size_t index = 0) const;
-        const void* getFacePtr(size_t index = 0) const;
+        const Vertex* getVertexPtr(size_t index = 0) const;
+        const TriangleIndex* getFacePtr(size_t index = 0) const;
         const size_t getId() const;
 
     public:
@@ -146,11 +146,11 @@ namespace Goblin {
         return mTriangles.size();
     }
 
-    inline const void* Geometry::getVertexPtr(size_t index) const {
+    inline const Vertex* Geometry::getVertexPtr(size_t index) const {
         return &mVertices[index];
     }
 
-    inline const void* Geometry::getFacePtr(size_t index) const {
+    inline const TriangleIndex* Geometry::getFacePtr(size_t index) const {
         return &mTriangles[index];
     }
 }

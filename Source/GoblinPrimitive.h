@@ -122,6 +122,18 @@ namespace Goblin {
         PrimitiveList mRefinedPrimitives;
         BBox mAABB;
     };
+
+
+    class ParamSet;
+    class SceneCache;
+
+    class InstancePrimitiveCreator : public 
+        Creator<Primitive , const ParamSet&, const SceneCache&> {
+    public:
+        Primitive* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
 }
 
 #endif //GOBLIN_PRIMITIVE_H

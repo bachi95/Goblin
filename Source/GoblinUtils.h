@@ -7,7 +7,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
 using namespace std;
@@ -32,9 +34,13 @@ typedef unsigned __int64 uint64_t;
 namespace Goblin {
     using std::vector;
     using std::string;
+    using std::map;
     using std::min;
     using std::max;
     using std::swap;
+    using std::cout;
+    using std::cerr;
+    using std::endl;
 
     class Vector3;
     class Camera;
@@ -143,6 +149,8 @@ namespace Goblin {
     private:
         RNGImp* mRNGImp;
     };
+
+    class NullType {};
 }
 
 #endif // GOBLIN_UTILS_H

@@ -1,5 +1,8 @@
-#include "GoblinModel.h"
 #include "GoblinBBox.h"
+#include "GoblinBVH.h"
+#include "GoblinModel.h"
+#include "GoblinParamSet.h"
+#include "GoblinScene.h"
 
 namespace Goblin {
     Model::Model(const GeometryPtr& geometry, const MaterialPtr& material,
@@ -38,4 +41,27 @@ namespace Goblin {
         const Matrix4& m) {
         rList.push_back(Renderable(m, mGeometry));
     }
+
+
+    Primitive* ModelPrimitiveCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+
+        string geoName = params.getString("geometry");
+        GeometryPtr geometry = sceneCache.getGeometry(geoName);
+
+        string materialName = params.getString("material");
+        MaterialPtr material = sceneCache.getMaterial(materialName);
+
+        Primitive* model = new Model(geometry, material);
+
+        if(!model->intersectable()) {
+            std::vector<PrimitivePtr> primitives;
+            primitives.push_back(PrimitivePtr(model));
+            Primitive* aggregate = new BVH(primitives, 1, "equal_count");
+            return aggregate;
+        } else {
+            return model;
+        }
+    }
+
 }

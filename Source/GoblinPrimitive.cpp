@@ -1,5 +1,7 @@
+#include "GoblinParamSet.h"
 #include "GoblinPrimitive.h"
 #include "GoblinRay.h"
+#include "GoblinScene.h"
 
 namespace Goblin {
 
@@ -112,4 +114,24 @@ namespace Goblin {
     BBox Aggregate::getAABB() const {
         return mAABB;
     }
+
+
+    Primitive* InstancePrimitiveCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        string primitiveName = params.getString("model");
+        PrimitivePtr primitive = sceneCache.getPrimitive(primitiveName);
+
+        Vector3 position = params.getVector3("position");
+        Vector4 v = params.getVector4("orientation", 
+            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        Vector3 scale = params.getVector3("scale");
+        Transform toWorld(position, orientation, scale);
+//        BBox bbox = instance->getAABB();
+//        cout << "BBox min: " << bbox.pMin << endl;
+//        cout << "BBox max: " << bbox.pMax << endl;
+
+        return new InstancedPrimitive(toWorld, primitive);
+    }
+
 }

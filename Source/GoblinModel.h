@@ -1,5 +1,6 @@
 #ifndef GOBLIN_MODEL_H
 #define GOBLIN_MODEL_H
+#include "GoblinFactory.h"
 #include "GoblinPrimitive.h"
 #include "GoblinLight.h"
 
@@ -36,6 +37,18 @@ namespace Goblin {
     inline const AreaLight* Model::getAreaLight() const {
         return mAreaLight;
     }
+
+    
+    class ParamSet;
+    class SceneCache;
+
+    class ModelPrimitiveCreator : public 
+        Creator<Primitive , const ParamSet&, const SceneCache&> {
+    public:
+        Primitive* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
 }
 
 #endif // GOBLIN_MODEL_H

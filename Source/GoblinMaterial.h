@@ -2,6 +2,7 @@
 #define GOBLIN_MATERIAL_H
 
 #include "GoblinColor.h"
+#include "GoblinFactory.h"
 #include "GoblinTexture.h"
 #include "GoblinUtils.h"
 
@@ -244,6 +245,38 @@ namespace Goblin {
         const Vector3& wo, const Vector3& wi, BSDFType type) const {
         return 0.0f;
     }
+
+
+    class LambertMaterialCreator : public 
+        Creator<Material , const ParamSet&, const SceneCache&> {
+    public:
+        Material* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+    
+    class BlinnMaterialCreator : public 
+        Creator<Material , const ParamSet&, const SceneCache&> {
+    public:
+        Material* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class TransparentMaterialCreator : public 
+        Creator<Material , const ParamSet&, const SceneCache&> {
+    public:
+        Material* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class MirrorMaterialCreator : public 
+        Creator<Material , const ParamSet&, const SceneCache&> {
+    public:
+        Material* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
 }
 
 #endif //GOBLIN_MATERIAL_H

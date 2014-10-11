@@ -442,4 +442,34 @@ namespace Goblin {
             (TWO_PI * PI * sinTheta);
         return pdf;
     }
+
+    
+    Light* PointLightCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        Color intensity = params.getColor("intensity");
+        Vector3 position = params.getVector3("position");
+        return new PointLight(intensity, position);
+    }
+
+
+    Light* DirectionalLightCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        Color radiance = params.getColor("radiance");
+        Vector3 direction = params.getVector3("direction");
+        return new DirectionalLight(radiance, direction);
+    }
+
+
+    Light* ImageBasedLightCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        string filename = params.getString("file");
+        string filePath = sceneCache.resolvePath(filename);
+        Color filter = params.getColor("filter");
+        Vector4 v = params.getVector4("orientation", 
+            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        int samplePerPixel = params.getInt("sample_per_pixel");
+        return new ImageBasedLight(filePath, filter, orientation, 
+            samplePerPixel);
+    }
 }

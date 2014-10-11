@@ -16,6 +16,7 @@ namespace Goblin {
         PropertyTree() {};
         bool read(const std::string& fileName);
         const PtreeList& getChildren() const;
+        bool getChildren(const char* key, PtreeList* children) const;
         bool hasChild(const char* key) const;
         bool getChild(const char* key, PropertyTree* child) const;
         bool parseBool(const char* key, bool fallback = false) const;

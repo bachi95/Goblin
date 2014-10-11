@@ -42,9 +42,9 @@ namespace Goblin {
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
         unsigned int i2 = ti->v[2];
-        Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
-        Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
-        Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+        const Vector3& p0 = mParentMesh->getVertexPtr(i0)->position;
+        const Vector3& p1 = mParentMesh->getVertexPtr(i1)->position;
+        const Vector3& p2 = mParentMesh->getVertexPtr(i2)->position;
 
         Vector3 e1 = p1 - p0;
         Vector3 e2 = p2 - p0;
@@ -81,13 +81,13 @@ namespace Goblin {
         unsigned int i1 = ti->v[1];
         unsigned int i2 = ti->v[2];
 
-        Vertex& v0 = *(Vertex*)mParentMesh->getVertexPtr(i0);
-        Vertex& v1 = *(Vertex*)mParentMesh->getVertexPtr(i1);
-        Vertex& v2 = *(Vertex*)mParentMesh->getVertexPtr(i2);
+        const Vertex& v0 = *mParentMesh->getVertexPtr(i0);
+        const Vertex& v1 = *mParentMesh->getVertexPtr(i1);
+        const Vertex& v2 = *mParentMesh->getVertexPtr(i2);
 
-        Vector3& p0 = v0.position;
-        Vector3& p1 = v1.position;
-        Vector3& p2 = v2.position;
+        const Vector3& p0 = v0.position;
+        const Vector3& p1 = v1.position;
+        const Vector3& p2 = v2.position;
 
         Vector3 e1 = p1 - p0;
         Vector3 e2 = p2 - p0;
@@ -123,9 +123,9 @@ namespace Goblin {
         Vector3 position(ray(t));
         Vector3 normal;
         if(mParentMesh->hasNormal()) {
-            Vector3& n0 = v0.normal;
-            Vector3& n1 = v1.normal;
-            Vector3& n2 = v2.normal;
+            const Vector3& n0 = v0.normal;
+            const Vector3& n1 = v1.normal;
+            const Vector3& n2 = v2.normal;
             normal = normalize(b0 * n0 + b1 * n1 + b2 * n2);
         } else {
             normal = normalize(cross(e1, e2));
@@ -170,9 +170,9 @@ namespace Goblin {
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
         unsigned int i2 = ti->v[2];
-        Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
-        Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
-        Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+        const Vector3& p0 = mParentMesh->getVertexPtr(i0)->position;
+        const Vector3& p1 = mParentMesh->getVertexPtr(i1)->position;
+        const Vector3& p2 = mParentMesh->getVertexPtr(i2)->position;
         *normal = normalize(cross(p1 - p0, p2 - p0));
         return b0 * p0 + b1 * p1 + (1.0f - b0 - b1) * p2;
     }
@@ -182,9 +182,9 @@ namespace Goblin {
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
         unsigned int i2 = ti->v[2];
-        Vector3& p0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
-        Vector3& p1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
-        Vector3& p2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+        const Vector3& p0 = mParentMesh->getVertexPtr(i0)->position;
+        const Vector3& p1 = mParentMesh->getVertexPtr(i1)->position;
+        const Vector3& p2 = mParentMesh->getVertexPtr(i2)->position;
 
         return 0.5f * length(cross(p1 - p0, p2 - p0));
     }
@@ -194,9 +194,9 @@ namespace Goblin {
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
         unsigned int i2 = ti->v[2];
-        Vector3& v0 = ((Vertex*)mParentMesh->getVertexPtr(i0))->position;
-        Vector3& v1 = ((Vertex*)mParentMesh->getVertexPtr(i1))->position;
-        Vector3& v2 = ((Vertex*)mParentMesh->getVertexPtr(i2))->position;
+        const Vector3& v0 = mParentMesh->getVertexPtr(i0)->position;
+        const Vector3& v1 = mParentMesh->getVertexPtr(i1)->position;
+        const Vector3& v2 = mParentMesh->getVertexPtr(i2)->position;
 
         BBox rv;
         rv.expand(v0);

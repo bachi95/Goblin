@@ -4,6 +4,7 @@
 #include "GoblinMatrix.h"
 #include "GoblinVector.h"
 #include "GoblinQuaternion.h"
+#include "GoblinFactory.h"
 
 namespace Goblin {
     class Film;
@@ -91,6 +92,13 @@ namespace Goblin {
     inline bool Camera::isUpdated() const {
         return mIsUpdated;
     }
+
+
+    class PerspectiveCameraCreator : 
+        public Creator<Camera, const ParamSet&, Film*> {
+    public:
+        Camera* create(const ParamSet& params, Film* film) const;
+    };
 }
 
 #endif //GOBLIN_CAMERA_H

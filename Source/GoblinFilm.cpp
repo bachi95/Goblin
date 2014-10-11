@@ -104,8 +104,8 @@ namespace Goblin {
 
     void ImageTile::addSample(const Sample& sample, const Color& L) {
         if(L.isNaN()) {
-            std::cout << "sample ("<< sample.imageX << " " << sample.imageY
-                << ") generate NaN point, discard this sample" << std::endl;
+            cout << "sample ("<< sample.imageX << " " << sample.imageY
+                << ") generate NaN point, discard this sample" << endl;
             return;
         }
         // transform continuous space sample to discrete space
@@ -211,8 +211,8 @@ namespace Goblin {
 
     void Film::addSample(const Sample& sample, const Color& L) {
         if(L.isNaN()) {
-            std::cout << "sample ("<< sample.imageX << " " << sample.imageY
-                << ") generate NaN point, discard this sample" << std::endl;
+            cout << "sample ("<< sample.imageX << " " << sample.imageY
+                << ") generate NaN point, discard this sample" << endl;
             return;
         }
         // transform continuous space sample to discrete space
@@ -269,12 +269,32 @@ namespace Goblin {
                 colors[index] = mPixels[index].color / mPixels[index].weight;
             }
         }
-        std::cout << "write image to : " << mFilename << std::endl;
+        cout << "write image to : " << mFilename << endl;
         if(mBloomRadius > 0.0f && mBloomWeight > 0.0f) {
             Goblin::bloom(colors, mXRes, mYRes, mBloomRadius, mBloomWeight);
         }
         Goblin::writeImage(mFilename, colors, mXRes, mYRes, mToneMapping);
         delete [] colors;
+    }
+
+    Film* ImageFilmCreator::create(const ParamSet& params, 
+        Filter* filter) const {
+        Vector2 res = params.getVector2("resolution", Vector2(640, 480));
+        int xRes = static_cast<int>(res.x);
+        int yRes = static_cast<int>(res.y);
+
+        Vector4 windowCrop = params.getVector4("crop", Vector4(0, 1, 0, 1));
+        float crop[4];
+        for(int i = 0; i < 4; ++i) {
+            crop[i] = windowCrop[i];
+        }
+        string filePath = params.getString("file", "goblin.png");
+        bool toneMapping = params.getBool("tone_mapping");
+        float bloomRadius = params.getFloat("bloom_radius");
+        float bloomWeight = params.getFloat("bloom_weight");
+        int tileWidth = params.getInt("tile_width", 16);
+        return new Film(xRes, yRes, crop, filter, filePath, 
+            tileWidth, toneMapping, bloomRadius, bloomWeight);
     }
 
 }

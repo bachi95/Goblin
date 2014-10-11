@@ -3,6 +3,7 @@
 #include "GoblinRay.h"
 #include "GoblinBBox.h"
 #include "GoblinSampler.h"
+#include "GoblinScene.h"
 
 using namespace Goblin;
 
@@ -193,4 +194,11 @@ void Sphere::buildStacks() {
         triangle.v[2] = baseIndex + i + 1;
         mTriangles.push_back(triangle);
     }
+}
+
+
+Geometry* SphereGeometryCreator::create(const ParamSet& params, 
+    const SceneCache& sceneCache) const {
+    float radius = params.getFloat("radius", 1.0f);
+    return new Sphere(radius);
 }

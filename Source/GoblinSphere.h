@@ -1,6 +1,7 @@
 #ifndef GOBLIN_SPHERE_H
 #define GOBLIN_SPHERE_H
 #include "GoblinGeometry.h"
+#include "GoblinFactory.h"
 
 namespace Goblin {
     class Sphere : public Geometry {
@@ -27,6 +28,17 @@ namespace Goblin {
     inline float Sphere::area() const {
         return 4.0f * PI * mRadius * mRadius;
     }
+
+
+    class ParamSet;
+    class SceneCache;
+
+    class SphereGeometryCreator : 
+        public Creator<Geometry, const ParamSet&, const SceneCache&> {
+    public:
+        Geometry* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
 }
 
 #endif //GOBLIN_SHPERE_H

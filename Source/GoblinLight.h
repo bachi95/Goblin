@@ -2,15 +2,14 @@
 #define GOBLIN_LIGHT_H
 
 #include "GoblinColor.h"
-#include "GoblinVector.h"
-#include "GoblinParamSet.h"
-#include "GoblinUtils.h"
+#include "GoblinFactory.h"
 #include "GoblinGeometry.h"
 #include "GoblinMaterial.h"
-#include "GoblinTransform.h"
+#include "GoblinParamSet.h"
 #include "GoblinTexture.h"
-
-#include <vector>
+#include "GoblinTransform.h"
+#include "GoblinUtils.h"
+#include "GoblinVector.h"
 
 namespace Goblin {
     class Ray;
@@ -202,5 +201,30 @@ namespace Goblin {
     inline bool ImageBasedLight::isDelta() const {
         return false;
     }
+
+
+    class PointLightCreator : public 
+        Creator<Light , const ParamSet&, const SceneCache&> {
+    public:
+        Light* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class DirectionalLightCreator : public 
+        Creator<Light , const ParamSet&, const SceneCache&> {
+    public:
+        Light* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class ImageBasedLightCreator : public 
+        Creator<Light , const ParamSet&, const SceneCache&> {
+    public:
+        Light* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
 }
 #endif //GOBLIN_LIGHT_H

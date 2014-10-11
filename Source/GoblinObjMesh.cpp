@@ -1,10 +1,12 @@
 #include "GoblinObjMesh.h"
 #include "GoblinTriangle.h"
+#include "GoblinScene.h"
+#include "GoblinParamSet.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cstring>
-//#include <map>
 #include <boost/unordered_map.hpp>
 
 namespace Goblin {
@@ -293,5 +295,13 @@ namespace Goblin {
             Vector3 v2 = mVertices[i2].position;
             mArea += 0.5f * length(cross(v1 - v0, v2 - v0));
         }
+    }
+
+
+    Geometry* MeshGeometryCreator::create(const ParamSet& params, 
+        const SceneCache& sceneCache) const {
+        string filename = params.getString("file");
+        string filePath = sceneCache.resolvePath(filename);
+        return new ObjMesh(filePath);
     }
 }

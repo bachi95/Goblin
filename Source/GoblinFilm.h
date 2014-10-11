@@ -2,6 +2,7 @@
 #define GOBLIN_FILM_H
 
 #include "GoblinColor.h"
+#include "GoblinFactory.h"
 #include <string>
 namespace Goblin {
     const int FILTER_TABLE_WIDTH = 16;
@@ -81,6 +82,11 @@ namespace Goblin {
     inline int Film::getXResolution() const { return mXRes; }
     inline int Film::getYResolution() const { return mYRes; }
     inline vector<ImageTile*>& Film::getTiles() { return mTiles; }
+
+    class ImageFilmCreator : public Creator<Film, const ParamSet&, Filter*> {
+    public:
+        Film* create(const ParamSet& params, Filter* filter) const;
+    };
 }
 
 #endif //GOBLIN_FILM_H

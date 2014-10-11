@@ -39,6 +39,18 @@ namespace Goblin {
         return mChildren;
     }
 
+    bool PropertyTree::getChildren(const char* key, 
+        PtreeList* children) const {
+        bool findAny = false;
+        for(size_t i = 0; i < mChildren.size(); ++i) {
+            if(mChildren[i].first == key) {
+                children->push_back(mChildren[i]);
+                findAny = true;
+            }
+        }
+        return findAny;
+    }
+
     bool PropertyTree::hasChild(const char* key) const {
         return mPtree.get_child_optional(key);
     }
