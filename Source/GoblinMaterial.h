@@ -165,7 +165,6 @@ namespace Goblin {
     public:
         TransparentMaterial(const ColorTexturePtr& Kr, const ColorTexturePtr& Kt, 
             float index, const FloatTexturePtr& bump = FloatTexturePtr());
-        ~TransparentMaterial();
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
 
@@ -182,20 +181,12 @@ namespace Goblin {
         ColorTexturePtr mRefractFactor;
         float mEtai;
         float mEtat;
-        RNG* mRNG;
     };
 
     inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
         const ColorTexturePtr& Kt, float index, const FloatTexturePtr& bump):
         Material(bump), mReflectFactor(Kr), mRefractFactor(Kt), 
-        mEtai(1.0f), mEtat(index) { mRNG = new RNG(); }
-
-    inline TransparentMaterial::~TransparentMaterial() {
-        if(mRNG) {
-            delete mRNG;
-            mRNG = NULL;
-        }
-    }
+        mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection
     // is a delta distribution function, we count on sample way to get

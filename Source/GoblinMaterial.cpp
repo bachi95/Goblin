@@ -441,7 +441,7 @@ namespace Goblin {
             // use fresnel factor to do importance sampling
             float fresnel = reflect * absdot(wReflect, fragment.getNormal());
             float reflectChance = fresnel;
-            bool doReflect = mRNG->randomFloat() < reflectChance;
+            bool doReflect = bsdfSample.uDirection[0] < reflectChance;
 
             if(doReflect) {
                 f = mReflectFactor->lookup(fragment) * reflect;

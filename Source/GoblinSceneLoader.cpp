@@ -194,6 +194,8 @@ namespace Goblin {
             new PointLightCreator);
         mLightFactory->registerCreator("directional",
             new DirectionalLightCreator);
+		mLightFactory->registerCreator("spot",
+			new SpotLightCreator);
         mLightFactory->registerCreator("ibl",
             new ImageBasedLightCreator);
         mLightFactory->setDefault("point");
