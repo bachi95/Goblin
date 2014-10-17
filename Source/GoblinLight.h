@@ -41,7 +41,7 @@ namespace Goblin {
         enum Type {
             Point = 0,
             Directional = 1,
-			Spot = 2,
+            Spot = 2,
             Area = 3,
             IBL = 4
         };
@@ -61,11 +61,11 @@ namespace Goblin {
         virtual Color power(const ScenePtr& scene) const = 0;
         virtual uint32_t getSamplesNum() const;
         const ParamSet& getParams() const;
-	protected:
-		void setOrientation(const Vector3& dir);
+    protected:
+        void setOrientation(const Vector3& dir);
     protected:
         ParamSet mParams;
-		Transform mToWorld;
+        Transform mToWorld;
     };
 
     inline Color Light::Le(const Ray& ray, float pdf, BSDFType type) const {
@@ -111,37 +111,37 @@ namespace Goblin {
         Color sampleL(const ScenePtr& scene, const LightSample& ls,
             float u1, float u2, Ray* ray, float* pdf = NULL) const;
         Color power(const ScenePtr& scene) const;
-		Vector3 getDirection() const;
-		void setDirection(const Vector3& dir);
+        Vector3 getDirection() const;
+        void setDirection(const Vector3& dir);
     private:
         Color mRadiance;
     };
 
-	inline Vector3 DirectionalLight::getDirection() const {
-		return mToWorld.onVector(Vector3::UnitZ);
-	}
+    inline Vector3 DirectionalLight::getDirection() const {
+        return mToWorld.onVector(Vector3::UnitZ);
+    }
 
-	inline void DirectionalLight::setDirection(const Vector3& dir) {
-		setOrientation(dir);
-	}
+    inline void DirectionalLight::setDirection(const Vector3& dir) {
+        setOrientation(dir);
+    }
 
 
     class SpotLight : public Light {
     public:
         SpotLight(const Color& intensity, const Vector3& position, 
-			const Vector3& dir, float cosThetaMax, float cosFalloffStart);
+            const Vector3& dir, float cosThetaMax, float cosFalloffStart);
         Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
             Vector3* wi, float* pdf, Ray* shadowRay) const;
         Color sampleL(const ScenePtr& scene, const LightSample& ls,
             float u1, float u2, Ray* ray, float* pdf = NULL) const;
         Color power(const ScenePtr& scene) const;
-	private:
-		float falloff(const Vector3& w) const;
+    private:
+        float falloff(const Vector3& w) const;
     private:
         Color mIntensity;
-		float mCosThetaMax;
-		float mCosFalloffStart;
+        float mCosThetaMax;
+        float mCosFalloffStart;
     };
 
 

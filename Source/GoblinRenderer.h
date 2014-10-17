@@ -61,6 +61,9 @@ namespace Goblin {
         void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const Ray& ray, 
             const Sample& sample, const RNG& rng) const = 0;
+        // volume in scatter and emission contribution
+        Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
+        Color transmittance(const ScenePtr& scene, const Ray& ray) const;
 
     protected:
         Color singleSampleLd(const ScenePtr& scene, const Ray& ray,
@@ -90,6 +93,7 @@ namespace Goblin {
         Color specularRefract(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample, const RNG& rng) const;
+
     private:
         virtual void querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota) = 0;

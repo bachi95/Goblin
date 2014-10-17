@@ -32,20 +32,20 @@ namespace Goblin {
         uGeometry[1] = sample.u2D[index.geometryIndex][2 * n + 1];
     }
 
-	void Light::setOrientation(const Vector3& dir) {
+    void Light::setOrientation(const Vector3& dir) {
         Vector3 xAxis, yAxis;
-		const Vector3& zAxis = dir;
+        const Vector3& zAxis = dir;
         coordinateAxises(zAxis, &xAxis, &yAxis);
-		Matrix3 rotation(
-			xAxis[0], yAxis[0], zAxis[0],
-			xAxis[1], yAxis[1], zAxis[1],
-			xAxis[2], yAxis[2], zAxis[2]);
-		mToWorld.setOrientation(Quaternion(rotation));
-	}
+        Matrix3 rotation(
+            xAxis[0], yAxis[0], zAxis[0],
+            xAxis[1], yAxis[1], zAxis[1],
+            xAxis[2], yAxis[2], zAxis[2]);
+        mToWorld.setOrientation(Quaternion(rotation));
+    }
 
     PointLight::PointLight(const Color& I, const Vector3& P):
     mIntensity(I) {
-		mToWorld.setPosition(P);
+        mToWorld.setPosition(P);
         mParams.setInt("type", Point);
         mParams.setColor("intensity", mIntensity);
         mParams.setVector3("position", P);
@@ -54,7 +54,7 @@ namespace Goblin {
     Color PointLight::sampleL(const Vector3& p, float epsilon, 
         const LightSample& lightSample,
         Vector3* wi, float* pdf, Ray* shadowRay) const {
-		Vector3 dir = mToWorld.getPosition() - p;
+        Vector3 dir = mToWorld.getPosition() - p;
         *wi = normalize(dir);
         *pdf = 1.0f;
         shadowRay->o = p;
@@ -68,7 +68,7 @@ namespace Goblin {
     Color PointLight::sampleL(const ScenePtr& scene, const LightSample& ls,
         float u1, float u2, Ray* ray, float* pdf) const {
         Vector3 dir = uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
-		*ray = Ray(mToWorld.getPosition(), dir, 0.0f);
+        *ray = Ray(mToWorld.getPosition(), dir, 0.0f);
         if(pdf) {
             *pdf = uniformSpherePdf();
         }
@@ -81,7 +81,7 @@ namespace Goblin {
 
     DirectionalLight::DirectionalLight(const Color& R, const Vector3& D):
     mRadiance(R) {
-		setOrientation(D);
+        setOrientation(D);
         mParams.setInt("type", Directional);
         mParams.setColor("radiance", mRadiance);
         mParams.setVector3("direction", D);
@@ -112,7 +112,7 @@ namespace Goblin {
         float worldRadius;
         scene->getBoundingSphere(&worldCenter, &worldRadius);
         Vector3 xAxis, yAxis;
-		Vector3 zAxis = getDirection();
+        Vector3 zAxis = getDirection();
         coordinateAxises(zAxis, &xAxis, &yAxis);
         Vector2 diskXY = uniformSampleDisk(ls.uGeometry[0], ls.uGeometry[1]);
         Vector3 worldDiskSample = worldCenter + 
@@ -135,11 +135,11 @@ namespace Goblin {
     }
 
     SpotLight::SpotLight(const Color& intensity, const Vector3& position, 
-		const Vector3& dir, float cosThetaMax, float cosFalloffStart):
-		mIntensity(intensity), mCosThetaMax(cosThetaMax), 
-		mCosFalloffStart(cosFalloffStart) {
-		mToWorld.setPosition(position);
-		setOrientation(dir);
+        const Vector3& dir, float cosThetaMax, float cosFalloffStart):
+        mIntensity(intensity), mCosThetaMax(cosThetaMax), 
+        mCosFalloffStart(cosFalloffStart) {
+        mToWorld.setPosition(position);
+        setOrientation(dir);
         mParams.setInt("type", Spot);
         mParams.setColor("intensity", intensity);
         mParams.setVector3("direction", dir);
@@ -148,7 +148,7 @@ namespace Goblin {
     Color SpotLight::sampleL(const Vector3& p, float epsilon, 
         const LightSample& lightSample, 
         Vector3* wi, float* pdf, Ray* shadowRay) const {
-		Vector3 dir = mToWorld.getPosition() - p;
+        Vector3 dir = mToWorld.getPosition() - p;
         *wi = normalize(dir);
         *pdf = 1.0f;
         shadowRay->o = p;
@@ -157,40 +157,40 @@ namespace Goblin {
         float squaredDistance = squaredLength(dir);
         shadowRay->maxt = sqrt(squaredDistance) - epsilon;
         return falloff(-(*wi)) * mIntensity / squaredDistance;
-	}
+    }
 
     Color SpotLight::sampleL(const ScenePtr& scene, const LightSample& ls,
         float u1, float u2, Ray* ray, float* pdf) const {
-		Vector3 v = uniformSampleCone(ls.uGeometry[0], ls.uGeometry[1], 
-			mCosThetaMax);
-		*ray = Ray(mToWorld.getPosition(), mToWorld.onVector(v), 0.0f);
-	    if(pdf) {
-			*pdf = 1.0f / (TWO_PI * (1.0f - mCosThetaMax));
-		}
-		return mIntensity * falloff(ray->d);
-	}
+        Vector3 v = uniformSampleCone(ls.uGeometry[0], ls.uGeometry[1], 
+            mCosThetaMax);
+        *ray = Ray(mToWorld.getPosition(), mToWorld.onVector(v), 0.0f);
+        if(pdf) {
+            *pdf = 1.0f / (TWO_PI * (1.0f - mCosThetaMax));
+        }
+        return mIntensity * falloff(ray->d);
+    }
 
-	Color SpotLight::power(const ScenePtr& scene) const {
-		/* 
-		 * integrate the solid angle =
-		 * integrate sinTheta over 0->thetaMax over 0->2PI =
-		 * 2PI * (1 - cosThetaMax)
-		 */
-		return mIntensity * TWO_PI * 
-			(1.0f - 0.5f * (mCosThetaMax + mCosFalloffStart));
-	}
+    Color SpotLight::power(const ScenePtr& scene) const {
+        /* 
+         * integrate the solid angle =
+         * integrate sinTheta over 0->thetaMax over 0->2PI =
+         * 2PI * (1 - cosThetaMax)
+         */
+        return mIntensity * TWO_PI * 
+            (1.0f - 0.5f * (mCosThetaMax + mCosFalloffStart));
+    }
 
-	float SpotLight::falloff(const Vector3& w) const {
-		float cosTheta = dot(w, mToWorld.onVector(Vector3::UnitZ));
-		if(cosTheta < mCosThetaMax) {
-			return 0.0f;
-		}
-		if(cosTheta > mCosFalloffStart) {
-			return 1.0f;
-		}
-		float delta = (cosTheta - mCosThetaMax) / (mCosFalloffStart - mCosThetaMax);
-		return delta * delta * delta * delta;
-	}
+    float SpotLight::falloff(const Vector3& w) const {
+        float cosTheta = dot(w, mToWorld.onVector(Vector3::UnitZ));
+        if(cosTheta < mCosThetaMax) {
+            return 0.0f;
+        }
+        if(cosTheta > mCosFalloffStart) {
+            return 1.0f;
+        }
+        float delta = (cosTheta - mCosThetaMax) / (mCosFalloffStart - mCosThetaMax);
+        return delta * delta * delta * delta;
+    }
 
     GeometrySet::GeometrySet(const GeometryPtr& geometry):
         mSumArea(0.0f), mAreaDistribution(NULL) {
@@ -252,7 +252,7 @@ namespace Goblin {
     AreaLight::AreaLight(const Color& Le, const GeometryPtr& geometry,
         const Transform& toWorld, uint32_t samplesNum): mLe(Le), 
         mSamplesNum(samplesNum) {
-		mToWorld = toWorld;
+        mToWorld = toWorld;
         mGeometrySet = new GeometrySet(geometry);
     }
 
@@ -537,11 +537,11 @@ namespace Goblin {
         const SceneCache& sceneCache) const {
         Color intensity = params.getColor("intensity");
         Vector3 position = params.getVector3("position");
-		Vector3 direction= params.getVector3("direction");
-		float cosThetaMax = cos(radians(params.getFloat("theta_max")));
-		float cosFalloffStart = cos(radians(params.getFloat("falloff_start")));
+        Vector3 direction= params.getVector3("direction");
+        float cosThetaMax = cos(radians(params.getFloat("theta_max")));
+        float cosFalloffStart = cos(radians(params.getFloat("falloff_start")));
         return new SpotLight(intensity, position, direction, 
-			cosThetaMax, cosFalloffStart);
+            cosThetaMax, cosFalloffStart);
     }
 
 

@@ -13,14 +13,16 @@
 
 namespace Goblin {
     class Ray;
+    class VolumeRegion;
 
     class Scene {
     public:
         Scene(const PrimitivePtr& root, const CameraPtr& camera,
-            const vector<Light*>& lights);
+            const vector<Light*>& lights, VolumeRegion* volumeRegion);
         ~Scene();
         const CameraPtr getCamera() const; 
         const vector<Light*>& getLights() const;
+        const VolumeRegion* getVolumeRegion() const;
         void collectRenderList(RenderList& rList);
         bool intersect(const Ray& ray);
         bool intersect(const Ray& ray, float* epsilon, 
@@ -30,6 +32,7 @@ namespace Goblin {
         PrimitivePtr mAggregate;
         CameraPtr mCamera;
         vector<Light*> mLights;
+        VolumeRegion* mVolumeRegion;
     };
 
     using boost::filesystem::path;

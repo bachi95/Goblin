@@ -538,7 +538,7 @@ namespace Goblin {
         string bumpmapName = params.getString("bumpmap");
         if(bumpmapName != "") {
             bump = sceneCache.getFloatTexture(bumpmapName);
-        }
+        }   
         return new TransparentMaterial(Kr, Kt, index, bump);
     }
 

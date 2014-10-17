@@ -4,6 +4,7 @@
 #include "GoblinCamera.h"
 #include "GoblinFilm.h"
 #include "GoblinUtils.h"
+#include "GoblinVolume.h"
 
 namespace Goblin {
 
@@ -38,8 +39,10 @@ namespace Goblin {
             for(int s = 0; s < sampleNum; ++s) {
                 Ray ray;
                 float w = mCamera->generateRay(samples[s], &ray);
-                Color L = w * mRenderer->Li(mScene, ray, samples[s], *mRNG);
-                mTile->addSample(samples[s], L);
+                Color L = mRenderer->Li(mScene, ray, samples[s], *mRNG);
+                Color tr = mRenderer->transmittance(mScene, ray);
+                Color Lv = mRenderer->Lv(mScene, ray, *mRNG);
+                mTile->addSample(samples[s], w * (tr * L + Lv));
             }
         }
         delete [] samples;
@@ -120,6 +123,74 @@ namespace Goblin {
         }
         renderTasks.clear();
         film->writeImage();
+    }
+
+    Color Renderer::Lv(const ScenePtr& scene, const Ray& ray, 
+        const RNG& rng) const {
+        const VolumeRegion* volume = scene->getVolumeRegion();
+        float tMin, tMax;
+        if(!volume || !volume->intersect(ray, &tMin, &tMax)) {
+            return Color::Black;
+        }
+        float stepSize = volume->getSampleStepSize();
+        Vector3 pPrevious = ray(tMin);
+        float tCurrent = tMin + stepSize * rng.randomFloat();
+        Vector3 pCurrent = ray(tCurrent);
+
+        Color Lv(0.0f);
+        Color transmittance(1.0f);
+        while(tCurrent <= tMax) {
+            Ray rSegment(pPrevious, pCurrent - pPrevious, 0.0f, 1.0f);
+            Color trSegment = volume->transmittance(rSegment);
+            transmittance *= trSegment;
+            // the emission part
+            Lv += transmittance * volume->getEmission(pCurrent);
+            // sample light for in scattring part
+            Color scatter = volume->getScatter(pCurrent);
+            float pickLightSample = rng.randomFloat();
+            float pickLightPdf;
+            int lightIndex = mPowerDistribution->sampleDiscrete(
+                pickLightSample, &pickLightPdf);
+            const vector<Light*>& lights = scene->getLights();
+            if(lights.size() > 0) {
+                const Light* light = lights[lightIndex];
+                Ray shadowRay;
+                Vector3 wi;
+                float lightPdf;
+                LightSample ls(rng);
+                Color L = light->sampleL(pCurrent, 0.0f, ls, 
+                    &wi, &lightPdf, &shadowRay);
+                if(L != Color::Black && lightPdf > 0.0f) {
+                    if(!scene->intersect(shadowRay)) {
+                        Color Ld = volume->transmittance(shadowRay) * L / 
+                            (pickLightPdf * lightPdf);
+                        float phase = volume->phase(pCurrent, ray.d, wi);
+                        Lv += transmittance * scatter * phase * Ld;
+                    }
+                }
+            }
+            // advance to the next sample segment
+            tCurrent += stepSize;
+            pPrevious = pCurrent;
+            pCurrent = ray(tCurrent);
+        }
+        /*
+         * the monte carlo estimator for integrate source term
+         * from tMin to tMax is (1 / N) * sum(source_term(pi), 1, N) / pdf(pi)
+         * where pdf(pi) is 1 / (tMax - tMin) and stepSize = (tMax - tMin) / N
+         * which give us the following sweet result
+         */
+        return stepSize * Lv;
+
+    }
+
+    Color Renderer::transmittance(const ScenePtr& scene, 
+        const Ray& ray) const {
+        const VolumeRegion* volume = scene->getVolumeRegion();
+        if(volume == NULL) {
+            return Color(1.0f);
+        }
+        return volume->transmittance(ray);
     }
 
     Color Renderer::singleSampleLd(const ScenePtr& scene, const Ray& ray,

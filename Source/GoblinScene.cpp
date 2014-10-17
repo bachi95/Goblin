@@ -2,17 +2,23 @@
 #include "GoblinModel.h"
 #include "GoblinScene.h"
 #include "GoblinSphere.h"
+#include "GoblinVolume.h"
 
 namespace Goblin {
 
     Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
-        const vector<Light*>& lights):
-        mAggregate(root), mCamera(camera), mLights(lights) {}
+        const vector<Light*>& lights, VolumeRegion* volumeRegion):
+        mAggregate(root), mCamera(camera), mLights(lights), 
+        mVolumeRegion(volumeRegion) {}
 
     Scene::~Scene() {        
         for(size_t i = 0; i < mLights.size(); ++i) {
             delete mLights[i];
             mLights[i] = NULL;
+        }
+        if(mVolumeRegion) {
+            delete mVolumeRegion;
+            mVolumeRegion = NULL;
         }
         ImageTexture<float>::clearImageCache();
         ImageTexture<Color>::clearImageCache();
@@ -28,6 +34,10 @@ namespace Goblin {
 
     const vector<Light*>& Scene::getLights() const {
         return mLights;
+    }
+
+    const VolumeRegion* Scene::getVolumeRegion() const {
+        return mVolumeRegion;
     }
 
     bool Scene::intersect(const Ray& ray) {

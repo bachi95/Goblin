@@ -9,6 +9,7 @@
 #include "GoblinPrimitive.h"
 #include "GoblinScene.h"
 #include "GoblinTexture.h"
+#include "GoblinVolume.h"
 
 namespace Goblin {
     using boost::scoped_ptr;
@@ -26,6 +27,7 @@ namespace Goblin {
         Filter* parseFilter(const PropertyTree& pt);
         Film* parseFilm(const PropertyTree& pt, Filter* filter);
         CameraPtr parseCamera(const PropertyTree& pt, Film* film);
+        VolumeRegion* parseVolume(const PropertyTree& pt);
         void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache);
         void parseTexture(const PropertyTree& pt, SceneCache* sceneCache);
         void parseMaterial(const PropertyTree& pt, SceneCache* sceneCache);
@@ -36,6 +38,7 @@ namespace Goblin {
         scoped_ptr<Factory<Filter, const ParamSet&> > mFilterFactory;
         scoped_ptr<Factory<Film, const ParamSet&, Filter*> > mFilmFactory;
         scoped_ptr<Factory<Camera, const ParamSet&, Film*> > mCameraFactory;
+        scoped_ptr<Factory<VolumeRegion, const ParamSet& > > mVolumeFactory;
         scoped_ptr<Factory<Geometry, const ParamSet&, const SceneCache&> > 
             mGeometryFactory;
         scoped_ptr<Factory<Texture<float>, const ParamSet&, const SceneCache&> >

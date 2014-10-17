@@ -15,8 +15,10 @@ namespace Goblin {
         BBox expand(const Vector3& p);
         BBox expand(const BBox& b);
         BBox expand(float f);
-        bool intersect(const Ray& ray);
-        int longestAxis();
+        bool contain(const Vector3& p) const;
+        bool intersect(const Ray& ray) const;
+        bool intersect(const Ray& ray, float* tMin, float* tMax) const;
+        int longestAxis() const;
         const Vector3& operator[](int i) const;
         Vector3& operator[](int i);
         void getBoundingSphere(Vector3* center, float* radius) const;

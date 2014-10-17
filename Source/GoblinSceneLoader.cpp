@@ -127,6 +127,7 @@ namespace Goblin {
         mFilterFactory(new Factory<Filter, const ParamSet&>()),
         mFilmFactory(new Factory<Film, const ParamSet&, Filter*>()),
         mCameraFactory(new Factory<Camera, const ParamSet&, Film*>()),
+        mVolumeFactory(new Factory<VolumeRegion, const ParamSet&>()),
         mGeometryFactory(
             new Factory<Geometry, const ParamSet&, const SceneCache&>()),
         mFloatTextureFactory(
@@ -153,6 +154,9 @@ namespace Goblin {
         mCameraFactory->registerCreator("perspective", 
             new PerspectiveCameraCreator);
         mCameraFactory->setDefault("perspective");
+        // volume
+        mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
+        mVolumeFactory->setDefault("homogeneous");
         // geometry
         mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);
         mGeometryFactory->registerCreator("mesh", new MeshGeometryCreator);
@@ -194,8 +198,8 @@ namespace Goblin {
             new PointLightCreator);
         mLightFactory->registerCreator("directional",
             new DirectionalLightCreator);
-		mLightFactory->registerCreator("spot",
-			new SpotLightCreator);
+        mLightFactory->registerCreator("spot",
+            new SpotLightCreator);
         mLightFactory->registerCreator("ibl",
             new ImageBasedLightCreator);
         mLightFactory->setDefault("point");
@@ -229,6 +233,19 @@ namespace Goblin {
         parseParamSet(cameraPt, &cameraParams);
         string type = cameraParams.getString("type");
         return CameraPtr(mCameraFactory->create(type, cameraParams, film));
+    }
+
+    VolumeRegion* SceneLoader::parseVolume(const PropertyTree& pt) {
+        if(!pt.hasChild("volume")) {
+            return NULL;
+        }
+        cout << "volume" << endl;
+        PropertyTree volumePt;
+        pt.getChild("volume", &volumePt);
+        ParamSet volumeParams;
+        parseParamSet(volumePt, &volumeParams);
+        string type = volumeParams.getString("type");
+        return mVolumeFactory->create(type, volumeParams);
     }
 
     void SceneLoader::parseGeometry(const PropertyTree& pt, 
@@ -368,6 +385,7 @@ namespace Goblin {
         Filter* filter = parseFilter(pt);
         Film* film = parseFilm(pt, filter);
         CameraPtr camera = parseCamera(pt, film);
+        VolumeRegion* volume = parseVolume(pt);
 
         PtreeList geometryNodes;
         pt.getChildren("geometry", &geometryNodes);
@@ -398,6 +416,7 @@ namespace Goblin {
 
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
             1, "equal_count"));
-        return ScenePtr(new Scene(aggregate, camera, sceneCache.getLights()));
+        return ScenePtr(new Scene(aggregate, camera, 
+            sceneCache.getLights(), volume));
     }
 }
