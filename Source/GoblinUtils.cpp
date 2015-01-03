@@ -1,5 +1,6 @@
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
+#include "GoblinColor.h"
 
 #include <ctime>
 #include <limits>
@@ -108,4 +109,84 @@ namespace Goblin {
         }
         return true;
     }
+
+    void drawLine(const Vector2& p0, const Vector2& p1, Color* buffer, 
+        int xRes, int yRes, const Color& color) {
+        int x0 = roundInt(p0.x);
+        int y0 = roundInt(p0.y); 
+        int x1 = roundInt(p1.x);
+        int y1 = roundInt(p1.y); 
+
+        int dx = x1 - x0;
+        int dy = y1 - y0;
+        int xStep = (dx > 0 ? 1 : (dx < 0 ? -1 : 0));
+        int yStep = (dy > 0 ? 1 : (dy < 0 ? -1 : 0));
+        if(dx < 0) {
+            dx = -dx;
+        }
+        if(dy < 0) {
+            dy = -dy;
+        }
+        
+        int ax = 2 * dx;
+        int ay = 2 * dy;
+        // draw line with Bresenham's algorithm
+        if(dx > dy) {
+            int accumD = ay - dx;
+            int y = y0;
+            for(int x = x0; x != x1; x += xStep) {
+                if(0 <= x && x < xRes && 0 <= y && y < yRes) {
+                    int index = y * xRes + x;
+                    buffer[index] = color;
+                }
+                if(accumD >= 0) {
+                    accumD += ay - ax;
+                    y += yStep;
+                } else {
+                    accumD += ay;
+                }
+            }
+        } else {
+            int accumD = ax - dy;
+            int x = x0;
+            for(int y = y0; y != y1; y += yStep) {
+                if(0 <= x && x < xRes && 0 <= y && y < yRes) {
+                    int index = y * xRes + x;
+                    buffer[index] = color;
+                }
+                if(accumD >= 0) {
+                    accumD += ax - ay;
+                    x += xStep;
+                } else {
+                    accumD += ax;
+                }
+            }
+        }
+    }
+
+    void drawPoint(const Vector2& p, Color* buffer, int xRes, int yRes,
+        const Color& color, int radius) {
+        if(radius <= 0) {
+            return;
+        }
+        int x0 = roundInt(p.x);
+        int y0 = roundInt(p.y);
+        int squareRadius = radius * radius;
+        for(int i = -radius; i <= radius; ++i) {
+            int i2 = i * i;
+            for(int j = -radius; j <= radius; ++j) {
+                if(i2 + j * j > squareRadius) {
+                    continue;
+                }
+                int x = x0 + j;
+                int y = y0 + i;
+                if(0 <= x && x < xRes && 0 <= y && y < yRes) {
+                    int index = y * xRes + x;
+                    buffer[index] = color;
+                }
+            }
+        }
+    }
+
 }
+

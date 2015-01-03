@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <map>
 
@@ -41,7 +42,10 @@ namespace Goblin {
     using std::cout;
     using std::cerr;
     using std::endl;
+    using std::pair;
 
+    class Color;
+    class Vector2;
     class Vector3;
     class Camera;
     class Scene;
@@ -136,6 +140,12 @@ namespace Goblin {
     // utils for quadratic equation, solution stored in t1 and t2
     // if it return true
     bool quadratic(float A, float B, float C, float* t1, float* t2);
+
+    void drawLine(const Vector2& p0, const Vector2& p1, Color* buffer, 
+        int xRes, int yRes, const Color& color); 
+
+    void drawPoint(const Vector2& p, Color* buffer, int xRes, int yRes,
+        const Color& color, int radius = 1);
 
     // random number generator utils from boost
     class RNGImp;

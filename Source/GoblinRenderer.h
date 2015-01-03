@@ -2,6 +2,7 @@
 #define GOBLIN_RENDERER_H
 
 #include "GoblinMaterial.h"
+#include "GoblinRay.h"
 #include "GoblinScene.h"
 #include "GoblinSampler.h"
 #include "GoblinThreadPool.h"
@@ -9,7 +10,6 @@
 namespace Goblin {
     class Color;
     class ImageTile;
-    class Ray;
     class ParamSet;
     class Renderer;
     struct BSDFSample;
@@ -17,13 +17,48 @@ namespace Goblin {
     struct BSDFSampleIndex;
     struct LightSampleIndex;
 
+    enum RenderMethod {
+        Whitted,
+        PathTracing
+    };
+
     struct RenderSetting {
-        RenderSetting(): 
-            samplePerPixel(1), threadNum(1), maxRayDepth(5) {}
+        RenderSetting(): samplePerPixel(1), threadNum(1), maxRayDepth(5), 
+            method(PathTracing) {}
         int samplePerPixel;
         int threadNum;
         int maxRayDepth;
+        RenderMethod method;
     };
+
+    class WorldDebugData {
+    public:
+        WorldDebugData() {}
+        void addRay(const Ray& ray);
+        void addPoint(const Vector3& point);
+        const vector<Ray>& getRays() const;
+        const vector<Vector3>& getPoints() const;
+    private:
+        vector<Ray> mRays;
+        vector<Vector3> mPoints;
+    };
+
+    inline void WorldDebugData::addRay(const Ray& line) { 
+        mRays.push_back(line); 
+    }
+
+    inline void WorldDebugData::addPoint(const Vector3& point) { 
+        mPoints.push_back(point); 
+    }
+
+    inline const vector<Ray>& WorldDebugData::getRays() const {
+        return mRays;
+    }
+
+    inline const vector<Vector3>& WorldDebugData::getPoints() const {
+        return mPoints;
+    }
+
 
     class RenderProgress {
     public:
@@ -60,7 +95,8 @@ namespace Goblin {
         virtual ~Renderer();
         void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const Ray& ray, 
-            const Sample& sample, const RNG& rng) const = 0;
+            const Sample& sample, const RNG& rng,
+            WorldDebugData* debugData = NULL) const = 0;
         // volume in scatter and emission contribution
         Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
         Color transmittance(const ScenePtr& scene, const Ray& ray) const;

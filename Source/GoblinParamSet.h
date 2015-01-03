@@ -34,6 +34,15 @@ namespace Goblin {
         void setColor(const std::string& key, const Color& c);
         void setString(const std::string& key, const std::string& s);
 
+        bool hasBool(const std::string& key) const;
+        bool hasInt(const std::string& key) const;
+        bool hasFloat(const std::string& key) const;
+        bool hasVector2(const std::string& key) const;
+        bool hasVector3(const std::string& key) const;
+        bool hasVector4(const std::string& key) const;
+        bool hasColor(const std::string& key) const;
+        bool hasString(const std::string& key) const;
+
         bool eraseBool(const std::string& key);
         bool eraseInt(const std::string& key);
         bool eraseFloat(const std::string& key);

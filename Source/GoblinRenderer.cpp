@@ -34,18 +34,33 @@ namespace Goblin {
             mSamplePerPixel, mSampleQuota, mRNG);
         int batchAmount = sampler.maxSamplesPerRequest();
         Sample* samples = sampler.allocateSampleBuffer(batchAmount);
+        WorldDebugData debugData;
         int sampleNum = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for(int s = 0; s < sampleNum; ++s) {
                 Ray ray;
                 float w = mCamera->generateRay(samples[s], &ray);
-                Color L = mRenderer->Li(mScene, ray, samples[s], *mRNG);
+                Color L = mRenderer->Li(mScene, ray, samples[s], 
+                    *mRNG, &debugData);
                 Color tr = mRenderer->transmittance(mScene, ray);
                 Color Lv = mRenderer->Lv(mScene, ray, *mRNG);
                 mTile->addSample(samples[s], w * (tr * L + Lv));
             }
         }
         delete [] samples;
+        // if there is any debug data, transform it to screen space
+        // and inject to image tile
+        const vector<Ray>& debugRays = debugData.getRays();
+        for(size_t i = 0; i < debugRays.size(); ++i) {
+            const Ray& r = debugRays[i];
+            Vector3 sWorld = r.o;
+            Vector3 eWorld = r(r.maxt);
+            Vector3 sScreen = mCamera->worldToScreen(sWorld);
+            Vector3 eScreen = mCamera->worldToScreen(eWorld);
+            DebugLine line(Vector2(sScreen.x, sScreen.y),
+                Vector2(eScreen.x, eScreen.y));
+            mTile->addDebugLine(line);
+        }
         mRenderProgress->update();
     }
 

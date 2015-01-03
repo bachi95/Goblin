@@ -133,6 +133,15 @@ namespace Goblin{
         mPosition += d;
         mIsUpdated = false;
     }
+
+    Vector3 Camera::worldToScreen(const Vector3& pWorld) const {
+        Vector4 pView = mView * Vector4(pWorld, 1.0f); 
+        Vector4 pNDC = mProj * pView;
+        pNDC /= pNDC.w;
+        float screenX = (pNDC.x + 1.0f) * 0.5f * mFilm->getXResolution();
+        float screenY = (1.0f - pNDC.y) * 0.5f * mFilm->getYResolution();
+        return Vector3(screenX, screenY, pView.z);
+    }
     
     void Camera::update() {
         Matrix4 R = mOrientation.toMatrix();
@@ -160,12 +169,19 @@ namespace Goblin{
         mIsUpdated = true;
     }
 
-
     Camera* PerspectiveCameraCreator::create(const ParamSet& params, 
         Film* film) const {
         Vector3 position = params.getVector3("position");
-        Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
-        Quaternion orientation(q[0], q[1], q[2], q[2]);
+        Quaternion orientation;
+        if(params.hasVector3("euler")) {
+            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
+            orientation = Quaternion(Vector3::UnitZ, radians(xyz.z)) * 
+                Quaternion(Vector3::UnitY, radians(xyz.y)) *
+                Quaternion(Vector3::UnitX, radians(xyz.x));
+        } else {
+            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+            orientation = Quaternion(q[0], q[1], q[2], q[2]);
+        }
         float fov = params.getFloat("fov", 60.0f);
         float zn = params.getFloat("near_plane", 0.1f);
         float zf = params.getFloat("far_plane", 1000.0f);

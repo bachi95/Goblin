@@ -9,7 +9,8 @@ namespace Goblin {
         PathTracer(const RenderSetting& setting);
         ~PathTracer();
         Color Li(const ScenePtr& scene, const Ray& ray,
-            const Sample& sample, const RNG& rng) const;
+            const Sample& sample, const RNG& rng,
+            WorldDebugData* debugData) const;
     private:
         void querySampleQuota(const ScenePtr& scene,
             SampleQuota* sampleQuota);

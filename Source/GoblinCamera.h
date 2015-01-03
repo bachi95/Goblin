@@ -49,6 +49,8 @@ namespace Goblin {
         void rotate(const Vector3& axis, float angle);
         void translate(const Vector3& d);
 
+        Vector3 worldToScreen(const Vector3& pWorld) const;
+
     private:
         Vector3 mPosition;
         Quaternion mOrientation;

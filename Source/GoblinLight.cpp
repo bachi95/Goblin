@@ -139,10 +139,11 @@ namespace Goblin {
         mIntensity(intensity), mCosThetaMax(cosThetaMax), 
         mCosFalloffStart(cosFalloffStart) {
         mToWorld.setPosition(position);
-        setOrientation(dir);
+        Vector3 direction = normalize(dir);
+        setOrientation(direction);
         mParams.setInt("type", Spot);
         mParams.setColor("intensity", intensity);
-        mParams.setVector3("direction", dir);
+        mParams.setVector3("direction", direction);
     }
 
     Color SpotLight::sampleL(const Vector3& p, float epsilon, 

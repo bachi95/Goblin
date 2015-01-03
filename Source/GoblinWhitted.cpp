@@ -9,7 +9,8 @@ namespace Goblin {
     WhittedRenderer::~WhittedRenderer() {}
 
     Color WhittedRenderer::Li(const ScenePtr& scene, const Ray& ray, 
-        const Sample& sample, const RNG& rng) const {
+        const Sample& sample, const RNG& rng,
+        WorldDebugData* debugData) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;

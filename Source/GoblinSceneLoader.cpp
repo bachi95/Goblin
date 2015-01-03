@@ -113,14 +113,17 @@ namespace Goblin {
         maxRayDepth = settingParams.getInt("max_ray_depth", maxRayDepth);
         threadNum = min(settingParams.getInt("thread_num", threadNum), 
             threadNum);
-
+        string method = settingParams.getString("render_method", 
+            "path_tracing");
         setting->samplePerPixel = samplePerPixel;
         setting->maxRayDepth = maxRayDepth;
         setting->threadNum = threadNum;
+        setting->method = method == "path_tracing" ? PathTracing : Whitted;
         cout << "\nrender setting" << endl;
         cout << "-sample per pixel " << samplePerPixel << endl;
         cout << "-thread num " << threadNum << endl;
         cout << "-max ray depth " << maxRayDepth << endl;
+        cout << "-render method " << method << endl;
     }
 
     SceneLoader::SceneLoader():
@@ -263,6 +266,7 @@ namespace Goblin {
         BBox bbox = geometry->getObjectBound();
         cout << "BBox min: " << bbox.pMin << endl;
         cout << "BBox max: " << bbox.pMax << endl;
+        cout << "BBox center: " << 0.5f * (bbox.pMin + bbox.pMax) << endl;
 
         sceneCache->addGeometry(name, geometry);
     }

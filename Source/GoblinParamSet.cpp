@@ -41,6 +41,78 @@ namespace Goblin {
         mStrings.push_back(ParamSetItem<std::string>(key, s));
     }
 
+    bool ParamSet::hasBool(const std::string& key) const {
+        for(size_t i = 0; i < mBools.size(); ++i) {
+            if(mBools[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasInt(const std::string& key) const {
+        for(size_t i = 0; i < mInts.size(); ++i) {
+            if(mInts[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasFloat(const std::string& key) const {
+        for(size_t i = 0; i < mFloats.size(); ++i) {
+            if(mFloats[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasVector2(const std::string& key) const {
+        for(size_t i = 0; i < mVec2s.size(); ++i) {
+            if(mVec2s[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasVector3(const std::string& key) const {
+        for(size_t i = 0; i < mVec3s.size(); ++i) {
+            if(mVec3s[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasVector4(const std::string& key) const {
+        for(size_t i = 0; i < mVec4s.size(); ++i) {
+            if(mVec4s[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasColor(const std::string& key) const {
+        for(size_t i = 0; i < mColors.size(); ++i) {
+            if(mColors[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ParamSet::hasString(const std::string& key) const {
+        for(size_t i = 0; i < mStrings.size(); ++i) {
+            if(mStrings[i].key == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool ParamSet::eraseBool(const std::string& key) {
         for(size_t i = 0; i < mBools.size(); ++i) {
             if(mBools[i].key == key) {

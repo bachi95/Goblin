@@ -14,7 +14,8 @@ namespace Goblin {
     }
 
     Color PathTracer::Li(const ScenePtr& scene, const Ray& ray, 
-        const Sample& sample, const RNG& rng) const {
+        const Sample& sample, const RNG& rng,
+        WorldDebugData* debugData) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
@@ -30,6 +31,7 @@ namespace Goblin {
         Li += intersection.Le(-ray.d);
 
         Ray currentRay = ray;
+        vector<Ray> debugRays;
         Color throughput(1.0f, 1.0f, 1.0f);
         for(int bounces = 0; bounces < mSetting.maxRayDepth; ++bounces) {
             LightSample ls(sample, mLightSampleIndexes[bounces], 0);
@@ -55,10 +57,25 @@ namespace Goblin {
             Vector3 n = intersection.fragment.getNormal();
             throughput *= f * absdot(wi, n) / pdf;
             currentRay = Ray(p, wi, epsilon);
+
             if(!scene->intersect(currentRay, &epsilon, &intersection)) {
                 break;
             }
+
+            debugRays.push_back(currentRay);
         }
+
+        if(debugData != NULL) {
+            // feed in the interested debug ray/point for debug purpose
+            //if(debugRays.size() > 0) {
+            //    Vector3 delta = debugRays[0].o - Vector3(0, -2, 0);
+            //    if(squaredLength(delta) < 1e-4) {
+            //        debugRays[0].maxt = clamp(debugRays[0].maxt, 0.0f, 100.0f);
+            //        debugData->addRay(debugRays[0]);
+            //    }
+            //}
+        }
+
         return Li;        
     }
 

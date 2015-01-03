@@ -98,10 +98,6 @@ namespace Goblin {
         }
     }
 
-    const Pixel* ImageTile::getTileBuffer() const {
-        return mPixels;
-    }
-
     void ImageTile::addSample(const Sample& sample, const Color& L) {
         if(L.isNaN()) {
             cout << "sample ("<< sample.imageX << " " << sample.imageY
@@ -269,6 +265,22 @@ namespace Goblin {
                 colors[index] = mPixels[index].color / mPixels[index].weight;
             }
         }
+
+        // draw debug info
+        cout << "drawing debug info: " << endl;
+        for(size_t i = 0; i < mTiles.size(); ++i) {
+            const DebugInfo& debugInfo = mTiles[i]->getDebugInfo();
+            const vector<DebugLine>& lines = debugInfo.getLines();
+            for(size_t i = 0; i < lines.size(); ++i) {
+                drawLine(lines[i].first, lines[i].second, colors, 
+                    mXRes, mYRes, Color::Blue);
+            }
+            const vector<Vector2>& points = debugInfo.getPoints();
+            for(size_t i = 0; i < points.size(); ++i) {
+                drawPoint(points[i], colors, mXRes, mYRes, Color::Red, 10);
+            }
+        }
+
         cout << "write image to : " << mFilename << endl;
         if(mBloomRadius > 0.0f && mBloomWeight > 0.0f) {
             Goblin::bloom(colors, mXRes, mYRes, mBloomRadius, mBloomWeight);
