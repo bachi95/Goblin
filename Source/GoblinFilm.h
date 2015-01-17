@@ -25,28 +25,28 @@ namespace Goblin {
     class DebugInfo {
     public:
         DebugInfo() {}
-        void addLine(const DebugLine& line);
-        void addPoint(const Vector2& point);
-        const vector<DebugLine>& getLines() const;
-        const vector<Vector2>& getPoints() const;
+        void addLine(const DebugLine& l, const Color& c);
+        void addPoint(const Vector2& p, const Color& c);
+        const vector<pair<DebugLine, Color> >& getLines() const;
+        const vector<pair<Vector2, Color> >& getPoints() const;
     private:
-        vector<DebugLine> mLines;
-        vector<Vector2> mPoints;
+        vector<pair<DebugLine, Color> > mLines;
+        vector<pair<Vector2, Color> > mPoints;
     };
 
-    inline void DebugInfo::addLine(const DebugLine& line) { 
-        mLines.push_back(line); 
+    inline void DebugInfo::addLine(const DebugLine& l, const Color& c) { 
+        mLines.push_back(pair<DebugLine, Color>(l, c)); 
     }
 
-    inline void DebugInfo::addPoint(const Vector2& point) { 
-        mPoints.push_back(point); 
+    inline void DebugInfo::addPoint(const Vector2& p, const Color& c) { 
+        mPoints.push_back(pair<Vector2, Color>(p, c)); 
     }
 
-    inline const vector<DebugLine>& DebugInfo::getLines() const {
+    inline const vector<pair<DebugLine, Color> >& DebugInfo::getLines() const {
         return mLines;
     }
 
-    inline const vector<Vector2>& DebugInfo::getPoints() const {
+    inline const vector<pair<Vector2, Color> >& DebugInfo::getPoints() const {
         return mPoints;
     }
 
@@ -70,8 +70,8 @@ namespace Goblin {
         const Pixel* getTileBuffer() const;
         const DebugInfo& getDebugInfo() const;
         void addSample(const Sample& sample, const Color& L);
-        void addDebugLine(const DebugLine& line);
-        void addDebugPoint(const Vector2& point);
+        void addDebugLine(const DebugLine& l, const Color& c);
+        void addDebugPoint(const Vector2& p, const Color& c);
     private:
         int mTileWidth;
         int mRowId, mRowNum;
@@ -92,12 +92,12 @@ namespace Goblin {
         return mDebugInfo;
     }
 
-    inline void ImageTile::addDebugLine(const DebugLine& line) {
-        mDebugInfo.addLine(line);
+    inline void ImageTile::addDebugLine(const DebugLine& l, const Color& c) {
+        mDebugInfo.addLine(l, c);
     }
 
-    inline void ImageTile::addDebugPoint(const Vector2& point) {
-        mDebugInfo.addPoint(point);
+    inline void ImageTile::addDebugPoint(const Vector2& p, const Color& c) {
+        mDebugInfo.addPoint(p, c);
     }
 
 

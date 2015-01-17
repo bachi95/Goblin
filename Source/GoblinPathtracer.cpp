@@ -29,6 +29,9 @@ namespace Goblin {
         }
         // if intersect an area light
         Li += intersection.Le(-ray.d);
+        // subsurface scattering 
+        Li += Lsubsurface(scene, intersection, -ray.d, sample, 
+            &mBSSRDFSampleIndex, debugData);
 
         Ray currentRay = ray;
         vector<Ray> debugRays;
@@ -114,6 +117,8 @@ namespace Goblin {
             mPickLightSampleIndexes[i] = sampleQuota->requestOneDQuota(1);
         }
 
+        mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
+            mSetting.bssrdfSampleNum);
         const vector<Light*>& lights = scene->getLights();
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {

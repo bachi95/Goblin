@@ -50,16 +50,23 @@ namespace Goblin {
         delete [] samples;
         // if there is any debug data, transform it to screen space
         // and inject to image tile
-        const vector<Ray>& debugRays = debugData.getRays();
+        const vector<pair<Ray, Color> >& debugRays = debugData.getRays();
         for(size_t i = 0; i < debugRays.size(); ++i) {
-            const Ray& r = debugRays[i];
+            const Ray& r = debugRays[i].first;
             Vector3 sWorld = r.o;
             Vector3 eWorld = r(r.maxt);
             Vector3 sScreen = mCamera->worldToScreen(sWorld);
             Vector3 eScreen = mCamera->worldToScreen(eWorld);
             DebugLine line(Vector2(sScreen.x, sScreen.y),
                 Vector2(eScreen.x, eScreen.y));
-            mTile->addDebugLine(line);
+            mTile->addDebugLine(line, debugRays[i].second);
+        }
+        const vector<pair<Vector3, Color> >& debugPoints = 
+            debugData.getPoints();
+        for(size_t i = 0; i < debugPoints.size(); ++i) {
+            Vector3 pScreen = mCamera->worldToScreen(debugPoints[i].first);
+            mTile->addDebugPoint(Vector2(pScreen.x, pScreen.y), 
+                debugPoints[i].second);
         }
         mRenderProgress->update();
     }
@@ -92,8 +99,7 @@ namespace Goblin {
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mPickLightSampleIndexes(NULL),
         mPowerDistribution(NULL), 
-        mSetting(setting) {
-    }
+        mSetting(setting) {}
 
     Renderer::~Renderer() {
         if(mLightSampleIndexes) {
@@ -138,6 +144,169 @@ namespace Goblin {
         }
         renderTasks.clear();
         film->writeImage();
+    }
+
+    Color Renderer::LbssrdfSingle(const ScenePtr& scene,
+        const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
+        const Sample& sample, 
+        const BSSRDFSampleIndex* bssrdfSampleIndex) const {
+        const Vector3& pwo = fragment.getPosition();
+        const Vector3& no = fragment.getNormal();
+        float coso = absdot(wo, fragment.getNormal());
+        float eta = bssrdf->getEta();
+        float Ft = 1.0f - Material::fresnelDieletric(coso, 1.0f, eta);
+        float sigmaTr = bssrdf->getSigmaTr(fragment).luminance();
+        Color scatter = bssrdf->getScatter(fragment);
+        Color sigmaT = bssrdf->getAttenuation(fragment);
+        Vector3 woRefract = Goblin::specularRefract(wo, no, 1.0f, eta);
+        const vector<Light*>& lights = scene->getLights();
+        Color Lsinglescatter(0.0f);
+        // single scattering part
+        for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
+            const BSSRDFSample bssrdfSample(sample, *bssrdfSampleIndex, i);
+            // sample a distance with exponential falloff
+            float d = exponentialSample(bssrdfSample.uSingleScatter, sigmaTr);
+            Vector3 pSample = pwo + d * woRefract;
+            float samplePdf = exponentialPdf(d, sigmaTr);
+            // sample a light from pSample
+            float pickLightPdf;
+            int lightIndex = mPowerDistribution->sampleDiscrete(
+                bssrdfSample.uPickLight, &pickLightPdf);
+            const Light* light = lights[lightIndex];
+            Vector3 wi;
+            float epsilon, lightPdf;
+            Ray shadowRay;
+            Color L = light->sampleL(pSample, 1e-5f, bssrdfSample.ls, 
+                &wi, &lightPdf, &shadowRay);
+            if(L == Color::Black || lightPdf == 0.0f) {
+                continue;
+            }
+            // preserve the maxt since the next intersection test will modify
+            // it to the closest intersection, but we still need this maxt to 
+            // cast shadow ray from that intersection to light
+            float maxt = shadowRay.maxt;
+            Intersection wiIntersect;
+            // TODO we can use a material indexed lookup table to query
+            // surface with this particular BSSRDF instead of doing a whole
+            // scene intersaction test 
+            if(scene->intersect(shadowRay, &epsilon, &wiIntersect)) {
+                // if not, the pSample is out of the BSSRDF geometry already
+                if(wiIntersect.getMaterial()->getBSSRDF() == bssrdf) {
+                    // update shadow ray to start from pwi
+                    const Fragment& fwi = wiIntersect.fragment;
+                    const Vector3& pwi = fwi.getPosition();
+                    const Vector3& ni = fwi.getNormal();
+                    shadowRay.mint = shadowRay.maxt + epsilon;
+                    shadowRay.maxt = maxt;
+                    if(!scene->intersect(shadowRay)) {
+                        float p = bssrdf->phase(wi, woRefract); 
+                        float cosi = absdot(ni, wi);
+                        float Fti = 1.0f - 
+                            Material::fresnelDieletric(cosi, 1.0f, eta);
+                        Color sigmaTi = bssrdf->getAttenuation(fwi);
+                        float G = absdot(ni, woRefract) / cosi;
+                        Color sigmaTC =  sigmaT + G * sigmaTi;
+                        float di = length(pwi - pSample);
+                        float et = 1.0f / eta;
+                        float diPrime = di * absdot(wi, ni) / 
+                            sqrt(1.0f - et * et * (1.0f - cosi * cosi));
+                        Lsinglescatter += (Ft * Fti * p * scatter / sigmaTC) *
+                            expColor(-diPrime * sigmaTi) * 
+                            expColor(-d * sigmaT) * L /
+                             (lightPdf * pickLightPdf * samplePdf); 
+                    }
+                }
+            } 
+        } 
+        Lsinglescatter /= (float)bssrdfSampleIndex->samplesNum; 
+        return Lsinglescatter;
+    }
+
+    Color Renderer::LbssrdfDiffusion(const ScenePtr& scene,
+        const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
+        const Sample& sample, 
+        const BSSRDFSampleIndex* bssrdfSampleIndex) const {
+        const Vector3& pwo = fragment.getPosition();
+        float coso = absdot(wo, fragment.getNormal());
+        float eta = bssrdf->getEta();
+        float Ft = 1.0f - Material::fresnelDieletric(coso, 1.0f, eta);
+        float sigmaTr = bssrdf->getSigmaTr(fragment).luminance();
+        const vector<Light*>& lights = scene->getLights();
+        // figure out the sample probe radius, we ignore the integration
+        // of area with pdf too small compare to center, yes...this introduces
+        // bias...but can limit the probe ray as short as possible
+        // skipRatio = pdf(r) / pdf(0, 0) = exp(-sigmaTr * r^2)
+        float skipRatio = 0.01f;
+        float Rmax = sqrt(log(skipRatio) / -sigmaTr);
+        Color Lmultiscatter(0.0f);
+        for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
+            const BSSRDFSample bssrdfSample(sample, *bssrdfSampleIndex, i);
+            // sample a probe ray with gaussian falloff pdf from intersection
+            Ray probeRay;
+            float discPdf;
+            BSSRDFSampleAxis axis = bssrdf->sampleProbeRay(fragment, 
+                bssrdfSample, sigmaTr, Rmax, &probeRay, &discPdf);
+            Intersection probeIntersect;
+            float epsilon;
+            // TODO we can use a material indexed lookup table to query
+            // surface with this particular BSSRDF instead of doing a whole
+            // scene intersaction test 
+            if(scene->intersect(probeRay, &epsilon, &probeIntersect)) {
+                if(probeIntersect.getMaterial()->getBSSRDF() == bssrdf) {
+                    const Fragment& probeFragment = probeIntersect.fragment;
+                    const Vector3& pProbe = probeFragment.getPosition();
+                    Color Rd = bssrdf->Rd(probeFragment, 
+                        squaredLength(pProbe - pwo));
+                    // calculate the irradiance on the sample point
+                    float pickLightPdf;
+                    int lightIndex = mPowerDistribution->sampleDiscrete(
+                        bssrdfSample.uPickLight, &pickLightPdf);
+                    const Light* light = lights[lightIndex];
+                    Vector3 wi;
+                    float lightPdf;
+                    Ray shadowRay;
+                    const Vector3& ni = probeFragment.getNormal();
+                    Color L = light->sampleL(pProbe, epsilon, bssrdfSample.ls, 
+                        &wi, &lightPdf, &shadowRay);
+                    if(L == Color::Black || lightPdf == 0.0f ||
+                        scene->intersect(shadowRay)) {
+                        continue;
+                    }
+                    float cosi = absdot(ni, wi);
+                    Color irradiance = L * cosi / (lightPdf * pickLightPdf);
+                    float Fti = 1.0f - 
+                        Material::fresnelDieletric(cosi, 1.0f, eta);
+                    // evaluate the MIS weight
+                    float pdf = discPdf * absdot(probeRay.d, ni);
+                    float w = bssrdf->MISWeight(fragment, probeFragment, axis, 
+                        pdf, sigmaTr, Rmax);
+                    Lmultiscatter += 
+                        (w * INV_PI * Ft  * Fti * Rd * irradiance) / pdf;
+                }
+            }
+        }
+        Lmultiscatter /= (float)bssrdfSampleIndex->samplesNum;
+        return Lmultiscatter;
+    }
+
+    Color Renderer::Lsubsurface(const ScenePtr& scene,
+        const Intersection& intersection, const Vector3& wo,
+        const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
+        WorldDebugData* debugData) const {
+        const MaterialPtr& material = 
+            intersection.primitive->getMaterial();
+        const BSSRDF* bssrdf = material->getBSSRDF();
+        const vector<Light*>& lights = scene->getLights();
+        if(bssrdf == NULL || lights.size() == 0) {
+            return Color(0.0f);
+        }
+        const Fragment& fragment = intersection.fragment;
+        Color Lsinglescatter = LbssrdfSingle(scene, fragment, bssrdf, 
+            wo, sample, bssrdfSampleIndex);
+        // multiple scattering part with diffusion approximation
+        Color Lmultiscatter = LbssrdfDiffusion(scene, fragment, bssrdf, 
+            wo, sample, bssrdfSampleIndex);
+        return Lsinglescatter + Lmultiscatter;
     }
 
     Color Renderer::Lv(const ScenePtr& scene, const Ray& ray, 
@@ -248,7 +417,7 @@ namespace Goblin {
                     ls = LightSample(sample, lightSampleIndexes[i], n);
                     bs = BSDFSample(sample, bsdfSampleIndexes[i], n);
                 }
-                Ld +=  estimateLd(scene, -ray.d, epsilon, intersection,
+                Ld += estimateLd(scene, -ray.d, epsilon, intersection,
                     light, ls, bs, type);
             }
             Ld /= static_cast<float>(samplesNum);
@@ -319,8 +488,42 @@ namespace Goblin {
                     fWeight / bsdfPdf;
             }
         }
-
         return Ld;
+    }
+
+    Color Renderer::singleSampleIrradiance(const ScenePtr& scene,
+        float epsilon, const Intersection& intersection,
+        const LightSample& lightSample, float pickLightSample) const {
+        const vector<Light*>& lights = scene->getLights();
+        if(lights.size() == 0) {
+            return Color::Black;
+        }
+        float pdf;
+        int lightIndex = 
+            mPowerDistribution->sampleDiscrete(pickLightSample, &pdf);
+        const Light* light = lights[lightIndex];
+        Color irradiance = estimateIrradiance(scene, epsilon, intersection,
+            light, lightSample) / pdf;
+        return irradiance;
+    }
+
+    Color Renderer::estimateIrradiance(const ScenePtr& scene,
+        float epsilon, const Intersection& intersection, 
+        const Light* light, const LightSample& ls) const {
+        Color irradiance(0.0f);
+        const Fragment& fragment = intersection.fragment;
+        Vector3 wi;
+        const Vector3& p = fragment.getPosition();
+        const Vector3& n = fragment.getNormal();
+        float pdf;
+        Ray shadowRay;
+        Color L = light->sampleL(p, epsilon, ls, &wi, &pdf, &shadowRay);
+        if(L != Color::Black && pdf > 0.0f) {
+            if(!scene->intersect(shadowRay)) {
+                irradiance += L * absdot(n, wi) / pdf;
+            }
+        }
+        return irradiance;
     }
 
     Color Renderer::specularReflect(const ScenePtr& scene, const Ray& ray, 

@@ -3,10 +3,6 @@
 #include "GoblinWhitted.h"
 #include "GoblinPathtracer.h"
 
-#include <iostream>
-#include <string>
-
-using namespace std;
 using namespace Goblin;
 
 int main(int argc, char** argv) {

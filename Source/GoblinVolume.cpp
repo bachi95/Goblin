@@ -22,14 +22,7 @@ namespace Goblin {
         if(!mLocalRegion.contain(mToWorld.invertPoint(p))) {
             return 0.0f;
         }
-
-        if(mG < 1e-3) {
-            return 0.25f * INV_PI;
-        } else {
-            float cosTheta = dot(wi, wo);
-            return 0.25f * INV_PI * (1.0f - mG * mG) / 
-                powf(1.0f + mG * mG - 2.0f * mG * cosTheta, 1.5f);
-        }
+        return phaseHG(wi, wo, mG);
     }
 
     Color VolumeRegion::transmittance(const Ray& ray) const {

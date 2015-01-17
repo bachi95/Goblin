@@ -142,7 +142,7 @@ namespace Goblin {
     // invDir and using dirIsNeg indexing to avoid swap tMin/tMax
     // if the ray direction is negative
     static inline bool intersect(const BBox& bbox, const Ray& ray,
-        const Vector3& invDir, const uint32_t dirIsNeg[3]) {
+        const Vector3& invDir, uint32_t dirIsNeg[3]) {
         // intersect x tabs
         float tMin = (bbox[dirIsNeg[0]].x - ray.o.x) * invDir.x;
         float tMax = (bbox[1 - dirIsNeg[0]].x - ray.o.x) * invDir.x;

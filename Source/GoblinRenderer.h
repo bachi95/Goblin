@@ -24,38 +24,40 @@ namespace Goblin {
 
     struct RenderSetting {
         RenderSetting(): samplePerPixel(1), threadNum(1), maxRayDepth(5), 
-            method(PathTracing) {}
+            bssrdfSampleNum(4), method(PathTracing) {}
         int samplePerPixel;
         int threadNum;
         int maxRayDepth;
+        int bssrdfSampleNum;
         RenderMethod method;
     };
 
     class WorldDebugData {
     public:
         WorldDebugData() {}
-        void addRay(const Ray& ray);
-        void addPoint(const Vector3& point);
-        const vector<Ray>& getRays() const;
-        const vector<Vector3>& getPoints() const;
+        void addRay(const Ray& ray, Color c = Color::White);
+        void addPoint(const Vector3& point, Color c = Color::White);
+        const vector<pair<Ray, Color> >& getRays() const;
+        const vector<pair<Vector3, Color> >& getPoints() const;
     private:
-        vector<Ray> mRays;
-        vector<Vector3> mPoints;
+        vector<pair<Ray, Color> > mRays;
+        vector<pair<Vector3, Color> > mPoints;
     };
 
-    inline void WorldDebugData::addRay(const Ray& line) { 
-        mRays.push_back(line); 
+    inline void WorldDebugData::addRay(const Ray& line, Color c) { 
+        mRays.push_back(pair<Ray, Color>(line, c)); 
     }
 
-    inline void WorldDebugData::addPoint(const Vector3& point) { 
-        mPoints.push_back(point); 
+    inline void WorldDebugData::addPoint(const Vector3& point, Color c) { 
+        mPoints.push_back(pair<Vector3, Color>(point, c)); 
     }
 
-    inline const vector<Ray>& WorldDebugData::getRays() const {
+    inline const vector<pair<Ray, Color> >& WorldDebugData::getRays() const {
         return mRays;
     }
 
-    inline const vector<Vector3>& WorldDebugData::getPoints() const {
+    inline const vector<pair<Vector3, Color> >& WorldDebugData::getPoints() 
+        const {
         return mPoints;
     }
 
@@ -99,6 +101,10 @@ namespace Goblin {
             WorldDebugData* debugData = NULL) const = 0;
         // volume in scatter and emission contribution
         Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
+        Color Lsubsurface(const ScenePtr& scene,
+            const Intersection& intersection, const Vector3& wo,
+            const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
+            WorldDebugData* debugData = NULL) const;
         Color transmittance(const ScenePtr& scene, const Ray& ray) const;
 
     protected:
@@ -122,6 +128,14 @@ namespace Goblin {
             const Light* light, const LightSample& ls,
             const BSDFSample& bs, BSDFType type = BSDFAll) const;
 
+        Color singleSampleIrradiance(const ScenePtr& scene,
+            float epsilon, const Intersection& intersection, 
+            const LightSample& lightSample, float pickLightSample) const;
+
+        Color estimateIrradiance(const ScenePtr& scene,
+            float epsilon, const Intersection& intersection, 
+            const Light* light, const LightSample& ls) const;
+
         Color specularReflect(const ScenePtr& scene, const Ray& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample, const RNG& rng) const;
@@ -134,10 +148,20 @@ namespace Goblin {
         virtual void querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota) = 0;
 
+        Color LbssrdfSingle(const ScenePtr& scene, const Fragment& fragment, 
+            const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
+            const BSSRDFSampleIndex* bssrdfSampleIndex) const;
+
+        Color LbssrdfDiffusion(const ScenePtr& scene, const Fragment& fragment, 
+            const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
+            const BSSRDFSampleIndex* bssrdfSampleIndex) const;
+
+
     protected:
         LightSampleIndex* mLightSampleIndexes;
         BSDFSampleIndex* mBSDFSampleIndexes;
         SampleIndex* mPickLightSampleIndexes;
+        BSSRDFSampleIndex mBSSRDFSampleIndex;
         CDF1D* mPowerDistribution;
         RenderSetting mSetting;
     };

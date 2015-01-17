@@ -3,9 +3,12 @@
 #include "GoblinMatrix.h"
 #include "GoblinVertex.h"
 #include "GoblinGeometry.h"
-#include "GoblinSampler.h"
+#include "GoblinLight.h"
 #include "GoblinParamSet.h"
+#include "GoblinRay.h"
+#include "GoblinSampler.h"
 #include "GoblinScene.h"
+#include "GoblinVolume.h"
 
 namespace Goblin {
 
@@ -26,6 +29,132 @@ namespace Goblin {
         uDirection[0] = sample.u2D[index.directionIndex][2 * n];
         uDirection[1] = sample.u2D[index.directionIndex][2 * n + 1];
     }
+
+    BSSRDF::BSSRDF(const ColorTexturePtr& absorb, 
+        const ColorTexturePtr& scatterPrime, float eta, float g):
+        mAbsorb(absorb), mScatterPrime(scatterPrime), 
+        mEta(eta), mG(g) {
+        float fdr = Fdr(eta);
+        mA = (1.0f + fdr) / (1.0f - fdr);
+    }
+
+    Color BSSRDF::Rd(const Fragment& fragment, float d2) const {
+        // see Donner. C 2006 Chapter 5 for the full derivation 
+        // of the following disffusion dipole approximation equation
+        Color sigmaA = mAbsorb->lookup(fragment);
+        Color sigmaSPrime = mScatterPrime->lookup(fragment);
+        Color sigmaTPrime = sigmaA + sigmaSPrime;
+        Color sigmaTr = sqrtColor(3.0f * sigmaA * sigmaTPrime);
+        Color one(1.0f);
+        Color zr = one / sigmaTPrime;
+        // zv = zr + 4AD where D = 1/(3 * sigmaT') = zr / 3
+        Color zv = zr * (1.0f + 4.0f / 3.0f * mA);
+        Color dr = sqrtColor(zr * zr + Color(d2));
+        Color dv = sqrtColor(zv * zv + Color(d2));
+
+        Color alphaPrime = sigmaSPrime / sigmaTPrime;
+        Color sTrDr = sigmaTr * dr;
+        Color sTrDv = sigmaTr * dv;
+        Color rd = 0.25f * INV_PI * alphaPrime * (
+            (zr * (one + sTrDr) * expColor(-sTrDr) / (dr * dr * dr)) +
+            (zv * (one + sTrDv) * expColor(-sTrDv) / (dv * dv * dv)));
+        return clampColor(rd);
+    }
+
+    float BSSRDF::MISWeight(const Fragment& fo, const Fragment& fi,
+        BSSRDFSampleAxis mainAxis, float pdf, float sigmaTr,
+        float Rmax) const {
+        float weight = 0.0f;
+        // The U, V, N ratio is 1 : 1 : 2, and we do MIS with
+        // power heuristic, so 1: 1: 4 
+        const Vector3& pwo = fo.getPosition();
+        const Vector3& pwi = fi.getPosition();
+        const Vector3& ni = fi.getNormal();
+        if(mainAxis == NAxis) {
+            const Vector3& u = normalize(fo.getDPDU());
+            const Vector3& v = normalize(fo.getDPDV());
+            float UPdf = 0.25f * 
+                gaussianSample2DPdf(pwo, pwi, u, sigmaTr, Rmax) * 
+                absdot(u, ni);
+            float VPdf = 0.25f * 
+                gaussianSample2DPdf(pwo, pwi, v, sigmaTr, Rmax) *
+                absdot(v, ni);
+            float numerator = 4 *  pdf * pdf;
+            weight = numerator / (numerator + UPdf* UPdf + VPdf * VPdf);
+        } else if(mainAxis == UAxis) {
+            const Vector3& n = fo.getNormal();
+            const Vector3& v = normalize(fo.getDPDV());
+            float NPdf = 0.5f * 
+                gaussianSample2DPdf(pwo, pwi, n, sigmaTr, Rmax) * 
+                absdot(n, ni);
+            float VPdf = 0.25f * 
+                gaussianSample2DPdf(pwo, pwi, v, sigmaTr, Rmax) *
+                absdot(v, ni);
+            float numerator = pdf * pdf;
+            weight = numerator / (4 * NPdf * NPdf + numerator + VPdf * VPdf);
+        } else if(mainAxis == VAxis) {
+            const Vector3& n = fo.getNormal();
+            const Vector3& u = normalize(fo.getDPDU());
+            float NPdf = 0.5f * 
+                gaussianSample2DPdf(pwo, pwi, n, sigmaTr, Rmax) * 
+                absdot(n, ni);
+            float UPdf = 0.25f * 
+                gaussianSample2DPdf(pwo, pwi, u, sigmaTr, Rmax) *
+                absdot(u, ni);
+            float numerator = pdf * pdf;
+            weight = numerator / (4 * NPdf * NPdf + UPdf * UPdf + numerator);
+        }
+        return weight;
+    }
+
+    BSSRDFSampleAxis BSSRDF::sampleProbeRay(const Fragment& fragment,
+        const BSSRDFSample& sample, float sigmaTr, float Rmax,
+        Ray* probeRay, float* pdf) const {
+        Matrix3 shadeToWorld = fragment.getWorldToShade().transpose();
+        const Vector3& pwo = fragment.getPosition();
+        // sample disk with gaussian falloff
+        Vector2 pSample = gaussianSample2D(
+            sample.uDisc[0], sample.uDisc[1], sigmaTr, Rmax);
+        float halfProbeLength = sqrt(Rmax * Rmax - pSample.squaredLength());
+        // figure out we should sample alone U or V or N 
+        // The chance to pick up U, V, N is 1 : 1 : 2
+        BSSRDFSampleAxis axis;
+        if(sample.uPickAxis <= 0.5f) {
+            probeRay->o =  pwo + shadeToWorld * 
+                Vector3(pSample.x, pSample.y, -halfProbeLength);
+            probeRay->d = fragment.getNormal();
+            axis = NAxis;
+            *pdf = 0.5f;
+        } else if(sample.uPickAxis <= 0.75f) {
+            probeRay->o =  pwo + shadeToWorld * 
+                Vector3(-halfProbeLength, pSample.x, pSample.y);
+            probeRay->d = normalize(fragment.getDPDU());
+            axis = UAxis;
+            *pdf = 0.25f;
+        } else {
+            probeRay->o =  pwo + shadeToWorld * 
+                Vector3(pSample.y, -halfProbeLength, pSample.x);
+            probeRay->d = normalize(fragment.getDPDV());
+            axis = VAxis;
+            *pdf = 0.25f;
+        }
+        probeRay->mint = 0.0f;
+        probeRay->maxt = 2.0f * halfProbeLength;
+        *pdf *= gaussianSample2DPdf(pSample.x, pSample.y, sigmaTr, Rmax); 
+        return axis;
+    }
+
+    Color BSSRDF::getSigmaTr(const Fragment& fragment) const {
+        Color sigmaA = mAbsorb->lookup(fragment);
+        Color sigmaSPrime = mScatterPrime->lookup(fragment);
+        Color sigmaTPrime = sigmaA + sigmaSPrime;
+        return sqrtColor(3.0f * sigmaA * sigmaTPrime);
+    }
+
+    float BSSRDF::phase(const Vector3& wi, const Vector3& wo) const {
+        return phaseHG(wi, wo, mG);
+    }
+
 
     BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
         const Fragment& fragment, BSDFType type) const {
@@ -168,7 +297,7 @@ namespace Goblin {
 
     // close approximation fresnel for dieletric material
     float Material::fresnelDieletric(float cosi, float etai, 
-        float etat) const {
+        float etat) {
         cosi = clamp(cosi, -1.0f, 1.0f);
         float sint = (etai / etat) * sqrt(max(0.0f, 1.0f - cosi * cosi));
         // total reflection
@@ -185,7 +314,7 @@ namespace Goblin {
         return (rParl * rParl + rPerp * rPerp) / 2.0f;
     }
 
-    float Material::fresnelConductor(float cosi, float eta, float k) const {
+    float Material::fresnelConductor(float cosi, float eta, float k) {
         float tmp = (eta * eta + k * k);
         float cosi2 = cosi * cosi;
         float rParl2 = (tmp * cosi2 - 2.0f * eta * cosi + 1.0f) /
@@ -193,6 +322,24 @@ namespace Goblin {
         float rPerp2 = (tmp - 2.0f * eta * cosi + cosi2) /
             (tmp + 2.0f * eta * cosi + cosi2);
         return (rParl2 + rPerp2) * 0.5f;
+    }
+
+    Vector3 specularRefract(const Vector3& wo, const Vector3& n,
+        float etai, float etat) {
+        /*
+         * Wi = -N * cost - WoPerpN * sint / sini =
+         * -N * cost - (sint / sini) * (Wo - dot(N, Wo) * N) =
+         * -N * sqrt(1 - (etai / etat)^2 * (1 - (dot(N, Wo))^2))) +
+         * etai / etat * (Wo - dot(N, Wo) * N) =
+         * N * (etai/etat * dot(N, Wo) - 
+         * sqrt(1 - (etai/etat)^2(1 - (dot(N, Wo))^2)) -
+         * etai / etat * Wo
+         */
+        float eta = etai / etat;
+        float cosi = absdot(n, wo);
+        return normalize(n * (eta * cosi - 
+            sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - cosi * cosi)))) - 
+            eta * wo);
     }
 
 
@@ -484,6 +631,23 @@ namespace Goblin {
         return f;
     }
 
+    Color SubsurfaceMaterial::sampleBSDF(const Fragment& fragment, 
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        BSDFType materialType = BSDFType(BSDFSpecular | BSDFReflection);
+        if(!matchType(type, materialType)) {
+            *pdf = 0.0f;
+            return Color::Black;
+        }
+
+        Color f = mReflectFactor->lookup(fragment) * 
+            specularReflectDieletric(fragment, wo, wi, 1.0f, mEta);
+        *pdf = 1.0f;
+        if(sampledType) {
+            *sampledType = materialType;
+        }
+        return f;
+    }
 
     Material* LambertMaterialCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
@@ -560,4 +724,42 @@ namespace Goblin {
         return new MirrorMaterial(Kr, index, absorption, bump);
     }
 
+
+    Material* SubsurfaceMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+
+        string absorbMapName = params.getString("absorb");
+        ColorTexturePtr absorb;
+        if(absorbMapName != "") {
+            absorb = sceneCache.getColorTexture(absorbMapName);
+        } else {
+            absorb = ColorTexturePtr(
+                new ConstantTexture<Color>(Color(0.0021f, 0.0041f, 0.0071f)));
+        }
+        string scatterMapName = params.getString("scatter_prime");
+        ColorTexturePtr scatterPrime;
+        if(scatterMapName != "") {
+            scatterPrime = sceneCache.getColorTexture(scatterMapName);
+        } else {
+            scatterPrime = ColorTexturePtr(
+                new ConstantTexture<Color>(Color(2.19f, 2.62f, 3.00f)));
+        }
+
+        string reflectTextureName = params.getString("Kr");
+        ColorTexturePtr Kr;
+        if(reflectTextureName != "") {
+            Kr = sceneCache.getColorTexture(reflectTextureName);
+        } else {
+            Kr = ColorTexturePtr(
+                new ConstantTexture<Color>(Color(1.0f)));
+        }
+        float index = params.getFloat("index", 1.5f);
+
+        FloatTexturePtr bump;
+        string bumpmapName = params.getString("bumpmap");
+        if(bumpmapName != "") {
+            bump = sceneCache.getFloatTexture(bumpmapName);
+        }
+        return new SubsurfaceMaterial(absorb, scatterPrime, Kr, index, bump);
+    }
 }

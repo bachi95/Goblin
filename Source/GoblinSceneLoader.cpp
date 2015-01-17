@@ -103,6 +103,7 @@ namespace Goblin {
         int samplePerPixel = 1;
         int maxRayDepth = 5;
         int threadNum = boost::thread::hardware_concurrency();
+        int bssrdfSampleNum = 4;
 
         PropertyTree settingPt;
         pt.getChild("render_setting", &settingPt);
@@ -113,16 +114,20 @@ namespace Goblin {
         maxRayDepth = settingParams.getInt("max_ray_depth", maxRayDepth);
         threadNum = min(settingParams.getInt("thread_num", threadNum), 
             threadNum);
+        bssrdfSampleNum = settingParams.getInt("bssrdf_sample_num", 
+            bssrdfSampleNum);
         string method = settingParams.getString("render_method", 
             "path_tracing");
         setting->samplePerPixel = samplePerPixel;
         setting->maxRayDepth = maxRayDepth;
         setting->threadNum = threadNum;
+        setting->bssrdfSampleNum = bssrdfSampleNum;
         setting->method = method == "path_tracing" ? PathTracing : Whitted;
         cout << "\nrender setting" << endl;
         cout << "-sample per pixel " << samplePerPixel << endl;
         cout << "-thread num " << threadNum << endl;
         cout << "-max ray depth " << maxRayDepth << endl;
+        cout << "-bssrdf sample num " << bssrdfSampleNum << endl;
         cout << "-render method " << method << endl;
     }
 
@@ -189,6 +194,8 @@ namespace Goblin {
             new TransparentMaterialCreator);
         mMaterialFactory->registerCreator("mirror", 
             new MirrorMaterialCreator);
+        mMaterialFactory->registerCreator("subsurface",
+            new SubsurfaceMaterialCreator);
         mMaterialFactory->setDefault("lambert");
         // primitive
         mPrimitiveFactory->registerCreator("model", 

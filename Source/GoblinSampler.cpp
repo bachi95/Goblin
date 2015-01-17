@@ -68,7 +68,6 @@ namespace Goblin {
         mCurrentX(xStart), mCurrentY(yStart),
         mSampleBuffer(NULL), mJitter(true),
         mSampleQuota(sampleQuota), mRNG(rng) {
-
         int root;
         mSamplesPerPixel = roundToSquare(samplePerPixel, &root);
         mXPerPixel = mYPerPixel = root;
@@ -603,4 +602,60 @@ namespace Goblin {
 
         return Vector2(r * cos(theta), r * sin(theta));
     }
+
+    /*
+     * let falloff be a
+     * since the pdf is proportional to exp(-a * (x * x + y * y))
+     * let pdf(x, y) = c * exp(-a * (x * x + y * y))
+     * convert to spherical coordinate:
+     * pdf(r, theta) = c * r * exp(-a * r * r)
+     * integrate c * r * exp(-a * r * r) over r (from 0 to inf) and theta = 1 ->
+     * c = a / pi -> pdf(r, theta) = a / pi * r * exp(-a * r * r) ->
+     * pdf(x, y) = a / pi * exp(-a * (x * x + y * y))
+     * marginal pdf(r) = integrage pdf((r, theta) over 0 to 2pi
+     * = 2 * a * r * exp(-a * r * r)
+     * conditional pdf(theta|r) = 1 / 2pi
+     * cdf(r) = integrate 2 * a * r * exp(-a * r * r) over 0 to r ->
+     * cdf(r) = 1 - exp(-a * r * r)
+     * cdf(theta) = integrate 1 / 2pi over 0 to theta = theta / 2pi
+     * inverse method:
+     * u1 = 1 - exp(-a * r * r) -> r = sqrt(ln(1 - u1) / -a) ->
+     * r = sqrt(ln(u1) / -a) since u1 is 0-1 uniform distribution
+     * u2 = theta / 2pi -> theta = 2pi * u2
+     * transform it back from spherical coordinate:
+     * x = r * cos(theta)
+     * y = r * sin(theta)
+     */
+    Vector2 gaussianSample2D(float u1, float u2, float falloff) {
+        float r = sqrtf(log(u1) / -falloff);
+        float theta = TWO_PI * u2;
+        return Vector2(r * cos(theta), r * sin(theta));
+    }
+
+    /*
+     * similar to the above gaussianSample2D, but the integrate range of r
+     * from 0 to Rmax, which makes us able to sample a disc with radius Rmax in
+     * gaussian distribution
+     */
+    Vector2 gaussianSample2D(float u1, float u2, float falloff, float Rmax) {
+        float r = sqrtf(log(1.0f - u1 * (1.0f - exp(-falloff * Rmax * Rmax))) /
+            -falloff);
+        float theta = TWO_PI * u2;
+        return Vector2(r * cos(theta), r * sin(theta));
+    }
+
+    float gaussianSample2DPdf(const Vector3& pCenter, 
+        const Vector3& pSample, const Vector3& N, float falloff) {
+        Vector3 d = pSample - pCenter;
+        Vector3 projected = d - N * dot(d, N);
+        return INV_PI * falloff * exp(-falloff * squaredLength(projected));
+    }
+
+
+    float gaussianSample2DPdf(const Vector3& pCenter, 
+        const Vector3& pSample, const Vector3& N, float falloff, float Rmax) {
+        return gaussianSample2DPdf(pCenter, pSample, N, falloff) /
+            (1.0f - exp(-falloff * Rmax * Rmax));
+    }
+    
 }

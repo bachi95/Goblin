@@ -150,6 +150,21 @@ namespace Goblin {
 
     Vector2 uniformSampleDisk(float u1, float u2);
 
+    Vector2 gaussianSample2D(float u1, float u2, float falloff);
+
+    Vector2 gaussianSample2D(float u1, float u2, float falloff, float Rmax);
+
+    /*
+     * integrate c * exp(-falloff * x) from 0 to inf = 1 ->
+     * c = falloff -> pdf(x) = falloff * exp(-falloff * x)
+     * cdf(x) = 1 - exp(-falloff * x) -> u = 1 - exp(-falloff * x) ->
+     * x = -ln(1 - u) / falloff -> simplified to x = -ln(u) / falloff
+     * since u are [0, 1) uniform distribution
+     */ 
+    inline float exponentialSample(float u, float falloff) {
+        return -log(u) / falloff;
+    }
+
     inline float uniformConePdf(float cosThetaMax) {
         return 1.0f / (TWO_PI * (1.0f - cosThetaMax));
     }
@@ -165,6 +180,28 @@ namespace Goblin {
 
     inline float cosineHemispherePdf(float cosTheta) {
         return  cosTheta * INV_PI;
+    }
+    
+    inline float gaussianSample2DPdf(float x, float y, float falloff) {
+        return INV_PI * falloff * exp(-falloff * (x * x + y * y));
+    }
+
+    inline float gaussianSample2DPdf(float x, float y, float falloff, 
+        float Rmax) {
+        return gaussianSample2DPdf(x, y, falloff) / 
+            (1.0f - exp(-falloff * Rmax * Rmax));
+    }
+
+    // project pSample on the plane form by pCenter and N, then calculate
+    // the corresponding gaussian 2D pdf 
+    float gaussianSample2DPdf(const Vector3& pCenter, 
+        const Vector3& pSample, const Vector3& N, float falloff);
+
+    float gaussianSample2DPdf(const Vector3& pCenter, 
+        const Vector3& pSample, const Vector3& N, float falloff, float Rmax);
+
+    inline float exponentialPdf(float x, float falloff) {
+        return falloff * exp(-falloff * x);
     }
 
     // determine weight for multi-importance sampling

@@ -32,6 +32,34 @@ namespace Goblin {
         uGeometry[1] = sample.u2D[index.geometryIndex][2 * n + 1];
     }
 
+    BSSRDFSampleIndex::BSSRDFSampleIndex(SampleQuota* sampleQuota, 
+        int requestNum):lsIndex(LightSampleIndex(sampleQuota, requestNum)) {
+        pickLightIndex = sampleQuota->requestOneDQuota(requestNum).offset;
+        pickAxisIndex = sampleQuota->requestOneDQuota(requestNum).offset;
+        discSampleIndex = sampleQuota->requestTwoDQuota(requestNum).offset;
+        singleScatterIndex = sampleQuota->requestOneDQuota(requestNum).offset;
+        samplesNum = lsIndex.samplesNum;
+    }
+
+    BSSRDFSample::BSSRDFSample(const RNG& rng): 
+        uPickLight(rng.randomFloat()),
+        uPickAxis(rng.randomFloat()),
+        ls(LightSample(rng)),
+        uSingleScatter(rng.randomFloat()) {
+        uDisc[0] = rng.randomFloat();
+        uDisc[1] = rng.randomFloat();
+    }
+
+    BSSRDFSample::BSSRDFSample(const Sample& sample, 
+        const BSSRDFSampleIndex& index, uint32_t n):
+        ls(LightSample(sample, index.lsIndex, n)) {
+        uPickLight = sample.u1D[index.pickLightIndex][n];
+        uPickAxis = sample.u1D[index.pickAxisIndex][n];
+        uDisc[0] = sample.u2D[index.discSampleIndex][2 * n];
+        uDisc[1] = sample.u2D[index.discSampleIndex][2 * n + 1];
+        uSingleScatter = sample.u1D[index.singleScatterIndex][n];
+    }
+
     void Light::setOrientation(const Vector3& dir) {
         Vector3 xAxis, yAxis;
         const Vector3& zAxis = dir;

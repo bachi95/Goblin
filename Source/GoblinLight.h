@@ -36,6 +36,28 @@ namespace Goblin {
         float uGeometry[2];
     };
 
+    struct BSSRDFSampleIndex {
+        BSSRDFSampleIndex() {}
+        BSSRDFSampleIndex(SampleQuota* sampleQuota, int requestNum);
+        LightSampleIndex lsIndex;
+        uint32_t pickLightIndex;
+        uint32_t pickAxisIndex;
+        uint32_t discSampleIndex;
+        uint32_t singleScatterIndex;
+        uint32_t samplesNum;
+    };
+
+    struct BSSRDFSample {
+        BSSRDFSample(const RNG& rng);
+        BSSRDFSample(const Sample& sample, 
+            const BSSRDFSampleIndex& index, uint32_t n);
+        float uPickLight;
+        float uPickAxis;
+        LightSample ls;
+        float uDisc[2];
+        float uSingleScatter;
+    };
+
     class Light {
     public:
         enum Type {

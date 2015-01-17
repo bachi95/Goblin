@@ -17,6 +17,9 @@ namespace Goblin {
         if(scene->intersect(ray, &epsilon, &intersection)) {
             // if intersect an area light
             Li += intersection.Le(-ray.d);
+            // subsurface scattering 
+            Li += Lsubsurface(scene, intersection, -ray.d, sample, 
+                &mBSSRDFSampleIndex, debugData);
             // direct light contribution, for specular part we let
             // specularReflect/specularRefract to deal with it
             Li += multiSampleLd(scene, ray, epsilon, intersection, sample, rng,
@@ -68,6 +71,8 @@ namespace Goblin {
         }
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
+        mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
+            mSetting.bssrdfSampleNum);
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {
             lightPowers.push_back(lights[i]->power(scene).luminance());

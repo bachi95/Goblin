@@ -150,6 +150,21 @@ namespace Goblin {
         return rhs * s;
     }
 
+    inline Color sqrtColor(const Color& c) {
+        return Color(sqrt(c.r), sqrt(c.g), sqrt(c.b));
+    }
+
+    inline Color expColor(const Color& c) {
+        return Color(exp(c.r), exp(c.g), exp(c.b));
+    }
+
+    inline Color clampColor(const Color& c, float min = 0.0f, 
+        float max = INFINITY) {
+        return Color(clamp(c.r, min, max), 
+            clamp(c.g, min, max), 
+            clamp(c.b, min, max));
+    }
+
     inline std::ostream& operator<<(std::ostream& os, const Color& c) {
         os << "Color(" << c.r << ", " << c.g << ", " << c.b << 
             ", " << c.a << ")";

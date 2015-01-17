@@ -270,14 +270,18 @@ namespace Goblin {
         cout << "drawing debug info: " << endl;
         for(size_t i = 0; i < mTiles.size(); ++i) {
             const DebugInfo& debugInfo = mTiles[i]->getDebugInfo();
-            const vector<DebugLine>& lines = debugInfo.getLines();
+            const vector<pair<DebugLine, Color> >& lines = 
+                debugInfo.getLines();
             for(size_t i = 0; i < lines.size(); ++i) {
-                drawLine(lines[i].first, lines[i].second, colors, 
-                    mXRes, mYRes, Color::Blue);
+                const DebugLine& line = lines[i].first;
+                drawLine(line.first, line.second, colors, 
+                    mXRes, mYRes, lines[i].second);
             }
-            const vector<Vector2>& points = debugInfo.getPoints();
+            const vector<pair<Vector2, Color> >& points = 
+                debugInfo.getPoints();
             for(size_t i = 0; i < points.size(); ++i) {
-                drawPoint(points[i], colors, mXRes, mYRes, Color::Red, 10);
+                drawPoint(points[i].first, colors, mXRes, mYRes, 
+                    points[i].second, 1);
             }
         }
 
