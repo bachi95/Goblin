@@ -54,6 +54,8 @@ namespace Goblin {
     public:
         BSSRDF(const ColorTexturePtr& absorb, 
             const ColorTexturePtr& scatterPrime, float eta, float g = 0.0f);
+        BSSRDF(const Color& Kd, const Color& diffuseMeanFreePath, 
+            float eta, float g = 0.0f);
         // diffusion dipole approximation part
         Color Rd(const Fragment& fragment, float d2) const;
         float MISWeight(const Fragment& fo, const Fragment& fi,
@@ -68,6 +70,11 @@ namespace Goblin {
         float getEta() const;
         float phase(const Vector3& wi, const Vector3& wo) const;
         static float Fdr(float eta);
+    private:
+        static void convertFromDiffuse(const Color& Kd, 
+            const Color& diffuseMeanFreePath, float A, 
+            Color* absorb, Color* scatterPrime);
+        static float reducedAlbedo(float alphaPrime, float A);
     private:
         ColorTexturePtr mAbsorb;
         ColorTexturePtr mScatterPrime;
@@ -312,7 +319,13 @@ namespace Goblin {
     public:
         SubsurfaceMaterial(const ColorTexturePtr& absorb, 
             const ColorTexturePtr& scatterPrime, 
-            const ColorTexturePtr& Kr, float eta, 
+            const ColorTexturePtr& Kr, float eta, float g,
+            const FloatTexturePtr& bump = FloatTexturePtr());
+
+        SubsurfaceMaterial(const Color& Kd, 
+            const Color& diffuseMeanFreePath, 
+            const ColorTexturePtr& Kr, 
+            float eta, float g,
             const FloatTexturePtr& bump = FloatTexturePtr());
 
         ~SubsurfaceMaterial();
@@ -337,9 +350,17 @@ namespace Goblin {
 
     inline SubsurfaceMaterial::SubsurfaceMaterial(
         const ColorTexturePtr& absorb, const ColorTexturePtr& scatterPrime, 
-        const ColorTexturePtr& Kr, float eta, const FloatTexturePtr& bump): 
+        const ColorTexturePtr& Kr, float eta, float g, 
+        const FloatTexturePtr& bump): 
         Material(bump), mReflectFactor(Kr), mEta(eta) {
-        mBSSRDF = new BSSRDF(absorb, scatterPrime, eta);
+        mBSSRDF = new BSSRDF(absorb, scatterPrime, eta, g);
+    }
+
+    inline SubsurfaceMaterial::SubsurfaceMaterial(const Color& Kd, 
+        const Color& diffuseMeanFreePath, const ColorTexturePtr& Kr, 
+        float eta, float g, const FloatTexturePtr& bump):
+        Material(bump), mReflectFactor(Kr), mEta(eta) {
+        mBSSRDF = new BSSRDF(Kd, diffuseMeanFreePath, eta, g);
     }
 
     inline SubsurfaceMaterial::~SubsurfaceMaterial() {

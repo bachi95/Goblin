@@ -150,11 +150,13 @@ namespace Goblin {
 
         Color LbssrdfSingle(const ScenePtr& scene, const Fragment& fragment, 
             const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
-            const BSSRDFSampleIndex* bssrdfSampleIndex) const;
+            const BSSRDFSampleIndex* bssrdfSampleIndex,
+            WorldDebugData* debugData = NULL) const;
 
         Color LbssrdfDiffusion(const ScenePtr& scene, const Fragment& fragment, 
             const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
-            const BSSRDFSampleIndex* bssrdfSampleIndex) const;
+            const BSSRDFSampleIndex* bssrdfSampleIndex,
+            WorldDebugData* debugData = NULL ) const;
 
 
     protected:

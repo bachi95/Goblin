@@ -38,6 +38,19 @@ namespace Goblin {
         mA = (1.0f + fdr) / (1.0f - fdr);
     }
 
+
+    BSSRDF::BSSRDF(const Color& Kd, const Color& diffuseMeanFreePath, 
+        float eta, float g): mEta(eta), mG(g) {
+        float fdr = Fdr(eta);
+        mA = (1.0f + fdr) / (1.0f - fdr);
+        Color absorb, scatterPrime;
+        convertFromDiffuse(Kd, diffuseMeanFreePath, mA, 
+            &absorb, &scatterPrime); 
+        mAbsorb = ColorTexturePtr(new ConstantTexture<Color>(absorb));
+        mScatterPrime = 
+            ColorTexturePtr(new ConstantTexture<Color>(scatterPrime));
+    }
+
     Color BSSRDF::Rd(const Fragment& fragment, float d2) const {
         // see Donner. C 2006 Chapter 5 for the full derivation 
         // of the following disffusion dipole approximation equation
@@ -155,6 +168,53 @@ namespace Goblin {
         return phaseHG(wi, wo, mG);
     }
 
+    void BSSRDF::convertFromDiffuse(const Color& Kd, 
+        const Color& diffuseMeanFreePath, float A, 
+        Color* absorb, Color* scatterPrime) {
+        float diffuse[3] = {Kd.r, Kd.g, Kd.b};
+        float sigmaTr[3] = {
+            1.0f / diffuseMeanFreePath.r,
+            1.0f / diffuseMeanFreePath.g, 
+            1.0f / diffuseMeanFreePath.b};
+
+        float sigmaSPrime[3];
+        float sigmaA[3];
+        // RGB channel
+        for(int i = 0; i < 3; ++i) {
+            // use few binary search iterations to approximate alpha prime
+            // since there is no easy way to inverse reducedAlbedo method
+            // directly...
+            float alphaLow = 0.0f;
+            float alphaHigh = 1.0f;
+            float rdLow = reducedAlbedo(alphaLow, A);
+            float rdHigh = reducedAlbedo(alphaHigh, A);
+            for(int j = 0; j < 16; ++j) {
+                float alphaMid =  0.5f * (alphaLow + alphaHigh);                
+                float rdMid = reducedAlbedo(alphaMid, A);
+                if(rdMid > diffuse[i]) {
+                    alphaHigh = alphaMid;
+                    rdHigh = rdMid;
+                } else {
+                    alphaLow = alphaMid;
+                    rdLow = rdMid;
+                }
+            }
+            float alphaPrime = 0.5f * (alphaLow + alphaHigh); 
+            float sigmaTPrime = sigmaTr[i] / 
+                sqrt(3.0f * (1.0f - alphaPrime));
+            sigmaSPrime[i] = alphaPrime * sigmaTPrime;
+            sigmaA[i] = sigmaTPrime - sigmaSPrime[i];
+        }
+        *scatterPrime = Color(sigmaSPrime[0], sigmaSPrime[1], sigmaSPrime[2]);
+        *absorb = Color(sigmaA[0], sigmaA[1], sigmaA[2]);
+    }
+
+    float BSSRDF::reducedAlbedo(float alphaPrime, float A) {
+        float sqrtTerm = sqrt(3.0f * (1.0f - alphaPrime));
+        return 0.5f * alphaPrime * 
+            (1.0f + exp(-(4.0f / 3.0f) * A * sqrtTerm)) *
+            exp(-sqrtTerm);
+    }
 
     BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
         const Fragment& fragment, BSDFType type) const {
@@ -728,23 +788,8 @@ namespace Goblin {
     Material* SubsurfaceMaterialCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
 
-        string absorbMapName = params.getString("absorb");
-        ColorTexturePtr absorb;
-        if(absorbMapName != "") {
-            absorb = sceneCache.getColorTexture(absorbMapName);
-        } else {
-            absorb = ColorTexturePtr(
-                new ConstantTexture<Color>(Color(0.0021f, 0.0041f, 0.0071f)));
-        }
-        string scatterMapName = params.getString("scatter_prime");
-        ColorTexturePtr scatterPrime;
-        if(scatterMapName != "") {
-            scatterPrime = sceneCache.getColorTexture(scatterMapName);
-        } else {
-            scatterPrime = ColorTexturePtr(
-                new ConstantTexture<Color>(Color(2.19f, 2.62f, 3.00f)));
-        }
-
+        float index = params.getFloat("index", 1.5f);
+        float g = params.getFloat("g", 0.0f);
         string reflectTextureName = params.getString("Kr");
         ColorTexturePtr Kr;
         if(reflectTextureName != "") {
@@ -753,13 +798,40 @@ namespace Goblin {
             Kr = ColorTexturePtr(
                 new ConstantTexture<Color>(Color(1.0f)));
         }
-        float index = params.getFloat("index", 1.5f);
-
         FloatTexturePtr bump;
         string bumpmapName = params.getString("bumpmap");
         if(bumpmapName != "") {
             bump = sceneCache.getFloatTexture(bumpmapName);
         }
-        return new SubsurfaceMaterial(absorb, scatterPrime, Kr, index, bump);
+
+        if(params.hasColor("Kd")) {
+            Color Kd = params.getColor("Kd");
+            Color diffuseMeanFreePath = params.getColor("mean_free_path", 
+                Color(1.0f));
+            return new SubsurfaceMaterial(Kd, diffuseMeanFreePath, Kr, 
+                index, g, bump);
+
+        } else {
+            string absorbMapName = params.getString("absorb");
+            ColorTexturePtr absorb;
+            if(absorbMapName != "") {
+                absorb = sceneCache.getColorTexture(absorbMapName);
+            } else {
+                absorb = ColorTexturePtr(
+                    new ConstantTexture<Color>(Color(0.0021f, 0.0041f, 0.0071f)));
+            }
+            string scatterMapName = params.getString("scatter_prime");
+            ColorTexturePtr scatterPrime;
+            if(scatterMapName != "") {
+                scatterPrime = sceneCache.getColorTexture(scatterMapName);
+            } else {
+                scatterPrime = ColorTexturePtr(
+                    new ConstantTexture<Color>(Color(2.19f, 2.62f, 3.00f)));
+            }
+
+            return new SubsurfaceMaterial(absorb, scatterPrime, Kr, 
+                index, g, bump);
+        }
+
     }
 }

@@ -149,7 +149,8 @@ namespace Goblin {
     Color Renderer::LbssrdfSingle(const ScenePtr& scene,
         const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
         const Sample& sample, 
-        const BSSRDFSampleIndex* bssrdfSampleIndex) const {
+        const BSSRDFSampleIndex* bssrdfSampleIndex,
+        WorldDebugData* debugData) const {
         const Vector3& pwo = fragment.getPosition();
         const Vector3& no = fragment.getNormal();
         float coso = absdot(wo, fragment.getNormal());
@@ -225,7 +226,8 @@ namespace Goblin {
     Color Renderer::LbssrdfDiffusion(const ScenePtr& scene,
         const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
         const Sample& sample, 
-        const BSSRDFSampleIndex* bssrdfSampleIndex) const {
+        const BSSRDFSampleIndex* bssrdfSampleIndex,
+        WorldDebugData* debugData) const {
         const Vector3& pwo = fragment.getPosition();
         float coso = absdot(wo, fragment.getNormal());
         float eta = bssrdf->getEta();
@@ -284,6 +286,7 @@ namespace Goblin {
                         (w * INV_PI * Ft  * Fti * Rd * irradiance) / pdf;
                 }
             }
+
         }
         Lmultiscatter /= (float)bssrdfSampleIndex->samplesNum;
         return Lmultiscatter;
@@ -302,10 +305,10 @@ namespace Goblin {
         }
         const Fragment& fragment = intersection.fragment;
         Color Lsinglescatter = LbssrdfSingle(scene, fragment, bssrdf, 
-            wo, sample, bssrdfSampleIndex);
+            wo, sample, bssrdfSampleIndex, debugData);
         // multiple scattering part with diffusion approximation
         Color Lmultiscatter = LbssrdfDiffusion(scene, fragment, bssrdf, 
-            wo, sample, bssrdfSampleIndex);
+            wo, sample, bssrdfSampleIndex, debugData);
         return Lsinglescatter + Lmultiscatter;
     }
 

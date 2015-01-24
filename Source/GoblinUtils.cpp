@@ -137,7 +137,9 @@ namespace Goblin {
             for(int x = x0; x != x1; x += xStep) {
                 if(0 <= x && x < xRes && 0 <= y && y < yRes) {
                     int index = y * xRes + x;
-                    buffer[index] = color;
+                    float a = color.a;
+                    buffer[index] = a * color + (1.0f - a) * buffer[index];
+                    buffer[index].a = 1.0f;
                 }
                 if(accumD >= 0) {
                     accumD += ay - ax;
@@ -152,7 +154,9 @@ namespace Goblin {
             for(int y = y0; y != y1; y += yStep) {
                 if(0 <= x && x < xRes && 0 <= y && y < yRes) {
                     int index = y * xRes + x;
-                    buffer[index] = color;
+                    float a = color.a;
+                    buffer[index] = a * color + (1.0f - a) * buffer[index];
+                    buffer[index].a = 1.0f;
                 }
                 if(accumD >= 0) {
                     accumD += ax - ay;
@@ -182,7 +186,9 @@ namespace Goblin {
                 int y = y0 + i;
                 if(0 <= x && x < xRes && 0 <= y && y < yRes) {
                     int index = y * xRes + x;
-                    buffer[index] = color;
+                    float a = color.a;
+                    buffer[index] = a * color + (1.0f - a) * buffer[index];
+                    buffer[index].a = 1.0f;
                 }
             }
         }
