@@ -169,7 +169,7 @@ namespace Goblin {
 
     class GeometrySet {
     public:
-        GeometrySet(const GeometryPtr& geometry);
+        GeometrySet(const Geometry* geometry);
         ~GeometrySet();
         Vector3 sample(const Vector3& p, const LightSample& lightSample,
             Vector3* normal) const;
@@ -191,7 +191,7 @@ namespace Goblin {
 
     class AreaLight : public Light {
     public:
-        AreaLight(const Color& Le, const GeometryPtr& geometry,
+        AreaLight(const Color& Le, const Geometry* geometry,
             const Transform& toWorld, uint32_t samplesNum);
         ~AreaLight();
         Color sampleL(const Vector3& p, float epsilon, 
@@ -271,6 +271,14 @@ namespace Goblin {
 
 
     class SpotLightCreator : public 
+        Creator<Light , const ParamSet&, const SceneCache&> {
+    public:
+        Light* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class AreaLightCreator : public 
         Creator<Light , const ParamSet&, const SceneCache&> {
     public:
         Light* create(const ParamSet& params, 

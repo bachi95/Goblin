@@ -2,6 +2,7 @@
 #include "GoblinModel.h"
 #include "GoblinScene.h"
 #include "GoblinSphere.h"
+#include "GoblinParamSet.h"
 #include "GoblinVolume.h"
 
 namespace Goblin {
@@ -20,6 +21,9 @@ namespace Goblin {
             delete mVolumeRegion;
             mVolumeRegion = NULL;
         }
+        Geometry::clearGeometryCache();
+        Primitive::clearAllocatedPrimitives();
+        Model::clearRefinedModels();
         ImageTexture<float>::clearImageCache();
         ImageTexture<Color>::clearImageCache();
     }
@@ -72,19 +76,25 @@ namespace Goblin {
         addFloatTexture(mErrorCode, errorFTexture); 
         MaterialPtr errorMaterial(new LambertMaterial(errorCTexture));
         addMaterial(mErrorCode, errorMaterial);
-        GeometryPtr errorGeometry(new Sphere(1.0f));
+        Geometry* errorGeometry = new Sphere(1.0f);
+        errorGeometry->init();
         addGeometry(mErrorCode, errorGeometry);
-        PrimitivePtr errorPrimitive(new Model(errorGeometry, errorMaterial));
+        ParamSet modelParams;
+        modelParams.setString("geometry", mErrorCode);
+        modelParams.setString("material", mErrorCode);
+        const Primitive* errorPrimitive = 
+            ModelPrimitiveCreator().create(modelParams, *this);
         addPrimitive(mErrorCode, errorPrimitive);
+        addAreaLight(mErrorCode, NULL);
     }
 
-    void SceneCache::addGeometry(const string& name, const GeometryPtr& g) {
-        std::pair<string, GeometryPtr> pair(name, g);
+    void SceneCache::addGeometry(const string& name, const Geometry* g) {
+        std::pair<string, const Geometry*> pair(name, g);
         mGeometryMap.insert(pair); 
     }
 
-    void SceneCache::addPrimitive(const string& name, const PrimitivePtr& p) {
-        std::pair<string, PrimitivePtr> pair(name, p);
+    void SceneCache::addPrimitive(const string& name, const Primitive* p) {
+        std::pair<string, const Primitive*> pair(name, p);
         mPrimitiveMap.insert(pair); 
     }
 
@@ -99,13 +109,18 @@ namespace Goblin {
         mFloatTextureMap.insert(pair); 
     }
 
+    void SceneCache::addAreaLight(const string& name, const AreaLight* l) {
+        std::pair<string, const AreaLight*> pair(name, l);
+        mAreaLightMap.insert(pair); 
+    }
+
     void SceneCache::addColorTexture(const string& name, 
         const ColorTexturePtr& t) {
         std::pair<string, ColorTexturePtr> pair(name, t);
         mColorTextureMap.insert(pair); 
     }
 
-    void SceneCache::addInstance(const PrimitivePtr& i) {
+    void SceneCache::addInstance(const Primitive* i) {
         mInstances.push_back(i);
     }
 
@@ -113,7 +128,7 @@ namespace Goblin {
         mLights.push_back(l);
     }
 
-    const GeometryPtr& SceneCache::getGeometry(const string& name) const {
+    const Geometry* SceneCache::getGeometry(const string& name) const {
         GeometryMap::const_iterator it = mGeometryMap.find(name);
         if(it == mGeometryMap.end()) {
             std::cerr << "Geometry " << name << " not defined!\n";
@@ -122,7 +137,7 @@ namespace Goblin {
         return it->second;
     }
 
-    const PrimitivePtr& SceneCache::getPrimitive(const string& name) const {
+    const Primitive* SceneCache::getPrimitive(const string& name) const {
         PrimitiveMap::const_iterator it = mPrimitiveMap.find(name);
         if(it == mPrimitiveMap.end()) {
             std::cerr << "Primitive " << name << " not defined!\n";
@@ -157,6 +172,15 @@ namespace Goblin {
         if(it == mColorTextureMap.end()) {
             std::cerr << "Texture " << name << " not defined!\n";
             return mColorTextureMap.find(mErrorCode)->second;
+        }
+        return it->second;
+    }
+
+    const AreaLight* SceneCache::getAreaLight(const string& name) const {
+        AreaLightMap::const_iterator it = mAreaLightMap.find(name);
+        if(mAreaLightMap.find(name) == mAreaLightMap.end()) {
+            std::cerr << "Area Light " << name << " not defined!\n";
+            return mAreaLightMap.find(mErrorCode)->second;
         }
         return it->second;
     }

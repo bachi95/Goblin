@@ -4,6 +4,7 @@
 #include "GoblinScene.h"
 
 namespace Goblin {
+    vector<Primitive*> Primitive::allocatedPrimitives;
 
     Color Intersection::Le(const Vector3& outDirection) {
         Vector3 ps = fragment.getPosition();
@@ -18,21 +19,21 @@ namespace Goblin {
     }
 
     InstancedPrimitive::InstancedPrimitive(const Transform& toWorld, 
-        const PrimitivePtr& primitive):
+        const Primitive* primitive):
         mToWorld(toWorld), mPrimitive(primitive) {}
 
     InstancedPrimitive::InstancedPrimitive(const Vector3& position, 
         const Quaternion& orientation,
-        const Vector3& scale, const PrimitivePtr& primitive):
+        const Vector3& scale, const Primitive* primitive):
         mToWorld(position, orientation, scale), mPrimitive(primitive) {}
 
-    bool InstancedPrimitive::intersect(const Ray& ray) {
+    bool InstancedPrimitive::intersect(const Ray& ray) const {
         Ray r = mToWorld.invertRay(ray);
         return mPrimitive->intersect(r);
     }
 
     bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
+        Intersection* intersection) const {
         Ray r = mToWorld.invertRay(ray);
         bool hit = mPrimitive->intersect(r, epsilon, intersection);
         if(hit) {
@@ -63,14 +64,14 @@ namespace Goblin {
     }
 
     void InstancedPrimitive::collectRenderList(RenderList& rList, 
-        const Matrix4& m) {
+        const Matrix4& m) const {
         mPrimitive->collectRenderList(rList, m * mToWorld.getMatrix());
     }
 
     Aggregate::Aggregate(const PrimitiveList& primitives):
         mInputPrimitives(primitives) {
         for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
-            PrimitivePtr primitive = mInputPrimitives[i];
+            const Primitive* primitive = mInputPrimitives[i];
             if(primitive->intersectable()) {
                 mRefinedPrimitives.push_back(mInputPrimitives[i]);
             } else {
@@ -84,13 +85,13 @@ namespace Goblin {
     }
     
     void Aggregate::collectRenderList(RenderList& rList, 
-        const Matrix4& m) {
+        const Matrix4& m) const {
         for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
             mInputPrimitives[i]->collectRenderList(rList, m);
         }
     }
 
-    bool Aggregate::intersect(const Ray& ray) {
+    bool Aggregate::intersect(const Ray& ray) const {
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             if(mRefinedPrimitives[i]->intersect(ray)) {
                 return true;
@@ -100,7 +101,7 @@ namespace Goblin {
     }
 
     bool Aggregate::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
+        Intersection* intersection) const {
         bool hit = false;
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             if(mRefinedPrimitives[i]->intersect(ray, epsilon, 
@@ -119,19 +120,24 @@ namespace Goblin {
     Primitive* InstancePrimitiveCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
         string primitiveName = params.getString("model");
-        PrimitivePtr primitive = sceneCache.getPrimitive(primitiveName);
+        const Primitive* primitive = sceneCache.getPrimitive(primitiveName);
 
         Vector3 position = params.getVector3("position");
-        Vector4 v = params.getVector4("orientation", 
-            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        Quaternion orientation;
+        if(params.hasVector3("euler")) {
+            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
+            orientation = Quaternion(Vector3::UnitZ, radians(xyz.z)) * 
+                Quaternion(Vector3::UnitY, radians(xyz.y)) *
+                Quaternion(Vector3::UnitX, radians(xyz.x));
+        } else {
+            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+            orientation = Quaternion(q[0], q[1], q[2], q[3]);
+        }
         Vector3 scale = params.getVector3("scale");
         Transform toWorld(position, orientation, scale);
-//        BBox bbox = instance->getAABB();
-//        cout << "BBox min: " << bbox.pMin << endl;
-//        cout << "BBox max: " << bbox.pMax << endl;
-
-        return new InstancedPrimitive(toWorld, primitive);
+        Primitive* instance = new InstancedPrimitive(toWorld, primitive);
+        Primitive::allocatedPrimitives.push_back(instance);
+        return instance;
     }
 
 }

@@ -221,7 +221,7 @@ namespace Goblin {
         return delta * delta * delta * delta;
     }
 
-    GeometrySet::GeometrySet(const GeometryPtr& geometry):
+    GeometrySet::GeometrySet(const Geometry* geometry):
         mSumArea(0.0f), mAreaDistribution(NULL) {
         if(geometry->intersectable()) {
             mGeometries.push_back(geometry);
@@ -278,7 +278,7 @@ namespace Goblin {
     }
 
 
-    AreaLight::AreaLight(const Color& Le, const GeometryPtr& geometry,
+    AreaLight::AreaLight(const Color& Le, const Geometry* geometry,
         const Transform& toWorld, uint32_t samplesNum): mLe(Le), 
         mSamplesNum(samplesNum) {
         mToWorld = toWorld;
@@ -571,6 +571,27 @@ namespace Goblin {
         float cosFalloffStart = cos(radians(params.getFloat("falloff_start")));
         return new SpotLight(intensity, position, direction, 
             cosThetaMax, cosFalloffStart);
+    }
+
+
+    Light* AreaLightCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        Color radiance = params.getColor("radiance");
+        Vector3 position = params.getVector3("position");
+        Vector4 v = params.getVector4("orientation", 
+            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        Vector3 scale = params.getVector3("scale", 
+            Vector3(1.0f, 1.0f, 1.0f));
+        string geoName = params.getString("geometry");
+        const Geometry* geometry = sceneCache.getGeometry(geoName);
+        // TODO: this cause a problem that we can't run time modify
+        // the transform for area light since it's not tied in between
+        // instance in scene and the transform in area light itself..
+        // need to find a way to improve this part
+        Transform toWorld(position, orientation, scale);
+        int sampleNum = params.getInt("sample_num", 1);
+        return new AreaLight(radiance, geometry, toWorld, sampleNum);
     }
 
 

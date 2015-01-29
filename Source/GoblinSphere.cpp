@@ -13,6 +13,7 @@ Sphere::Sphere(float r, size_t numSlices, size_t numStacks):
     mNumStacks(numStacks) { }
 
 void Sphere::init() {
+    geometryCache[getId()] = this;
     buildStacks();
 }
 
@@ -112,7 +113,7 @@ Vector3 Sphere::sample(float u1, float u2, Vector3* normal) const {
     return mRadius * (*normal);
 }
 
-BBox Sphere::getObjectBound() {
+BBox Sphere::getObjectBound() const {
     return BBox(Vector3(mRadius, mRadius, mRadius), 
         Vector3(-mRadius, -mRadius, -mRadius));
 }

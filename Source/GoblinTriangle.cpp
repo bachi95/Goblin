@@ -5,7 +5,7 @@
 #include "GoblinSampler.h"
 
 namespace Goblin {
-    Triangle::Triangle(ObjMesh* parentMesh, size_t index):
+    Triangle::Triangle(const ObjMesh* parentMesh, size_t index):
         mParentMesh(parentMesh), mIndex(index) {}
 
     /*
@@ -189,7 +189,7 @@ namespace Goblin {
         return 0.5f * length(cross(p1 - p0, p2 - p0));
     }
 
-    BBox Triangle::getObjectBound() {
+    BBox Triangle::getObjectBound() const {
         TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
         unsigned int i0 = ti->v[0];
         unsigned int i1 = ti->v[1];
@@ -204,4 +204,13 @@ namespace Goblin {
         rv.expand(v2);
         return rv;
     }
+
+    inline const Vertex* Triangle::getVertexPtr(size_t index) const {
+        return mParentMesh->getVertexPtr(mIndex);
+    }
+
+    inline const TriangleIndex* Triangle::getFacePtr(size_t index) const {
+        return mParentMesh->getFacePtr(mIndex);
+    }
+
 }

@@ -4,6 +4,7 @@
 #include "GoblinGeometry.h"
 #include "GoblinBBox.h"
 #include "GoblinFactory.h"
+#include "GoblinTriangle.h"
 
 #include <string>
 
@@ -19,10 +20,14 @@ namespace Goblin {
         bool intersect(const Ray& ray, float* epsilon, 
             Fragment* fragment) const;
         float area() const;
-        BBox getObjectBound();
-        void refine(GeometryList& refinedGeometries);
-        bool load();
+        BBox getObjectBound() const;
+        void refine(GeometryList& refinedGeometries) const;
+        size_t getVertexNum() const;
+        size_t getFaceNum() const;
+        const Vertex* getVertexPtr(size_t index) const;
+        const TriangleIndex* getFacePtr(size_t index) const;
 
+        bool load();
         bool hasNormal() const;
         bool hasTexCoord() const;
     private:
@@ -33,7 +38,26 @@ namespace Goblin {
         float mArea;
         bool mHasNormal;
         bool mHasTexCoord;
+        mutable vector<Triangle> mRefinedMeshes;
+        VertexList mVertices;
+        TriangleList mTriangles;
     };
+
+    inline size_t ObjMesh::getVertexNum() const { 
+        return mVertices.size();
+    }
+
+    inline size_t ObjMesh::getFaceNum() const {
+        return mTriangles.size();
+    }
+
+    inline const Vertex* ObjMesh::getVertexPtr(size_t index) const {
+        return &mVertices[index];
+    }
+
+    inline const TriangleIndex* ObjMesh::getFacePtr(size_t index) const {
+        return &mTriangles[index];
+    }
 
     inline float ObjMesh::area() const { return mArea; }
 

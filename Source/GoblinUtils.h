@@ -5,6 +5,7 @@
 #include <cfloat>
 #include <cmath>
 #include <iostream>
+#include <list>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,6 +34,7 @@ typedef unsigned __int64 uint64_t;
 #endif // INFINITY
 
 namespace Goblin {
+    using std::list;
     using std::vector;
     using std::string;
     using std::map;

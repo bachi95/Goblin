@@ -156,9 +156,9 @@ namespace Goblin {
         float coso = absdot(wo, fragment.getNormal());
         float eta = bssrdf->getEta();
         float Ft = 1.0f - Material::fresnelDieletric(coso, 1.0f, eta);
-        float sigmaTr = bssrdf->getSigmaTr(fragment).luminance();
         Color scatter = bssrdf->getScatter(fragment);
         Color sigmaT = bssrdf->getAttenuation(fragment);
+        float falloff = sigmaT.luminance();
         Vector3 woRefract = Goblin::specularRefract(wo, no, 1.0f, eta);
         const vector<Light*>& lights = scene->getLights();
         Color Lsinglescatter(0.0f);
@@ -166,9 +166,9 @@ namespace Goblin {
         for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
             const BSSRDFSample bssrdfSample(sample, *bssrdfSampleIndex, i);
             // sample a distance with exponential falloff
-            float d = exponentialSample(bssrdfSample.uSingleScatter, sigmaTr);
+            float d = exponentialSample(bssrdfSample.uSingleScatter, falloff);
             Vector3 pSample = pwo + d * woRefract;
-            float samplePdf = exponentialPdf(d, sigmaTr);
+            float samplePdf = exponentialPdf(d, falloff);
             // sample a light from pSample
             float pickLightPdf;
             int lightIndex = mPowerDistribution->sampleDiscrete(

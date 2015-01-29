@@ -174,7 +174,7 @@ namespace Goblin {
         return (tMin < ray.maxt) && (tMax > ray.mint);
     }
 
-    bool BVH::intersect(const Ray& ray) {
+    bool BVH::intersect(const Ray& ray) const {
         if(mBVHNodes.size() == 0) {
             return false;
         }
@@ -187,7 +187,7 @@ namespace Goblin {
         uint32_t todoOffset = 0;
         uint32_t todo[64];
         while(true) {
-            CompactBVHNode& node = mBVHNodes[nodeNum];
+            const CompactBVHNode& node = mBVHNodes[nodeNum];
             if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
                 if(node.primitivesNum > 0) {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {
@@ -220,7 +220,7 @@ namespace Goblin {
     }
 
     bool BVH::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
+        Intersection* intersection) const {
         if(mBVHNodes.size() == 0) {
             return false;
         }
@@ -234,7 +234,7 @@ namespace Goblin {
         uint32_t todo[64];
         bool hit = false;
         while(true) {
-            CompactBVHNode& node = mBVHNodes[nodeNum];
+            const CompactBVHNode& node = mBVHNodes[nodeNum];
             if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
                 if(node.primitivesNum > 0) {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {

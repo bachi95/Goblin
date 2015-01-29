@@ -32,17 +32,17 @@ namespace Goblin {
     // collect a list of renderable from the scene by
     // another temp virtual method collectRenderable
     struct Renderable {
-        Renderable(const Matrix4& m, const GeometryPtr& g):
+        Renderable(const Matrix4& m, const Geometry* g):
             worldMatrix(m), geometry(g) {}
         Matrix4 worldMatrix;
-        GeometryPtr geometry;
+        const Geometry* geometry;
     };
 
     typedef std::vector<Renderable> RenderList;
 
     class Primitive;
     typedef boost::shared_ptr<Primitive> PrimitivePtr;
-    typedef std::vector<PrimitivePtr> PrimitiveList;
+    typedef vector<const Primitive*> PrimitiveList;
 
     struct Intersection {
         Intersection(): primitive(NULL) {}
@@ -56,20 +56,25 @@ namespace Goblin {
     public:
         virtual ~Primitive() {}
         virtual bool intersectable() const;
-        virtual void refine(PrimitiveList& refinedPrimitives);
-        virtual bool intersect(const Ray& ray) = 0;
+        virtual void refine(PrimitiveList& refinedPrimitives) const;
+        virtual bool intersect(const Ray& ray) const = 0;
         virtual bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) = 0;
+            Intersection* intersection) const = 0;
         virtual BBox getAABB() const = 0;
         virtual const MaterialPtr& getMaterial() const;
         virtual const AreaLight* getAreaLight() const;
         virtual void collectRenderList(RenderList& rList, 
-            const Matrix4& m = Matrix4::Identity) = 0;
+            const Matrix4& m = Matrix4::Identity) const = 0;
+        static void clearAllocatedPrimitives();
+    protected:
+        Primitive() {}
+    protected:
+        static vector<Primitive*> allocatedPrimitives;
     };
 
 
     inline bool Primitive::intersectable() const { return true; }
-    inline void Primitive::refine(PrimitiveList& refinedPrimitives) {
+    inline void Primitive::refine(PrimitiveList& refinedPrimitives) const {
         std::cerr << "unimplemented Primitive::refine" << std::endl; 
         throw std::exception();
     }
@@ -86,36 +91,46 @@ namespace Goblin {
         throw std::exception();
     }
 
+    inline void Primitive::clearAllocatedPrimitives() {
+        for(size_t i = 0; i < allocatedPrimitives.size(); ++i) {
+            delete allocatedPrimitives[i];
+            allocatedPrimitives[i] = NULL;
+        }
+    }
+
     class InstancedPrimitive : public Primitive{
     public:
-        InstancedPrimitive(const Transform& toWorld, 
-            const PrimitivePtr& primitive);
-        InstancedPrimitive(const Vector3& position, 
-            const Quaternion& orientation,
-            const Vector3& scale, const PrimitivePtr& primitive);
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Intersection* intersection) const;
         BBox getAABB() const;
         const Vector3& getPosition() const;
         const Quaternion& getOrientation() const;
         const Vector3& getScale() const;
         const Matrix4& getWorldMatrix();
         void collectRenderList(RenderList& rList, 
-            const Matrix4& m = Matrix4::Identity);
+            const Matrix4& m = Matrix4::Identity) const;
+    private:
+        InstancedPrimitive(const Transform& toWorld, 
+            const Primitive* primitive);
+        InstancedPrimitive(const Vector3& position, 
+            const Quaternion& orientation,
+            const Vector3& scale, const Primitive* primitive);
+
     private:
         Transform mToWorld;
-        PrimitivePtr mPrimitive;
+        const Primitive* mPrimitive;
+    friend class InstancePrimitiveCreator;
     };
 
     class Aggregate : public Primitive {
     public:
         Aggregate(const PrimitiveList& primitives);
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Intersection* intersection) const;
         void collectRenderList(RenderList& rList, 
-            const Matrix4& m = Matrix4::Identity);
+            const Matrix4& m = Matrix4::Identity) const;
         BBox getAABB() const;
     protected:
         PrimitiveList mInputPrimitives;

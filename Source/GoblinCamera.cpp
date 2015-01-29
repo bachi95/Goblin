@@ -180,7 +180,7 @@ namespace Goblin{
                 Quaternion(Vector3::UnitX, radians(xyz.x));
         } else {
             Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
-            orientation = Quaternion(q[0], q[1], q[2], q[2]);
+            orientation = Quaternion(q[0], q[1], q[2], q[3]);
         }
         float fov = params.getFloat("fov", 60.0f);
         float zn = params.getFloat("near_plane", 0.1f);

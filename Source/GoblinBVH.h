@@ -33,9 +33,9 @@ namespace Goblin {
         BVH(const PrimitiveList& primitives, int maxPrimitivesNum = 1,
             const std::string& splitMethod = "middle");
         ~BVH();
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection);
+            Intersection* intersection) const;
     private:
         //the BVH we build is a flatten binary tree in DFS order, the node
         //is defined as a compact 32byte class for cache line friendly access

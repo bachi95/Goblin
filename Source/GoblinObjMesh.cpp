@@ -20,6 +20,18 @@ namespace Goblin {
                 normal == rhs.normal &&
                 texCoord == rhs.texCoord;
         }
+
+        bool operator<(const TriIndex& rhs) const {
+            if(vertex == rhs.vertex) {
+                if(normal == rhs.normal) {
+                    return texCoord < rhs.texCoord;
+                } else {
+                    return normal < rhs.normal;
+                }
+            } else {
+                return vertex < rhs.vertex;
+            }
+        }
     };
 
     std::size_t hash_value(const TriIndex& t) {
@@ -49,6 +61,7 @@ namespace Goblin {
     }
 
     void ObjMesh::init() {
+        geometryCache[getId()] = this;
         load();
     }
 
@@ -64,8 +77,8 @@ namespace Goblin {
         typedef std::vector<Vector3> NormalList;
         typedef std::vector<Vector2> UVList;
         typedef std::vector<Face> FaceList;
-        //typedef std::map<TriIndex, unsigned int> VertexMap;
-        typedef boost::unordered_map<TriIndex, unsigned int> VertexMap;
+        typedef std::map<TriIndex, unsigned int> VertexMap;
+        //typedef boost::unordered_map<TriIndex, unsigned int> VertexMap;
         VertexMap vMap;
 
         VertexList vertexList;
@@ -231,7 +244,7 @@ namespace Goblin {
                 }
             }
         }
-        mVertices.reserve(faceList.size() * 2);
+        //mVertices.reserve(faceList.size());
         mTriangles.reserve(faceList.size());
 
         unsigned int vIndexCounter = 0;
@@ -273,15 +286,22 @@ namespace Goblin {
         return false;
     }
 
-    BBox ObjMesh::getObjectBound() {
+    BBox ObjMesh::getObjectBound() const {
         return mBBox;
     }
 
-    void ObjMesh::refine(GeometryList& refinedGeometries) {
-        for(size_t i = 0; i < mTriangles.size(); ++i) {
-            GeometryPtr triangle(new Triangle(this, i));
-            refinedGeometries.push_back(triangle);
-        } 
+    void ObjMesh::refine(GeometryList& refinedGeometries) const {
+        size_t faceNum = mTriangles.size();
+        if(mRefinedMeshes.size() != faceNum) {
+            mRefinedMeshes.clear();
+            mRefinedMeshes.resize(faceNum, Triangle(this));
+            for(size_t i = 0; i < faceNum; ++i) {
+                mRefinedMeshes[i].setIndex(i);
+            }
+        }
+        for(size_t i = 0; i < faceNum; ++i) {
+            refinedGeometries.push_back(&mRefinedMeshes[i]);
+        }
     }
 
     void ObjMesh::recalculateArea() {

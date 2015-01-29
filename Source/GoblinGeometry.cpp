@@ -3,6 +3,7 @@
 #include "GoblinRay.h"
 
 namespace Goblin {
+    std::map<size_t, Geometry*> Geometry::geometryCache;
 
     Fragment::Fragment(const Vector3& p, const Vector3& n, const Vector2& uv,
         const Vector3& dpdu, const Vector3& dpdv):

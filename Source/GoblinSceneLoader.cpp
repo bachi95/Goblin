@@ -210,6 +210,8 @@ namespace Goblin {
             new DirectionalLightCreator);
         mLightFactory->registerCreator("spot",
             new SpotLightCreator);
+        mLightFactory->registerCreator("area",
+            new AreaLightCreator);
         mLightFactory->registerCreator("ibl",
             new ImageBasedLightCreator);
         mLightFactory->setDefault("point");
@@ -265,7 +267,7 @@ namespace Goblin {
         parseParamSet(pt, &geometryParams);
         string type = geometryParams.getString("type");
         string name = geometryParams.getString("name");
-        GeometryPtr geometry(mGeometryFactory->create(type, geometryParams,
+        Geometry* geometry(mGeometryFactory->create(type, geometryParams,
             *sceneCache));
         geometry->init();
         cout << "vertex num: " << geometry->getVertexNum() << endl;
@@ -319,8 +321,8 @@ namespace Goblin {
         parseParamSet(pt, &primitiveParams);
         string type = primitiveParams.getString("type");
         string name = primitiveParams.getString("name");
-        PrimitivePtr primitive(mPrimitiveFactory->create(type, primitiveParams,
-            *sceneCache));
+        const Primitive* primitive = mPrimitiveFactory->create(type, 
+            primitiveParams, *sceneCache);
         sceneCache->addPrimitive(name, primitive);
 
         if(type == "instance") {
@@ -336,51 +338,34 @@ namespace Goblin {
         lightParams.setInt("sample_per_pixel", samplePerPixel);
         string type = lightParams.getString("type");
         string name = lightParams.getString("name");
-        Light* light;
-        // TODO figure out a way to get this misfit to generic factory.....
+        Light* light = mLightFactory->create(type, lightParams, *sceneCache);
+        sceneCache->addLight(light);
         if(type == "area") {
-            Color radiance = lightParams.getColor("radiance");
-            Vector3 position = lightParams.getVector3("position");
-            Vector4 v = lightParams.getVector4("orientation", 
-                Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-            Quaternion orientation(v[0], v[1], v[2], v[3]);
-            Vector3 scale = lightParams.getVector3("scale", 
-                Vector3(1.0f, 1.0f, 1.0f));
-            string geoName = lightParams.getString("geometry");
-            GeometryPtr geometry = sceneCache->getGeometry(geoName);
-            // TODO: this cause a problem that we can't run time modify
-            // the transform for area light since it's not tied in between
-            // instance in scene and the transform in area light itself..
-            // need to find a way to improve this part
-            Transform toWorld(position, orientation, scale);
-            int sampleNum = lightParams.getInt("sample_num", 1);
-            AreaLight* areaLight = new AreaLight(radiance, geometry, 
-                toWorld, sampleNum);
-            light = areaLight;
-
-            // and we need to push this geometry into scene so that it can
-            // be intersection tested.....this is gonna be messy for the 
-            // current awkward parsing mechanics.......
+            // we need to push this geometry into scene so that it can
+            // be intersection tested. the run time material/model
+            // creation is pretty awkward at this moment...definitly should
+            // be improved....
+            ParamSet modelParams;
+            modelParams.setString("geometry", 
+                lightParams.getString("geometry"));
             ColorTexturePtr white(new ConstantTexture<Color>(Color::White));
             MaterialPtr mtl(new LambertMaterial(white));
-            PrimitivePtr model(new Model(geometry, mtl, areaLight));
-            PrimitivePtr instance;
-            if(!model->intersectable()) {
-                PrimitiveList primitives;
-                primitives.push_back(model);
-                PrimitivePtr aggregate(new BVH(primitives, 1, "equal_count"));
-                instance = 
-                    PrimitivePtr(new InstancedPrimitive(toWorld, aggregate));
-            } else {
-                instance = 
-                    PrimitivePtr(new InstancedPrimitive(toWorld, model)); 
-            }
+            string materialName = type + "_" + name + "_material";
+            sceneCache->addMaterial(materialName, mtl);
+            modelParams.setString("material", materialName);
+            const AreaLight* areaLight = static_cast<AreaLight*>(light);
+            sceneCache->addAreaLight(name, areaLight);
+            modelParams.setString("area_light", name);
+            const Primitive* model(mPrimitiveFactory->create("model",
+                modelParams, *sceneCache));
+
+            string modelName = type + "_" + name + "_model";
+            sceneCache->addPrimitive(modelName, model);
+            lightParams.setString("model" , modelName);
+            const Primitive* instance(mPrimitiveFactory->create("instance",
+                lightParams, *sceneCache));
             sceneCache->addInstance(instance);
-        } else {
-            light = mLightFactory->create(type, lightParams,
-                *sceneCache);
         }
-        sceneCache->addLight(light);
     }
 
     ScenePtr SceneLoader::load(const string& filename, 

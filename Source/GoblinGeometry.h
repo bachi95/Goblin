@@ -84,7 +84,7 @@ namespace Goblin {
 
     class Geometry;
     typedef boost::shared_ptr<Geometry> GeometryPtr;
-    typedef std::vector<GeometryPtr> GeometryList;
+    typedef std::vector<const Geometry*> GeometryList;
 
     class Geometry {
     public:
@@ -101,14 +101,16 @@ namespace Goblin {
         // pdf with respect to solid angle from p and extanded by this geometry
         virtual float pdf(const Vector3& p, const Vector3& wi) const; 
         virtual float area() const = 0;
-        virtual BBox getObjectBound() = 0;
-        virtual void refine(GeometryList& refinedGeometries);
+        virtual BBox getObjectBound() const = 0;
+        virtual void refine(GeometryList& refinedGeometries) const;
 
-        const size_t getVertexNum() const;
-        const size_t getFaceNum() const;
-        const Vertex* getVertexPtr(size_t index = 0) const;
-        const TriangleIndex* getFacePtr(size_t index = 0) const;
+        virtual size_t getVertexNum() const = 0;
+        virtual size_t getFaceNum() const = 0;
+        virtual const Vertex* getVertexPtr(size_t index = 0) const = 0;
+        virtual const TriangleIndex* getFacePtr(size_t index = 0) const = 0;
         const size_t getId() const;
+
+        static void clearGeometryCache();
 
     public:
         typedef std::vector<Vertex> VertexList;
@@ -116,10 +118,8 @@ namespace Goblin {
 
     protected:
         static size_t nextGeometryId;
+        static std::map<size_t, Geometry*> geometryCache;
         size_t mGeometryId;
-
-        VertexList mVertices;
-        TriangleList mTriangles;
     };
 
     inline void Geometry::init() {}
@@ -133,25 +133,17 @@ namespace Goblin {
         throw std::exception();
     }
 
-    inline void Geometry::refine(GeometryList& refinedGeometries) {
+    inline void Geometry::refine(GeometryList& refinedGeometries) const {
         std::cerr << "unimplemented Geometry::refine" << std::endl;
         throw std::exception();
     }
 
-    inline const size_t Geometry::getVertexNum() const { 
-        return mVertices.size();
-    }
-
-    inline const size_t Geometry::getFaceNum() const {
-        return mTriangles.size();
-    }
-
-    inline const Vertex* Geometry::getVertexPtr(size_t index) const {
-        return &mVertices[index];
-    }
-
-    inline const TriangleIndex* Geometry::getFacePtr(size_t index) const {
-        return &mTriangles[index];
+    inline void Geometry::clearGeometryCache() {
+        std::map<size_t, Geometry*>::iterator it;
+        for(it = geometryCache.begin(); it != geometryCache.end(); ++it) {
+            delete it->second;
+        }
+        geometryCache.clear();
     }
 }
 

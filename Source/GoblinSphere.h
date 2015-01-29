@@ -14,8 +14,12 @@ namespace Goblin {
             Fragment* fragment) const;
         Vector3 sample(float u1, float u2, Vector3* normal) const;
         float area() const;
-        BBox getObjectBound();
+        BBox getObjectBound() const;
 
+        size_t getVertexNum() const;
+        size_t getFaceNum() const;
+        const Vertex* getVertexPtr(size_t index) const;
+        const TriangleIndex* getFacePtr(size_t index) const;
     private:
         void buildStacks();
 
@@ -23,10 +27,29 @@ namespace Goblin {
         float mRadius;
         size_t mNumSlices;
         size_t mNumStacks;
+
+        VertexList mVertices;
+        TriangleList mTriangles;
     };
 
     inline float Sphere::area() const {
         return 4.0f * PI * mRadius * mRadius;
+    }
+
+    inline size_t Sphere::getVertexNum() const { 
+        return mVertices.size();
+    }
+
+    inline size_t Sphere::getFaceNum() const {
+        return mTriangles.size();
+    }
+
+    inline const Vertex* Sphere::getVertexPtr(size_t index) const {
+        return &mVertices[index];
+    }
+
+    inline const TriangleIndex* Sphere::getFacePtr(size_t index) const {
+        return &mTriangles[index];
     }
 
 
