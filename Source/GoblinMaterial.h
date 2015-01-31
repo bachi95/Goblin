@@ -74,7 +74,7 @@ namespace Goblin {
         static void convertFromDiffuse(const Color& Kd, 
             const Color& diffuseMeanFreePath, float A, 
             Color* absorb, Color* scatterPrime);
-        static float reducedAlbedo(float alphaPrime, float A);
+        static float diffuseReflectance(float alphaPrime, float A);
     private:
         ColorTexturePtr mAbsorb;
         ColorTexturePtr mScatterPrime;

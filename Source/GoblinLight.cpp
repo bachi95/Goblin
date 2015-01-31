@@ -578,9 +578,16 @@ namespace Goblin {
         const SceneCache& sceneCache) const {
         Color radiance = params.getColor("radiance");
         Vector3 position = params.getVector3("position");
-        Vector4 v = params.getVector4("orientation", 
-            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        Quaternion orientation;
+        if(params.hasVector3("euler")) {
+            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
+            orientation = Quaternion(Vector3::UnitZ, radians(xyz.z)) * 
+                Quaternion(Vector3::UnitY, radians(xyz.y)) *
+                Quaternion(Vector3::UnitX, radians(xyz.x));
+        } else {
+            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+            orientation = Quaternion(q[0], q[1], q[2], q[3]);
+        }
         Vector3 scale = params.getVector3("scale", 
             Vector3(1.0f, 1.0f, 1.0f));
         string geoName = params.getString("geometry");
@@ -600,9 +607,16 @@ namespace Goblin {
         string filename = params.getString("file");
         string filePath = sceneCache.resolvePath(filename);
         Color filter = params.getColor("filter");
-        Vector4 v = params.getVector4("orientation", 
-            Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        Quaternion orientation(v[0], v[1], v[2], v[3]);
+        Quaternion orientation;
+        if(params.hasVector3("euler")) {
+            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
+            orientation = Quaternion(Vector3::UnitZ, radians(xyz.z)) * 
+                Quaternion(Vector3::UnitY, radians(xyz.y)) *
+                Quaternion(Vector3::UnitX, radians(xyz.x));
+        } else {
+            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+            orientation = Quaternion(q[0], q[1], q[2], q[3]);
+        }
         int samplePerPixel = params.getInt("sample_per_pixel");
         return new ImageBasedLight(filePath, filter, orientation, 
             samplePerPixel);

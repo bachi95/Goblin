@@ -182,15 +182,15 @@ namespace Goblin {
         // RGB channel
         for(int i = 0; i < 3; ++i) {
             // use few binary search iterations to approximate alpha prime
-            // since there is no easy way to inverse reducedAlbedo method
+            // since there is no easy way to inverse diffuseReflectance method
             // directly...
             float alphaLow = 0.0f;
             float alphaHigh = 1.0f;
-            float rdLow = reducedAlbedo(alphaLow, A);
-            float rdHigh = reducedAlbedo(alphaHigh, A);
+            float rdLow = diffuseReflectance(alphaLow, A);
+            float rdHigh = diffuseReflectance(alphaHigh, A);
             for(int j = 0; j < 16; ++j) {
                 float alphaMid =  0.5f * (alphaLow + alphaHigh);                
-                float rdMid = reducedAlbedo(alphaMid, A);
+                float rdMid = diffuseReflectance(alphaMid, A);
                 if(rdMid > diffuse[i]) {
                     alphaHigh = alphaMid;
                     rdHigh = rdMid;
@@ -209,7 +209,7 @@ namespace Goblin {
         *absorb = Color(sigmaA[0], sigmaA[1], sigmaA[2]);
     }
 
-    float BSSRDF::reducedAlbedo(float alphaPrime, float A) {
+    float BSSRDF::diffuseReflectance(float alphaPrime, float A) {
         float sqrtTerm = sqrt(3.0f * (1.0f - alphaPrime));
         return 0.5f * alphaPrime * 
             (1.0f + exp(-(4.0f / 3.0f) * A * sqrtTerm)) *
