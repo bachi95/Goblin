@@ -50,6 +50,8 @@ namespace Goblin {
     class Vector2;
     class Vector3;
     class Camera;
+    class ParamSet;
+    class Quaternion;
     class Scene;
     typedef boost::shared_ptr<Camera> CameraPtr;
     typedef boost::shared_ptr<Scene> ScenePtr;
@@ -138,6 +140,8 @@ namespace Goblin {
     // utils that let you form a local coordinate with feed in random axis,
     // ex: form a local coordinate based on surface normal vector
     void coordinateAxises(const Vector3& a1, Vector3* a2, Vector3* a3);
+
+    Quaternion getQuaternion(const ParamSet& params);
 
     // utils for quadratic equation, solution stored in t1 and t2
     // if it return true

@@ -161,6 +161,8 @@ namespace Goblin {
         // camera
         mCameraFactory->registerCreator("perspective", 
             new PerspectiveCameraCreator);
+        mCameraFactory->registerCreator("orthographic", 
+            new OrthographicCameraCreator);
         mCameraFactory->setDefault("perspective");
         // volume
         mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
@@ -374,6 +376,7 @@ namespace Goblin {
         PropertyTree pt;
         path scenePath(filename);
         if(!exists(scenePath) || !pt.read(filename)) {
+            cerr << "error reading scene file: " << filename << endl;
             return scene;
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));

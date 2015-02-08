@@ -1,6 +1,8 @@
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
 #include "GoblinColor.h"
+#include "GoblinQuaternion.h"
+#include "GoblinParamSet.h"
 
 #include <ctime>
 #include <limits>
@@ -86,6 +88,19 @@ namespace Goblin {
             *a2 = Vector3(0.0f, -a1.z * invLen, a1.y * invLen);
         }
         *a3 = cross(a1, *a2);
+    }
+
+    Quaternion getQuaternion(const ParamSet& params) {
+        Quaternion result;
+        if(params.hasVector3("euler")) {
+            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
+            string order = params.getString("rotation_order", "xyz");
+            result = eulerToQuaternion(xyz, order);
+        } else {
+            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
+            result = Quaternion(q[0], q[1], q[2], q[3]);
+        }
+        return result;
     }
 
     bool quadratic(float A, float B, float C, float* t1, float* t2) {

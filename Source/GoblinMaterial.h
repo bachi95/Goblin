@@ -109,13 +109,21 @@ namespace Goblin {
         return mEta;
     }
 
+    struct BumpShaders {
+        BumpShaders(const FloatTexturePtr& bump = FloatTexturePtr(), 
+            const ColorTexturePtr& normal = ColorTexturePtr()):
+            bumpMap(bump), normalMap(normal) {}
+        void evaluate(Fragment* fragment) const;
+        FloatTexturePtr bumpMap;
+        ColorTexturePtr normalMap;
+    };
 
     // This serves the purpose of what GPU shader usually do
     // perturb the geometry info(position, normal, tangent....)
     // calculate the bsdf value, hold the texture reference...etc
     class Material {
     public:
-        Material(const FloatTexturePtr& bump = FloatTexturePtr());
+        Material(const BumpShaders& bumpShaders);
         virtual ~Material() {}
 
         void perturb(Fragment* fragment) const;
@@ -158,10 +166,11 @@ namespace Goblin {
             Vector3* wi, float etai, float etat) const;
 
     private:
-        FloatTexturePtr mBumpMap;
+        BumpShaders mBumpShaders;
     };
 
-    inline Material::Material(const FloatTexturePtr& bump): mBumpMap(bump) {}
+    inline Material::Material(const BumpShaders& bumpShaders):
+        mBumpShaders(bumpShaders) {}
 
     inline bool Material::matchType(BSDFType type, BSDFType toMatch) const {
         return (type & toMatch) == toMatch;
@@ -179,8 +188,8 @@ namespace Goblin {
 
     class LambertMaterial : public Material {
     public:
-        LambertMaterial(const ColorTexturePtr& Kd,
-            const FloatTexturePtr& bump = FloatTexturePtr());
+        LambertMaterial(const ColorTexturePtr& Kd, 
+            const BumpShaders& bumpShaders = BumpShaders());
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
 
@@ -196,17 +205,16 @@ namespace Goblin {
     };
 
     inline LambertMaterial::LambertMaterial(const ColorTexturePtr& Kd,
-        const FloatTexturePtr& bump):
-        Material(bump), mDiffuseFactor(Kd) {}
+        const BumpShaders& bumpShaders):
+        Material(bumpShaders), mDiffuseFactor(Kd) {}
 
     class BlinnMaterial : public Material {
     public:
         BlinnMaterial(const ColorTexturePtr& Kg, const FloatTexturePtr& exp, 
-            float index, const FloatTexturePtr& bump = FloatTexturePtr());
-
+            float index, const BumpShaders& bumpShaders = BumpShaders());
         BlinnMaterial(const ColorTexturePtr& Kg, const FloatTexturePtr& exp, 
             float index, float absorption, 
-            const FloatTexturePtr& bump = FloatTexturePtr());
+            const BumpShaders& bumpShaders = BumpShaders());
 
         Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type) const;
@@ -227,21 +235,21 @@ namespace Goblin {
 
     inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
         const FloatTexturePtr& exponent, float index, 
-        const FloatTexturePtr& bump): 
-        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        const BumpShaders& bumpShaders):
+        Material(bumpShaders), mGlossyFactor(Kg), mExp(exponent), mEta(index),
         mFresnelType(Dieletric) {}
 
     inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
         const FloatTexturePtr& exponent, float index, float absorption,
-        const FloatTexturePtr& bump): 
-        Material(bump), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        const BumpShaders& bumpShaders):
+        Material(bumpShaders), mGlossyFactor(Kg), mExp(exponent), mEta(index),
         mK(absorption), mFresnelType(Conductor) {}
 
 
     class TransparentMaterial : public Material {
     public:
         TransparentMaterial(const ColorTexturePtr& Kr, const ColorTexturePtr& Kt, 
-            float index, const FloatTexturePtr& bump = FloatTexturePtr());
+            float index, const BumpShaders& bumpShaders = BumpShaders());
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
 
@@ -261,8 +269,8 @@ namespace Goblin {
     };
 
     inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
-        const ColorTexturePtr& Kt, float index, const FloatTexturePtr& bump):
-        Material(bump), mReflectFactor(Kr), mRefractFactor(Kt), 
+        const ColorTexturePtr& Kt, float index, const BumpShaders& bumpShaders):
+        Material(bumpShaders), mReflectFactor(Kr), mRefractFactor(Kt), 
         mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection
@@ -282,7 +290,7 @@ namespace Goblin {
     class MirrorMaterial : public Material {
     public:
         MirrorMaterial(const ColorTexturePtr& Kr, float index, 
-            float absorption, const FloatTexturePtr& bump = FloatTexturePtr());
+            float absorption, const BumpShaders& bumpShaders = BumpShaders());
         Color bsdf(const Fragment& fragment, const Vector3& wo,
             const Vector3& wi, BSDFType type) const;
 
@@ -301,8 +309,9 @@ namespace Goblin {
     };
 
     inline MirrorMaterial::MirrorMaterial(const ColorTexturePtr& Kr, 
-        float index, float absorption, const FloatTexturePtr& bump):
-        Material(bump), mReflectFactor(Kr), mEta(index), mK(absorption) {}
+        float index, float absorption, const BumpShaders& bumpShaders):
+        Material(bumpShaders), mReflectFactor(Kr), 
+        mEta(index), mK(absorption) {}
 
     inline Color MirrorMaterial::bsdf(const Fragment& fragment, 
         const Vector3& wo, const Vector3& wi, BSDFType type) const {
@@ -320,13 +329,13 @@ namespace Goblin {
         SubsurfaceMaterial(const ColorTexturePtr& absorb, 
             const ColorTexturePtr& scatterPrime, 
             const ColorTexturePtr& Kr, float eta, float g,
-            const FloatTexturePtr& bump = FloatTexturePtr());
+            const BumpShaders& bumpShaders = BumpShaders());
 
         SubsurfaceMaterial(const Color& Kd, 
             const Color& diffuseMeanFreePath, 
             const ColorTexturePtr& Kr, 
             float eta, float g,
-            const FloatTexturePtr& bump = FloatTexturePtr());
+            const BumpShaders& bumpShaders = BumpShaders());
 
         ~SubsurfaceMaterial();
 
@@ -351,15 +360,15 @@ namespace Goblin {
     inline SubsurfaceMaterial::SubsurfaceMaterial(
         const ColorTexturePtr& absorb, const ColorTexturePtr& scatterPrime, 
         const ColorTexturePtr& Kr, float eta, float g, 
-        const FloatTexturePtr& bump): 
-        Material(bump), mReflectFactor(Kr), mEta(eta) {
+        const BumpShaders& bumpShaders): 
+        Material(bumpShaders), mReflectFactor(Kr), mEta(eta) {
         mBSSRDF = new BSSRDF(absorb, scatterPrime, eta, g);
     }
 
     inline SubsurfaceMaterial::SubsurfaceMaterial(const Color& Kd, 
         const Color& diffuseMeanFreePath, const ColorTexturePtr& Kr, 
-        float eta, float g, const FloatTexturePtr& bump):
-        Material(bump), mReflectFactor(Kr), mEta(eta) {
+        float eta, float g, const BumpShaders& bumpShaders):
+        Material(bumpShaders), mReflectFactor(Kr), mEta(eta) {
         mBSSRDF = new BSSRDF(Kd, diffuseMeanFreePath, eta, g);
     }
 

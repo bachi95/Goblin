@@ -216,41 +216,30 @@ namespace Goblin {
             exp(-sqrtTerm);
     }
 
-    BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
-        const Fragment& fragment, BSDFType type) const {
-        const Vector3& n = fragment.getNormal();
-        if(dot(n, wo) * dot(n, wi) > 0.0f) {
-            type = BSDFType(type & ~BSDFTransmission);
-        } else {
-            type = BSDFType(type & ~BSDFReflection);
-        }
-        return type;
-    }
-
-    void Material::perturb(Fragment* fragment) const {
+    void BumpShaders::evaluate(Fragment* fragment) const {
         /*
          * let bumpmap(u, v) be D
          * p'(u, v) = p(u, v) + n(u, v) * D
          * we want to get the new normal n'(u, v),
          * which is cross(dp'du, dp'dv)
-         * dp'du = d(p'(u, v)/du = dp/du + dD/du * n d+ dn/du * D
+         * dp'du = d(p'(u, v)/du = dp/du + dD/du * n + dn/du * D
          * we have dp/du already
          * dn/du * D can be ignored when D is small
          * dD/du can be approximated by forward differential approximation
          * (D(u + du, v) - D(u, v)) / du
          * dp'dv is calculated with the same way above
          */
-        if(mBumpMap) {
+        if(bumpMap) {
             Vector3 p = fragment->getPosition();
             Vector3 n = fragment->getNormal();
             Vector2 uv = fragment->getUV();
-            float bumpD = mBumpMap->lookup(*fragment);
+            float bumpD = bumpMap->lookup(*fragment);
 
             float du = 0.002f;
             Fragment fdu = *fragment; 
             fdu.setPosition(p + du * fragment->getDPDU());
             fdu.setUV(uv + Vector2(du, 0.0f));
-            float bumpDdu = mBumpMap->lookup(fdu);
+            float bumpDdu = bumpMap->lookup(fdu);
             Vector3 bumpDPDU = fragment->getDPDU() + 
                 (bumpDdu - bumpD) / du * n;
 
@@ -258,7 +247,7 @@ namespace Goblin {
             Fragment fdv = *fragment;
             fdv.setPosition(p + dv * fragment->getDPDV());
             fdv.setUV(uv + Vector2(0.0f, dv));
-            float bumpDdv = mBumpMap->lookup(fdv);
+            float bumpDdv = bumpMap->lookup(fdv);
             Vector3 bumpDPDV = fragment->getDPDV() +
                 (bumpDdv - bumpD) / dv * n;
 
@@ -272,7 +261,38 @@ namespace Goblin {
             fragment->setDPDU(bumpDPDU);
             fragment->setDPDV(bumpDPDV);
         }
+
+        if(normalMap) {
+            // Decode normal map
+            Color colorN = normalMap->lookup(*fragment);
+            Vector3 nShade(colorN.r, colorN.g, colorN.b); 
+            nShade = 2.0f * nShade - Vector3(1.0f, 1.0f, 1.0f);
+            // mathmatically it should be shadeToWorld.inverse().transpose()
+            // but since getWorldToShade guarantee to deliver orthognal matrix
+            // it's fine that we directly use its transpose to transform normal
+            Matrix3 shadeToWorld = fragment->getWorldToShade().transpose();
+            Vector3 nWorld = normalize(shadeToWorld * nShade);
+            if(dot(nWorld, fragment->getNormal()) < 0.0f) {
+                nWorld *= -1.0f;
+            }
+            fragment->setNormal(nWorld);
+        }
         return;
+    }
+
+    BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
+        const Fragment& fragment, BSDFType type) const {
+        const Vector3& n = fragment.getNormal();
+        if(dot(n, wo) * dot(n, wi) > 0.0f) {
+            type = BSDFType(type & ~BSDFTransmission);
+        } else {
+            type = BSDFType(type & ~BSDFReflection);
+        }
+        return type;
+    }
+
+    void Material::perturb(Fragment* fragment) const {
+        mBumpShaders.evaluate(fragment);
     }
 
     bool Material::sameHemisphere(const Fragment& fragment,
@@ -709,15 +729,24 @@ namespace Goblin {
         return f;
     }
 
+    static BumpShaders getBumpShaders(const ParamSet& params,
+        const SceneCache& sceneCache) {
+        FloatTexturePtr bump;
+        if(params.hasString("bumpmap")) {
+            bump = sceneCache.getFloatTexture(params.getString("bumpmap"));
+        }
+        ColorTexturePtr normal;
+        if(params.hasString("normalmap")) {
+            normal = sceneCache.getColorTexture(params.getString("normalmap"));
+        }
+        return BumpShaders(bump, normal);
+    }
+
     Material* LambertMaterialCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
         string textureName = params.getString("Kd");
         ColorTexturePtr Kd = sceneCache.getColorTexture(textureName);
-        FloatTexturePtr bump;
-        string bumpmapName = params.getString("bumpmap");
-        if(bumpmapName != "") {
-            bump = sceneCache.getFloatTexture(bumpmapName);
-        }
+        BumpShaders bump = getBumpShaders(params, sceneCache);
         return new LambertMaterial(Kd, bump);
     }
 
@@ -732,11 +761,7 @@ namespace Goblin {
             sceneCache.getFloatTexture(expTextureName);
         float index = params.getFloat("index", 1.5f);
         float absorption = params.getFloat("k", -1.0f);
-        FloatTexturePtr bump;
-        string bumpmapName = params.getString("bumpmap");
-        if(bumpmapName != "") {
-            bump = sceneCache.getFloatTexture(bumpmapName);
-        }
+        BumpShaders bump = getBumpShaders(params, sceneCache);
         Material* material;
         if(absorption > 0.0f) {
             // conductor
@@ -758,29 +783,20 @@ namespace Goblin {
         ColorTexturePtr Kt = 
             sceneCache.getColorTexture(refractTextureName);
         float index = params.getFloat("index", 1.5f);
-        FloatTexturePtr bump;
-        string bumpmapName = params.getString("bumpmap");
-        if(bumpmapName != "") {
-            bump = sceneCache.getFloatTexture(bumpmapName);
-        }   
+        BumpShaders bump = getBumpShaders(params, sceneCache);
         return new TransparentMaterial(Kr, Kt, index, bump);
     }
 
 
     Material* MirrorMaterialCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
-
         string reflectTextureName = params.getString("Kr");
         ColorTexturePtr Kr = 
             sceneCache.getColorTexture(reflectTextureName);
         // use aluminium by default
         float index = params.getFloat("index", 0.8f);
         float absorption = params.getFloat("k", 6.0f);
-        FloatTexturePtr bump;
-        string bumpmapName = params.getString("bumpmap");
-        if(bumpmapName != "") {
-            bump = sceneCache.getFloatTexture(bumpmapName);
-        }
+        BumpShaders bump = getBumpShaders(params, sceneCache);
         return new MirrorMaterial(Kr, index, absorption, bump);
     }
 
@@ -790,19 +806,14 @@ namespace Goblin {
 
         float index = params.getFloat("index", 1.5f);
         float g = params.getFloat("g", 0.0f);
-        string reflectTextureName = params.getString("Kr");
         ColorTexturePtr Kr;
-        if(reflectTextureName != "") {
-            Kr = sceneCache.getColorTexture(reflectTextureName);
+        if(params.hasString("Kr")) {
+            Kr = sceneCache.getColorTexture(params.getString("Kr"));
         } else {
             Kr = ColorTexturePtr(
                 new ConstantTexture<Color>(Color(1.0f)));
         }
-        FloatTexturePtr bump;
-        string bumpmapName = params.getString("bumpmap");
-        if(bumpmapName != "") {
-            bump = sceneCache.getFloatTexture(bumpmapName);
-        }
+        BumpShaders bump = getBumpShaders(params, sceneCache);
 
         if(params.hasColor("Kd")) {
             Color Kd = params.getColor("Kd");
@@ -812,21 +823,24 @@ namespace Goblin {
                 index, g, bump);
 
         } else {
-            string absorbMapName = params.getString("absorb");
             ColorTexturePtr absorb;
-            if(absorbMapName != "") {
-                absorb = sceneCache.getColorTexture(absorbMapName);
+            if(params.hasString("absorb")) {
+                absorb = sceneCache.getColorTexture(
+                    params.getString("absorb"));
             } else {
+                Color marbleAbsorb(0.0021f, 0.0041f, 0.0071f);
                 absorb = ColorTexturePtr(
-                    new ConstantTexture<Color>(Color(0.0021f, 0.0041f, 0.0071f)));
+                    new ConstantTexture<Color>(marbleAbsorb));
             }
-            string scatterMapName = params.getString("scatter_prime");
+
             ColorTexturePtr scatterPrime;
-            if(scatterMapName != "") {
-                scatterPrime = sceneCache.getColorTexture(scatterMapName);
+            if(params.hasString("scatter_prime")) {
+                scatterPrime = sceneCache.getColorTexture(
+                    params.getString("scatter_prime"));
             } else {
+                Color marbleScatterp(2.19f, 2.62f, 3.00f);
                 scatterPrime = ColorTexturePtr(
-                    new ConstantTexture<Color>(Color(2.19f, 2.62f, 3.00f)));
+                    new ConstantTexture<Color>(marbleScatterp));
             }
 
             return new SubsurfaceMaterial(absorb, scatterPrime, Kr, 

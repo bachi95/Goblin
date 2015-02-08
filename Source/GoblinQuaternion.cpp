@@ -1,6 +1,6 @@
 #include "GoblinQuaternion.h"
 #include "GoblinMatrix.h"
-
+#include "GoblinUtils.h"
 #include <cmath>
 namespace Goblin {
 
@@ -96,6 +96,52 @@ namespace Goblin {
         Quaternion result(q);
         result.v *= inv;
         result.w *= inv;
+        return result;
+    }
+
+    Quaternion eulerToQuaternion(const Vector3& xyzAngle,
+        const std::string& rotationOrder) {
+        RotationOrder order = XYZ;
+        if(rotationOrder == "xyz") {
+            order = XYZ;
+        } else if(rotationOrder == "xzy") {
+            order = XZY;
+        } else if(rotationOrder == "yxz") {
+            order = YXZ;
+        } else if(rotationOrder == "yzx") {
+            order = YZX;
+        } else if(rotationOrder == "zxy") {
+            order = ZXY;
+        } else if(rotationOrder == "zyx") {
+            order = ZYX;
+        } else {
+            cerr << "unrecognized rotation order " << rotationOrder <<
+                ", fall back to XYZ" << endl;
+        }
+        return eulerToQuaternion(xyzAngle, order);
+    }
+
+    Quaternion eulerToQuaternion(const Vector3& xyzAngle, RotationOrder order) {
+        Quaternion qx(Vector3::UnitX, radians(xyzAngle.x));
+        Quaternion qy(Vector3::UnitY, radians(xyzAngle.y));
+        Quaternion qz(Vector3::UnitZ, radians(xyzAngle.z));
+        Quaternion result;
+        if(order == XYZ) {
+            result = qz * qy * qx;
+        } else if(order == XZY) {
+            result = qy * qz * qx;
+        } else if(order == YXZ) {
+            result = qz * qx * qy;
+        } else if(order == YZX) {
+            result = qx * qz * qy;
+        } else if(order == ZXY) {
+            result = qy * qx * qz;
+        } else if(order == ZYX) {
+            result = qx * qy * qz;
+        } else {
+            cerr << "unrecognized rotation order, fall back to XYZ" << endl;
+            result = qz * qy * qx;
+        }
         return result;
     }
 

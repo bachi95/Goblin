@@ -123,16 +123,7 @@ namespace Goblin {
         const Primitive* primitive = sceneCache.getPrimitive(primitiveName);
 
         Vector3 position = params.getVector3("position");
-        Quaternion orientation;
-        if(params.hasVector3("euler")) {
-            Vector3 xyz = params.getVector3("euler", Vector3::Zero);
-            orientation = Quaternion(Vector3::UnitZ, radians(xyz.z)) * 
-                Quaternion(Vector3::UnitY, radians(xyz.y)) *
-                Quaternion(Vector3::UnitX, radians(xyz.x));
-        } else {
-            Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
-            orientation = Quaternion(q[0], q[1], q[2], q[3]);
-        }
+        Quaternion orientation = getQuaternion(params);
         Vector3 scale = params.getVector3("scale");
         Transform toWorld(position, orientation, scale);
         Primitive* instance = new InstancedPrimitive(toWorld, primitive);

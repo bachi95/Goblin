@@ -3,9 +3,21 @@
 
 #include "GoblinVector.h"
 
+#include <string>
+
 namespace Goblin {
     class Matrix3;
     class Matrix4;
+
+    enum RotationOrder {
+        XYZ,
+        XZY,
+        YXZ,
+        YZX,
+        ZXY,
+        ZYX
+    };
+
     class Quaternion {
     public:
         static const Quaternion Identity;
@@ -57,6 +69,11 @@ namespace Goblin {
     }
 
     Quaternion normalize(const Quaternion& q);
+
+    Quaternion eulerToQuaternion(const Vector3& xyzAngle, 
+        const std::string& rotationOrder);
+
+    Quaternion eulerToQuaternion(const Vector3& xyzAngle, RotationOrder order);
 
     std::ostream& operator<<(std::ostream& os, const Quaternion& q);
 }
