@@ -468,6 +468,16 @@ namespace Goblin {
         return Vector3(x, y, z);
     }
 
+    Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax,
+        const Vector3& x, const Vector3& y, const Vector3& z) {
+        float cosTheta = 1.0f - u1 + u1 * cosThetaMax;
+        float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+        float phi = TWO_PI * u2;
+        return x * sinTheta * cos(phi) + 
+            y * sinTheta * sin(phi) +
+            z * cosTheta;
+    }
+
     /*
      * uniform means integrate pdf(w) over sphere = 1
      * pdf(w) = 1 / 4pi, since dw = sin(theta)d(theta)d(phi)

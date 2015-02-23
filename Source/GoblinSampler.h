@@ -142,6 +142,9 @@ namespace Goblin {
 
     Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax);
 
+    Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax,
+        const Vector3& x, const Vector3& y, const Vector3& z);
+
     Vector3 uniformSampleSphere(float u1, float u2);
 
     Vector3 uniformSampleHemisphere(float u1, float u2);

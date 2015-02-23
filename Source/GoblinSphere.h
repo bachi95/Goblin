@@ -13,6 +13,9 @@ namespace Goblin {
         bool intersect(const Ray& ray, float* epsilon, 
             Fragment* fragment) const;
         Vector3 sample(float u1, float u2, Vector3* normal) const;
+        Vector3 sample(const Vector3& p, float u1, float u2, 
+            Vector3* normal) const;
+        float pdf(const Vector3& p, const Vector3& wi) const; 
         float area() const;
         BBox getObjectBound() const;
 

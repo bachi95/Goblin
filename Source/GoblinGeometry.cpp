@@ -61,6 +61,9 @@ namespace Goblin {
          */
         float pdf = squaredLength(p - fragment.getPosition()) / 
             (area() * absdot(-wi, fragment.getNormal()));
+        if(isinf(pdf)) {
+            pdf = 0.0f;
+        }
         return pdf;
     }
 

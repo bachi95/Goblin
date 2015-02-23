@@ -113,6 +113,49 @@ Vector3 Sphere::sample(float u1, float u2, Vector3* normal) const {
     return mRadius * (*normal);
 }
 
+Vector3 Sphere::sample(const Vector3& p, float u1, float u2, 
+    Vector3* normal) const {
+    float squaredRadius = mRadius * mRadius;
+    float squaredDistance = squaredLength(p);
+    if(squaredDistance - squaredRadius< 1e-4f) {
+        return sample(u1, u2, normal);
+    }
+    // local space, center is at (0, 0, 0)
+    Vector3 zAxis = normalize(-p);
+    Vector3 xAxis, yAxis;
+    coordinateAxises(zAxis, &xAxis, &yAxis);
+    
+    float sinThetaMax2 = squaredRadius / squaredDistance;
+    float cosThetaMax = sqrt(max(0.0f, 1.0f - sinThetaMax2));
+
+    Ray ray(p, 
+        uniformSampleCone(u1, u2, cosThetaMax, xAxis, yAxis, zAxis), 1e-3f);
+    Fragment fragment; 
+    float epsilon;
+    Vector3 pHit;
+    if(intersect(ray, &epsilon, &fragment)) {
+        pHit = fragment.getPosition();
+    } else {
+        // ray scratches over sphere's surface
+        pHit = ray(sqrt(squaredDistance) * cosThetaMax); 
+    }
+    *normal = normalize(pHit);
+    return pHit;
+}
+
+float Sphere::pdf(const Vector3& p, const Vector3& wi) const {
+    // inside the sphere, return uniform weight
+    float squaredDistance = squaredLength(p);
+    float squaredRadius = mRadius * mRadius;
+    if(squaredDistance - squaredRadius< 1e-4f) {
+        return Geometry::pdf(p, wi);
+    }
+    // outside the sphere, use cone pdf 
+    float sinThetaMax2 = squaredRadius / squaredDistance;
+    float cosThetaMax = sqrt(max(0.0f, 1.0f - sinThetaMax2));
+    return uniformConePdf(cosThetaMax);
+}
+
 BBox Sphere::getObjectBound() const {
     return BBox(Vector3(mRadius, mRadius, mRadius), 
         Vector3(-mRadius, -mRadius, -mRadius));
