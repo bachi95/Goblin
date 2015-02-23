@@ -29,6 +29,11 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h> 
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <float.h>
+#define isinf(f) (!_finite((f)))
+#endif
+
 #ifndef INFINITY
 #define INFINITY FLT_MAX
 #endif // INFINITY
