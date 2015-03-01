@@ -95,7 +95,7 @@ namespace Goblin {
         }
     }
 
-    Renderer::Renderer(const RenderSetting& setting):
+    Renderer::Renderer(const ParamSet& setting):
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mPickLightSampleIndexes(NULL),
         mPowerDistribution(NULL), 
@@ -125,7 +125,7 @@ namespace Goblin {
         Film* film = camera->getFilm();
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
-        int samplePerPixel = mSetting.samplePerPixel;
+        int samplePerPixel = mSetting.getInt("sample_per_pixel", 1);
 
         vector<ImageTile*>& tiles = film->getTiles();
         vector<Task*> renderTasks;
@@ -135,7 +135,7 @@ namespace Goblin {
                 camera, scene, sampleQuota, samplePerPixel, &progress));
         }
         
-        ThreadPool threadPool(mSetting.threadNum);
+        ThreadPool threadPool(mSetting.getInt("thread_num", 1));
         threadPool.enqueue(renderTasks);
         threadPool.waitForAll();
         //clean up
@@ -458,7 +458,7 @@ namespace Goblin {
                 }
             }
         }
-
+        
         // MIS for bsdf part
         BSDFType sampledType;
         Color f = material->sampleBSDF(fragment, wo, bs, 

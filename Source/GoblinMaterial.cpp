@@ -14,18 +14,24 @@ namespace Goblin {
 
     BSDFSampleIndex::BSDFSampleIndex(SampleQuota* sampleQuota, 
         int requestNum) {
+        SampleIndex oneDIndex = sampleQuota->requestOneDQuota(requestNum);
         SampleIndex twoDIndex = sampleQuota->requestTwoDQuota(requestNum);
-        samplesNum = twoDIndex.sampleNum;
+        // theoretically this two should be the same...
+        // this is just a paranoid double check
+        samplesNum = min(oneDIndex.sampleNum, twoDIndex.sampleNum);
+        componentIndex = oneDIndex.offset;
         directionIndex = twoDIndex.offset;
     }
 
     BSDFSample::BSDFSample(const RNG& rng) {
+        uComponent = rng.randomFloat();
         uDirection[0] = rng.randomFloat();
         uDirection[1] = rng.randomFloat();
     }
 
     BSDFSample::BSDFSample(const Sample& sample,
         const BSDFSampleIndex& index, uint32_t n) {
+        uComponent = sample.u1D[index.componentIndex][n];
         uDirection[0] = sample.u2D[index.directionIndex][2 * n];
         uDirection[1] = sample.u2D[index.directionIndex][2 * n + 1];
     }
@@ -280,7 +286,7 @@ namespace Goblin {
         return;
     }
 
-    BSDFType Material::getType(const Vector3& wo, const Vector3& wi,
+    BSDFType Material::getSampleType(const Vector3& wo, const Vector3& wi,
         const Fragment& fragment, BSDFType type) const {
         const Vector3& n = fragment.getNormal();
         if(dot(n, wo) * dot(n, wi) > 0.0f) {
@@ -426,8 +432,8 @@ namespace Goblin {
     Color LambertMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
         const Vector3& wi, BSDFType type) const {
         Color f(Color::Black);
-        type = getType(wo, wi, fragment, type);
-        if(matchType(type, BSDFType(BSDFDiffuse | BSDFReflection))) {
+        type = getSampleType(wo, wi, fragment, type);
+        if(matchType(type, getType())) {
             f += mDiffuseFactor->lookup(fragment) * INV_PI;
         }
         return f;
@@ -436,7 +442,7 @@ namespace Goblin {
     Color LambertMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
         float* pdf, BSDFType type, BSDFType* sampledType) const {
-        BSDFType materialType = BSDFType(BSDFDiffuse | BSDFReflection);
+        BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
             return Color::Black;
@@ -460,7 +466,7 @@ namespace Goblin {
     float LambertMaterial::pdf(const Fragment& fragment,
         const Vector3& wo, const Vector3& wi,
         BSDFType type) const {
-        if(!matchType(type, BSDFType(BSDFDiffuse | BSDFReflection))) {
+        if(!matchType(type, getType())) {
             return 0.0f;
         }
         return sameHemisphere(fragment, wo, wi)? 
@@ -527,8 +533,8 @@ namespace Goblin {
      */
     Color BlinnMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
         const Vector3& wi, BSDFType type) const {
-        type = getType(wo, wi, fragment, type);
-        if(matchType(type, BSDFType(BSDFGlossy | BSDFReflection))) {
+        type = getSampleType(wo, wi, fragment, type);
+        if(matchType(type, getType())) {
             Vector3 n = fragment.getNormal();
             float cosi = absdot(n, wi);
             float coso = absdot(n, wo);
@@ -582,7 +588,7 @@ namespace Goblin {
     Color BlinnMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
         float* pdf, BSDFType type, BSDFType* sampledType) const {
-        BSDFType materialType = BSDFType(BSDFGlossy | BSDFReflection);
+        BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
             return Color::Black;
@@ -616,7 +622,7 @@ namespace Goblin {
     float BlinnMaterial::pdf(const Fragment& fragment,
         const Vector3& wo, const Vector3& wi,
         BSDFType type) const {
-        if(!matchType(type, BSDFType(BSDFGlossy | BSDFReflection))) {
+        if(!matchType(type, getType())) {
             return 0.0f;
         }
 
@@ -668,7 +674,7 @@ namespace Goblin {
             // use fresnel factor to do importance sampling
             float fresnel = reflect * absdot(wReflect, fragment.getNormal());
             float reflectChance = fresnel;
-            bool doReflect = bsdfSample.uDirection[0] < reflectChance;
+            bool doReflect = bsdfSample.uComponent < reflectChance;
 
             if(doReflect) {
                 f = mReflectFactor->lookup(fragment) * reflect;
@@ -696,7 +702,7 @@ namespace Goblin {
     Color MirrorMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
         float* pdf, BSDFType type, BSDFType* sampledType) const {
-        BSDFType materialType = BSDFType(BSDFSpecular | BSDFReflection);
+        BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
             return Color::Black;
@@ -714,7 +720,7 @@ namespace Goblin {
     Color SubsurfaceMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
         float* pdf, BSDFType type, BSDFType* sampledType) const {
-        BSDFType materialType = BSDFType(BSDFSpecular | BSDFReflection);
+        BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
             return Color::Black;
@@ -727,6 +733,71 @@ namespace Goblin {
             *sampledType = materialType;
         }
         return f;
+    }
+
+    Color MaskMaterial::bsdf(const Fragment& fragment, const Vector3& wo,
+        const Vector3& wi, BSDFType type) const {
+        if(type == BSDFNull) {
+            return Color::Black;
+        } else {
+            float alpha = mAlphaMask->lookup(fragment);
+            return alpha * mMaskedMaterial->bsdf(fragment, wo, wi, type);
+        }
+    }
+
+    Color MaskMaterial::sampleBSDF(const Fragment& fragment, 
+        const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi,
+        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        bool sampleAlpha = matchType(type, BSDFNull);
+        // if this request ask us to evaluate masked material
+        bool sampleMasked = type != BSDFNull;
+
+        Color result(0.0f);
+        *pdf = 0.0f;
+        float alpha = mAlphaMask->lookup(fragment);
+        if(sampleMasked && sampleAlpha) {
+            float maskedProb = alpha;
+            if(bsdfSample.uComponent < maskedProb) {
+                result = alpha * mMaskedMaterial->sampleBSDF(fragment, wo, 
+                    bsdfSample, wi, pdf, type, sampledType);
+                *pdf *= maskedProb;
+            } else {
+                result = (1.0f - alpha) * mTransparentColor->lookup(fragment);
+                *wi = -normalize(wo);
+                *pdf = 1.0f - maskedProb;
+                if(sampledType) {
+                    *sampledType = BSDFNull;
+                }
+            }
+        } else if(sampleMasked) {
+            result = alpha * mMaskedMaterial->sampleBSDF(fragment, wo, 
+                bsdfSample, wi, pdf, type, sampledType);
+        } else if(sampleAlpha) {
+            result = (1.0f - alpha) * mTransparentColor->lookup(fragment);
+            *wi = -normalize(wo);
+            *pdf = 1.0f;
+            if(sampledType) {
+                *sampledType = BSDFNull;
+            }
+        }
+        return result;
+    }
+
+    float MaskMaterial::pdf(const Fragment& fragment, const Vector3& wo, 
+        const Vector3& wi, BSDFType type) const {
+        bool sampleAlpha = matchType(type, BSDFNull);
+        // if this request ask us to evaluate masked material
+        bool sampleMasked = type != BSDFNull;
+        float pdf = 0.0f;
+        if(sampleMasked && sampleAlpha) {
+            pdf = mAlphaMask->lookup(fragment) * 
+                mMaskedMaterial->pdf(fragment, wo, wi, type);
+        } else if(sampleMasked) {
+            pdf = mMaskedMaterial->pdf(fragment, wo, wi, type);
+        } else if(sampleAlpha) {
+            pdf = 0.0f;
+        }
+        return pdf;
     }
 
     static BumpShaders getBumpShaders(const ParamSet& params,
@@ -846,6 +917,29 @@ namespace Goblin {
             return new SubsurfaceMaterial(absorb, scatterPrime, Kr, 
                 index, g, bump);
         }
+    }
 
+
+    Material* MaskMaterialCreator::create(const ParamSet& params,
+        const SceneCache& sceneCache) const {
+        FloatTexturePtr alphaMask;
+        if(params.hasString("alpha")) {
+            alphaMask = sceneCache.getFloatTexture(params.getString("alpha"));
+        } else {
+            alphaMask = FloatTexturePtr(new ConstantTexture<float>(1.0f));
+            cout << "no feed in alpha" << endl;
+        }
+        ColorTexturePtr transparentColor;
+        if(params.hasString("transparent_color")) {
+            transparentColor= sceneCache.getColorTexture(
+                params.getString("transparent_color"));
+        } else {
+            transparentColor = ColorTexturePtr(
+                new ConstantTexture<Color>(Color::White));
+            cout << "no feed in tr color" << endl;
+        }
+        MaterialPtr material = 
+            sceneCache.getMaterial(params.getString("material"));
+        return new MaskMaterial(alphaMask, transparentColor, material);
     }
 }

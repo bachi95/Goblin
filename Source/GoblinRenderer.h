@@ -17,21 +17,6 @@ namespace Goblin {
     struct BSDFSampleIndex;
     struct LightSampleIndex;
 
-    enum RenderMethod {
-        Whitted,
-        PathTracing
-    };
-
-    struct RenderSetting {
-        RenderSetting(): samplePerPixel(1), threadNum(1), maxRayDepth(5), 
-            bssrdfSampleNum(4), method(PathTracing) {}
-        int samplePerPixel;
-        int threadNum;
-        int maxRayDepth;
-        int bssrdfSampleNum;
-        RenderMethod method;
-    };
-
     class WorldDebugData {
     public:
         WorldDebugData() {}
@@ -93,7 +78,7 @@ namespace Goblin {
 
     class Renderer {
     public:
-        Renderer(const RenderSetting& setting);
+        Renderer(const ParamSet& setting);
         virtual ~Renderer();
         void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const Ray& ray, 
@@ -165,7 +150,7 @@ namespace Goblin {
         SampleIndex* mPickLightSampleIndexes;
         BSSRDFSampleIndex mBSSRDFSampleIndex;
         CDF1D* mPowerDistribution;
-        RenderSetting mSetting;
+        ParamSet mSetting;
     };
 }
 

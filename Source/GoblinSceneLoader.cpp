@@ -99,36 +99,23 @@ namespace Goblin {
     }
 
     static void parseRenderSetting(const PropertyTree& pt, 
-        RenderSetting* setting) {
-        int samplePerPixel = 1;
-        int maxRayDepth = 5;
-        int threadNum = boost::thread::hardware_concurrency();
-        int bssrdfSampleNum = 4;
-
+        ParamSet* setting) {
         PropertyTree settingPt;
         pt.getChild("render_setting", &settingPt);
-        ParamSet settingParams;
-        parseParamSet(settingPt, &settingParams);
-        samplePerPixel = 
-            settingParams.getInt("sample_per_pixel", samplePerPixel);
-        maxRayDepth = settingParams.getInt("max_ray_depth", maxRayDepth);
-        threadNum = min(settingParams.getInt("thread_num", threadNum), 
-            threadNum);
-        bssrdfSampleNum = settingParams.getInt("bssrdf_sample_num", 
-            bssrdfSampleNum);
-        string method = settingParams.getString("render_method", 
-            "path_tracing");
-        setting->samplePerPixel = samplePerPixel;
-        setting->maxRayDepth = maxRayDepth;
-        setting->threadNum = threadNum;
-        setting->bssrdfSampleNum = bssrdfSampleNum;
-        setting->method = method == "path_tracing" ? PathTracing : Whitted;
-        cout << "\nrender setting" << endl;
-        cout << "-sample per pixel " << samplePerPixel << endl;
-        cout << "-thread num " << threadNum << endl;
-        cout << "-max ray depth " << maxRayDepth << endl;
-        cout << "-bssrdf sample num " << bssrdfSampleNum << endl;
-        cout << "-render method " << method << endl;
+        parseParamSet(settingPt, setting);
+        if(!setting->hasInt("sample_per_pixel")) {
+            setting->setInt("sample_per_pixel", 1);
+        }
+        if(!setting->hasInt("max_ray_depth")) {
+            setting->setInt("max_ray_depth", 5);
+        }
+        if(!setting->hasInt("thread_num")) {
+            setting->setInt("thread_num", 
+                boost::thread::hardware_concurrency());
+        }
+        if(!setting->hasInt("bssrdf_sample_num")) {
+            setting->setInt("bssrdf_sample_num", 4);
+        }
     }
 
     SceneLoader::SceneLoader():
@@ -198,6 +185,8 @@ namespace Goblin {
             new MirrorMaterialCreator);
         mMaterialFactory->registerCreator("subsurface",
             new SubsurfaceMaterialCreator);
+        mMaterialFactory->registerCreator("mask",
+            new MaskMaterialCreator);
         mMaterialFactory->setDefault("lambert");
         // primitive
         mPrimitiveFactory->registerCreator("model", 
@@ -371,7 +360,7 @@ namespace Goblin {
     }
 
     ScenePtr SceneLoader::load(const string& filename, 
-        RenderSetting* setting) {
+        ParamSet* setting) {
         ScenePtr scene;
         PropertyTree pt;
         path scenePath(filename);
@@ -410,7 +399,7 @@ namespace Goblin {
         pt.getChildren("light", &lightNodes);
         for(size_t i = 0; i < lightNodes.size(); ++i) {
             parseLight(lightNodes[i].second, &sceneCache, 
-                setting->samplePerPixel);
+                setting->getInt("sample_per_pixel"));
         }
 
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),

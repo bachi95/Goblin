@@ -174,7 +174,7 @@ namespace Goblin {
         return (tMin < ray.maxt) && (tMax > ray.mint);
     }
 
-    bool BVH::intersect(const Ray& ray) const {
+    bool BVH::intersect(const Ray& ray, IntersectFilter f) const {
         if(mBVHNodes.size() == 0) {
             return false;
         }
@@ -192,7 +192,7 @@ namespace Goblin {
                 if(node.primitivesNum > 0) {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;
-                        if(mRefinedPrimitives[index]->intersect(ray)) {
+                        if(mRefinedPrimitives[index]->intersect(ray, f)) {
                             return true;
                         }
                     }
@@ -220,7 +220,7 @@ namespace Goblin {
     }
 
     bool BVH::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) const {
+        Intersection* intersection, IntersectFilter f) const {
         if(mBVHNodes.size() == 0) {
             return false;
         }
@@ -240,7 +240,7 @@ namespace Goblin {
                     for(uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;
                         if(mRefinedPrimitives[index]->intersect(ray, 
-                            epsilon, intersection)) {
+                            epsilon, intersection, f)) {
                             hit = true;
                         }
                     }
@@ -266,6 +266,7 @@ namespace Goblin {
         }
         return hit;
     }
+
 
     void BVH::buildDataSummary(
             const std::vector<BVHPrimitiveInfo> &buildData) const {

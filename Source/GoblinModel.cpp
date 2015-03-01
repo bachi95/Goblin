@@ -12,12 +12,18 @@ namespace Goblin {
         const AreaLight* areaLight): 
         mGeometry(geometry), mMaterial(material), mAreaLight(areaLight) {}
 
-    bool Model::intersect(const Ray& ray) const {
+    bool Model::intersect(const Ray& ray, IntersectFilter f) const {
+        if(f != NULL && !f(this, ray)) {
+            return false;
+        }
         return mGeometry->intersect(ray);
     }
 
     bool Model::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) const {
+        Intersection* intersection, IntersectFilter f) const {
+        if(f != NULL && !f(this, ray)) {
+            return false;
+        }
         bool hit = mGeometry->intersect(ray, epsilon, 
             &intersection->fragment);
         if(hit) {

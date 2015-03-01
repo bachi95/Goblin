@@ -8,9 +8,10 @@ namespace Goblin {
     class Model : public Primitive {
     public:
         bool intersectable() const;
-        bool intersect(const Ray& ray) const;
+        bool intersect(const Ray& ray, IntersectFilter f) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) const;
+            Intersection* intersection, IntersectFilter f) const;
+
         BBox getAABB() const;
         const MaterialPtr& getMaterial() const;
         const AreaLight* getAreaLight() const;

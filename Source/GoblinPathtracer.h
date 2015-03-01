@@ -6,16 +6,20 @@
 namespace Goblin {
     class PathTracer : public Renderer {
     public:
-        PathTracer(const RenderSetting& setting);
+        PathTracer(const ParamSet& setting);
         ~PathTracer();
         Color Li(const ScenePtr& scene, const Ray& ray,
             const Sample& sample, const RNG& rng,
             WorldDebugData* debugData) const;
     private:
+        // evaluate index-matched material attenuation along the ray
+        Color evalAttenuation(const ScenePtr& scene, const Ray& ray,
+            const BSDFSample& bs) const;
+        
         void querySampleQuota(const ScenePtr& scene,
             SampleQuota* sampleQuota);
     private:
-        BSDFSampleIndex* mPathSampleIndexes;
+        int mMaxRayDepth;
     };
 }
 

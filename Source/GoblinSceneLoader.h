@@ -13,8 +13,6 @@
 
 namespace Goblin {
     using boost::scoped_ptr;
-
-    struct RenderSetting;
     class PropertyTree;
     class ParamSet;
 
@@ -22,7 +20,7 @@ namespace Goblin {
     public:
         SceneLoader();
         ScenePtr load(const std::string& filename, 
-            RenderSetting* setting);
+            ParamSet* setting);
     private:
         Filter* parseFilter(const PropertyTree& pt);
         Film* parseFilm(const PropertyTree& pt, Filter* filter);

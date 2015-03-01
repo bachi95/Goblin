@@ -21,8 +21,10 @@ namespace Goblin {
         BSDFDiffuse = 1 << 2,
         BSDFGlossy = 1 << 3,
         BSDFSpecular = 1 << 4,
+        // alpha masking material
+        BSDFNull = 1 << 5,
         BSDFAll = BSDFReflection | BSDFTransmission |
-            BSDFDiffuse | BSDFGlossy | BSDFSpecular
+            BSDFDiffuse | BSDFGlossy | BSDFSpecular | BSDFNull
     };
 
     enum FresnelType {
@@ -40,6 +42,7 @@ namespace Goblin {
         BSDFSampleIndex() {}
         BSDFSampleIndex(SampleQuota* sampleQuota, int requestNum);
         uint32_t samplesNum;
+        uint32_t componentIndex;
         uint32_t directionIndex;
     };
 
@@ -47,6 +50,7 @@ namespace Goblin {
         BSDFSample(const RNG& rng);
         BSDFSample(const Sample& sample,
             const BSDFSampleIndex& index, uint32_t n);
+        float uComponent;
         float uDirection[2];
     };
 
@@ -123,10 +127,10 @@ namespace Goblin {
     // calculate the bsdf value, hold the texture reference...etc
     class Material {
     public:
-        Material(const BumpShaders& bumpShaders);
+        Material(BSDFType type, const BumpShaders& bumpShaders);
         virtual ~Material() {}
 
-        void perturb(Fragment* fragment) const;
+        virtual void perturb(Fragment* fragment) const;
 
         virtual Color bsdf(const Fragment& fragment, const Vector3& wo, 
             const Vector3& wi, BSDFType type = BSDFAll) const = 0;
@@ -142,6 +146,8 @@ namespace Goblin {
 
         virtual const BSSRDF* getBSSRDF() const;
 
+        BSDFType getType() const;
+
         // material util to get the fresnel factor
         static float fresnelDieletric(float cosi, float etai, float etat);
 
@@ -150,7 +156,7 @@ namespace Goblin {
     protected:
         bool matchType(BSDFType type, BSDFType toMatch) const;
 
-        BSDFType getType(const Vector3& wo, const Vector3& wi, 
+        BSDFType getSampleType(const Vector3& wo, const Vector3& wi, 
             const Fragment& f, BSDFType type) const;
 
         bool sameHemisphere(const Fragment& fragment,
@@ -165,12 +171,15 @@ namespace Goblin {
         float specularRefract(const Fragment& fragment, const Vector3& wo,
             Vector3* wi, float etai, float etat) const;
 
+    protected:
+        BSDFType mType;
+
     private:
         BumpShaders mBumpShaders;
     };
 
-    inline Material::Material(const BumpShaders& bumpShaders):
-        mBumpShaders(bumpShaders) {}
+    inline Material::Material(BSDFType type, const BumpShaders& bumpShaders):
+        mType(type), mBumpShaders(bumpShaders) {}
 
     inline bool Material::matchType(BSDFType type, BSDFType toMatch) const {
         return (type & toMatch) == toMatch;
@@ -178,6 +187,10 @@ namespace Goblin {
 
     inline const BSSRDF* Material::getBSSRDF() const {
         return NULL;
+    }
+
+    inline BSDFType Material::getType() const {
+        return mType;
     }
 
     Vector3 specularRefract(const Vector3& wo, const Vector3& n, 
@@ -206,7 +219,8 @@ namespace Goblin {
 
     inline LambertMaterial::LambertMaterial(const ColorTexturePtr& Kd,
         const BumpShaders& bumpShaders):
-        Material(bumpShaders), mDiffuseFactor(Kd) {}
+        Material(BSDFType(BSDFDiffuse | BSDFReflection), bumpShaders), 
+        mDiffuseFactor(Kd) {}
 
     class BlinnMaterial : public Material {
     public:
@@ -236,13 +250,15 @@ namespace Goblin {
     inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
         const FloatTexturePtr& exponent, float index, 
         const BumpShaders& bumpShaders):
-        Material(bumpShaders), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        Material(BSDFType(BSDFGlossy | BSDFReflection), bumpShaders), 
+        mGlossyFactor(Kg), mExp(exponent), mEta(index),
         mFresnelType(Dieletric) {}
 
     inline BlinnMaterial::BlinnMaterial(const ColorTexturePtr& Kg, 
         const FloatTexturePtr& exponent, float index, float absorption,
         const BumpShaders& bumpShaders):
-        Material(bumpShaders), mGlossyFactor(Kg), mExp(exponent), mEta(index),
+        Material(BSDFType(BSDFGlossy | BSDFReflection), bumpShaders), 
+        mGlossyFactor(Kg), mExp(exponent), mEta(index),
         mK(absorption), mFresnelType(Conductor) {}
 
 
@@ -270,7 +286,8 @@ namespace Goblin {
 
     inline TransparentMaterial::TransparentMaterial(const ColorTexturePtr& Kr,
         const ColorTexturePtr& Kt, float index, const BumpShaders& bumpShaders):
-        Material(bumpShaders), mReflectFactor(Kr), mRefractFactor(Kt), 
+        Material(BSDFType(BSDFSpecular | BSDFReflection | BSDFTransmission),
+        bumpShaders), mReflectFactor(Kr), mRefractFactor(Kt), 
         mEtai(1.0f), mEtat(index) {}
 
     // there is only one possible wi for specified wo, specular reflection
@@ -310,8 +327,8 @@ namespace Goblin {
 
     inline MirrorMaterial::MirrorMaterial(const ColorTexturePtr& Kr, 
         float index, float absorption, const BumpShaders& bumpShaders):
-        Material(bumpShaders), mReflectFactor(Kr), 
-        mEta(index), mK(absorption) {}
+        Material(BSDFType(BSDFSpecular | BSDFReflection), bumpShaders), 
+        mReflectFactor(Kr), mEta(index), mK(absorption) {}
 
     inline Color MirrorMaterial::bsdf(const Fragment& fragment, 
         const Vector3& wo, const Vector3& wi, BSDFType type) const {
@@ -361,14 +378,14 @@ namespace Goblin {
         const ColorTexturePtr& absorb, const ColorTexturePtr& scatterPrime, 
         const ColorTexturePtr& Kr, float eta, float g, 
         const BumpShaders& bumpShaders): 
-        Material(bumpShaders), mReflectFactor(Kr), mEta(eta) {
+        Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta) {
         mBSSRDF = new BSSRDF(absorb, scatterPrime, eta, g);
     }
 
     inline SubsurfaceMaterial::SubsurfaceMaterial(const Color& Kd, 
         const Color& diffuseMeanFreePath, const ColorTexturePtr& Kr, 
         float eta, float g, const BumpShaders& bumpShaders):
-        Material(bumpShaders), mReflectFactor(Kr), mEta(eta) {
+        Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta) {
         mBSSRDF = new BSSRDF(Kd, diffuseMeanFreePath, eta, g);
     }
 
@@ -392,6 +409,45 @@ namespace Goblin {
     inline const BSSRDF* SubsurfaceMaterial::getBSSRDF() const {
         return mBSSRDF;
     }
+
+
+    class MaskMaterial : public Material {
+    public:
+        MaskMaterial(const FloatTexturePtr& alphaMask, 
+            const ColorTexturePtr& transparentColor,
+            const MaterialPtr& maskedMaterial);
+
+        Color bsdf(const Fragment& fragment, const Vector3& wo,
+            const Vector3& wi, BSDFType type) const;
+
+        Color sampleBSDF(const Fragment& fragment, 
+            const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
+            float* pdf, BSDFType type, BSDFType* sampledType) const;
+
+        float pdf(const Fragment& fragment, 
+            const Vector3& wo, const Vector3& wi, BSDFType type) const;
+
+        // override the bump mapping since it's the masked material
+        // should do the job
+        void perturb(Fragment* fragment) const;
+    private:
+        FloatTexturePtr mAlphaMask;
+        ColorTexturePtr mTransparentColor;
+        MaterialPtr mMaskedMaterial;
+    };
+
+    inline MaskMaterial::MaskMaterial(const FloatTexturePtr& alphaMask, 
+        const ColorTexturePtr& transparentColor,
+        const MaterialPtr& maskedMaterial): 
+        Material(BSDFType(maskedMaterial->getType() | BSDFNull), 
+        BumpShaders()), mAlphaMask(alphaMask), 
+        mTransparentColor(transparentColor),
+        mMaskedMaterial(maskedMaterial) {}
+
+    inline void MaskMaterial::perturb(Fragment* fragment) const {
+        mMaskedMaterial->perturb(fragment);
+    }
+
 
     class LambertMaterialCreator : public 
         Creator<Material , const ParamSet&, const SceneCache&> {
@@ -424,7 +480,16 @@ namespace Goblin {
             const SceneCache& sceneCache) const;
     };
 
+
     class SubsurfaceMaterialCreator : public 
+        Creator<Material , const ParamSet&, const SceneCache&> {
+    public:
+        Material* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class MaskMaterialCreator : public 
         Creator<Material , const ParamSet&, const SceneCache&> {
     public:
         Material* create(const ParamSet& params, 

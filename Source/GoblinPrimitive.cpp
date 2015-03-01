@@ -27,21 +27,23 @@ namespace Goblin {
         const Vector3& scale, const Primitive* primitive):
         mToWorld(position, orientation, scale), mPrimitive(primitive) {}
 
-    bool InstancedPrimitive::intersect(const Ray& ray) const {
+    bool InstancedPrimitive::intersect(const Ray& ray, 
+        IntersectFilter f) const {
         Ray r = mToWorld.invertRay(ray);
-        return mPrimitive->intersect(r);
+        return mPrimitive->intersect(r, f);
     }
 
     bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) const {
+        Intersection* intersection, IntersectFilter f) const {
         Ray r = mToWorld.invertRay(ray);
-        bool hit = mPrimitive->intersect(r, epsilon, intersection);
+        bool hit = mPrimitive->intersect(r, epsilon, intersection, f);
         if(hit) {
             intersection->fragment.transform(mToWorld);
             ray.maxt = r.maxt;
         }
         return hit;
     }
+
 
     BBox InstancedPrimitive::getAABB() const {
         return mToWorld.onBBox(mPrimitive->getAABB());
@@ -91,9 +93,12 @@ namespace Goblin {
         }
     }
 
-    bool Aggregate::intersect(const Ray& ray) const {
+    bool Aggregate::intersect(const Ray& ray, IntersectFilter f) const {
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-            if(mRefinedPrimitives[i]->intersect(ray)) {
+            if(f != NULL && !f(mRefinedPrimitives[i], ray)) {
+                return false;
+            }
+            if(mRefinedPrimitives[i]->intersect(ray, f)) {
                 return true;
             }
         }
@@ -101,16 +106,20 @@ namespace Goblin {
     }
 
     bool Aggregate::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) const {
+        Intersection* intersection, IntersectFilter f) const {
         bool hit = false;
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            if(f != NULL && !f(mRefinedPrimitives[i], ray)) {
+                return false;
+            }
             if(mRefinedPrimitives[i]->intersect(ray, epsilon, 
-                intersection)) {
+                intersection, f)) {
                 hit = true;
             }
         }
         return hit;
     }
+
 
     BBox Aggregate::getAABB() const {
         return mAABB;

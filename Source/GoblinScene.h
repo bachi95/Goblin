@@ -24,9 +24,11 @@ namespace Goblin {
         const vector<Light*>& getLights() const;
         const VolumeRegion* getVolumeRegion() const;
         void collectRenderList(RenderList& rList);
-        bool intersect(const Ray& ray);
+        bool intersect(const Ray& ray, IntersectFilter f = NULL) const;
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* itersection);
+            Intersection* intersection, IntersectFilter f = NULL) const;
+
+        Color evalEnvironmentLight(const Ray& ray) const;
         void getBoundingSphere(Vector3* center, float* radius) const;
     private:
         PrimitivePtr mAggregate;
@@ -36,7 +38,6 @@ namespace Goblin {
     };
 
     using boost::filesystem::path;
-    struct RenderSetting;
 
     class SceneCache {
     public:

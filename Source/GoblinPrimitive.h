@@ -52,14 +52,18 @@ namespace Goblin {
         const Primitive* primitive;
     };
 
+    typedef bool (*IntersectFilter)(const Primitive* p, const Ray& ray);
+
     class Primitive {
     public:
         virtual ~Primitive() {}
         virtual bool intersectable() const;
         virtual void refine(PrimitiveList& refinedPrimitives) const;
-        virtual bool intersect(const Ray& ray) const = 0;
+        virtual bool intersect(const Ray& ray, 
+            IntersectFilter f = NULL) const = 0; 
         virtual bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) const = 0;
+            Intersection* intersection, IntersectFilter f = NULL) const = 0;
+
         virtual BBox getAABB() const = 0;
         virtual const MaterialPtr& getMaterial() const;
         virtual const AreaLight* getAreaLight() const;
@@ -100,9 +104,10 @@ namespace Goblin {
 
     class InstancedPrimitive : public Primitive{
     public:
-        bool intersect(const Ray& ray) const;
+        bool intersect(const Ray& ray, IntersectFilter f) const; 
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) const;
+            Intersection* intersection, IntersectFilter f) const;
+
         BBox getAABB() const;
         const Vector3& getPosition() const;
         const Quaternion& getOrientation() const;
@@ -126,9 +131,10 @@ namespace Goblin {
     class Aggregate : public Primitive {
     public:
         Aggregate(const PrimitiveList& primitives);
-        bool intersect(const Ray& ray) const;
+        bool intersect(const Ray& ray, IntersectFilter f) const; 
         bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection) const;
+            Intersection* intersection, IntersectFilter f) const;
+
         void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) const;
         BBox getAABB() const;

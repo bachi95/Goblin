@@ -2,29 +2,64 @@
 #include "GoblinRay.h"
 
 namespace Goblin {
+    static bool isOpaque(const Primitive* p, const Ray& r) {
+        return !(p->getMaterial()->getType() & BSDFNull);
+    }
+    
+    static bool notOpaque(const Primitive* p, const Ray& r) {
+        return !isOpaque(p, r);
+    }
 
-    PathTracer::PathTracer(const RenderSetting& setting): 
-        Renderer(setting), mPathSampleIndexes(NULL) {}
+    PathTracer::PathTracer(const ParamSet& setting): 
+        Renderer(setting) {
+        mMaxRayDepth = setting.getInt("max_ray_depth", 5);
+    }
 
-    PathTracer::~PathTracer() {
-        if(mPathSampleIndexes != NULL) {
-            delete [] mPathSampleIndexes;
-            mPathSampleIndexes = NULL;
+    PathTracer::~PathTracer() {}
+
+    Color PathTracer::evalAttenuation(const ScenePtr& scene, 
+        const Ray& ray, const BSDFSample& bs) const {
+        Color throughput(1.0f);
+        float maxt = ray.maxt;
+        Ray currentRay(ray);
+        float epsilon;
+        Intersection intersection;
+        while(true) {
+            if(!scene->intersect(currentRay,
+                &epsilon, &intersection, &notOpaque)) {
+                break;
+            } 
+            const MaterialPtr& material = intersection.getMaterial();
+            const Fragment& fragment = intersection.fragment;
+            Vector3 wo = -currentRay.d;   
+            Vector3 wi;
+            float pdf;
+            throughput *= material->sampleBSDF(fragment, wo, bs, 
+                &wi, &pdf, BSDFNull);
+            if(throughput == Color::Black) {
+                break;
+            }
+            // move forward ray's start point
+            currentRay.mint = currentRay.maxt + epsilon;
+            currentRay.maxt = maxt;
         }
+        return throughput;
     }
 
     Color PathTracer::Li(const ScenePtr& scene, const Ray& ray, 
         const Sample& sample, const RNG& rng,
         WorldDebugData* debugData) const {
-        Color Li = Color::Black;
+        const vector<Light*>& lights = scene->getLights();
+        if(lights.size() == 0) {
+            return Color(0.0f);
+        }
+
+        Color Li(0.0f);
         float epsilon;
         Intersection intersection;
         if(!scene->intersect(ray, &epsilon, &intersection)) {
             // get image based lighting if ray didn't hit anything
-            const vector<Light*>& lights = scene->getLights();
-            for(size_t i = 0; i < lights.size(); ++i) {
-                Li += lights[i]->Le(ray);
-            }
+            Li += scene->evalEnvironmentLight(ray);
             return Li;
         }
         // if intersect an area light
@@ -35,48 +70,116 @@ namespace Goblin {
 
         Ray currentRay = ray;
         vector<Ray> debugRays;
-        Color throughput(1.0f, 1.0f, 1.0f);
-        for(int bounces = 0; bounces < mSetting.maxRayDepth; ++bounces) {
+        Color throughput(1.0f);
+        bool firstBounce = true;
+        for(int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
             LightSample ls(sample, mLightSampleIndexes[bounces], 0);
             BSDFSample bs(sample, mBSDFSampleIndexes[bounces], 0);
             float pickSample = 
                 sample.u1D[mPickLightSampleIndexes[bounces].offset][0];
-            Li += throughput * singleSampleLd(scene, 
-                currentRay, epsilon, intersection, sample,
-                ls, bs, pickSample);
 
+            float pickLightPdf;
+            int lightIndex = mPowerDistribution->sampleDiscrete(pickSample, 
+                &pickLightPdf);
+            const Light* light = lights[lightIndex];
+
+            // direct lighting
+            Color Ld(0.0f);
             const MaterialPtr& material = 
                 intersection.primitive->getMaterial();
+            const Fragment& fragment = intersection.fragment;
             Vector3 wo = -currentRay.d;
             Vector3 wi;
-            float pdf;
-            BSDFSample ps(sample, mPathSampleIndexes[bounces], 0); 
-            Color f =  material->sampleBSDF(intersection.fragment, wo, ps,
-                &wi, &pdf);
-            if( f == Color::Black || pdf == 0.0f) {
+            Vector3 p = fragment.getPosition();
+            Vector3 n = fragment.getNormal();
+            float lightPdf, bsdfPdf;
+            Ray shadowRay;
+            // lighting sample
+            Color L = light->sampleL(p, epsilon, ls, &wi, &lightPdf, &shadowRay);
+            if(L != Color::Black && lightPdf > 0.0f) {
+                Color f = material->bsdf(fragment, wo, wi);
+                if(f != Color::Black && 
+                    !scene->intersect(shadowRay, &isOpaque)) {
+                    // calculate the transmittance alone index-matched material
+                    Color tr = evalAttenuation(scene, shadowRay,
+                        BSDFSample(rng)); 
+                    // we don't do MIS for delta distribution light
+                    // since there is only one sample need for it
+                    if(light->isDelta()) {
+                        return f * tr * L * absdot(n, wi) / lightPdf;
+                    } else {
+                        bsdfPdf = material->pdf(fragment, wo, wi);
+                        float lWeight = powerHeuristic(1, lightPdf, 1, bsdfPdf);
+                        Ld += f * tr * L * absdot(n, wi) * lWeight / lightPdf;
+                    }
+                }
+            }
+            // bsdf sample
+            BSDFType sampledType;
+            Color f = material->sampleBSDF(fragment, wo, bs, 
+                &wi, &bsdfPdf, BSDFAll, &sampledType);
+            if(f != Color::Black && bsdfPdf > 0.0f) {
+                // this sample steps on an index-matched BSDF
+                // should punch through it with attenuation accounted
+                if(sampledType == BSDFNull) {
+                    throughput *= (f / bsdfPdf);
+                    currentRay = Ray(p, wi, epsilon);
+                    if(!scene->intersect(currentRay, &epsilon, &intersection)) {
+                        // primary ray need to evaluate image based lighting
+                        // in this case
+                        if(firstBounce) {
+                            Li += throughput * 
+                                scene->evalEnvironmentLight(currentRay);
+                        }
+                        break;
+                    }
+                    continue;
+                }
+
+                // calculate the misWeight if it's not a specular material
+                // otherwise we should got 0 Ld from light sample earlier,
+                // and count on this part for all the Ld contribution
+                float fWeight = 1.0f;
+                if(!(sampledType & BSDFSpecular)) {
+                    lightPdf = light->pdf(p, wi);
+                    fWeight = powerHeuristic(1, bsdfPdf, 1, lightPdf);
+                }
+                Intersection lightIntersect;
+                float lightEpsilon;
+                Ray r(p, wi, epsilon);
+                if(scene->intersect(r, &lightEpsilon, 
+                    &lightIntersect, &isOpaque)) {
+                    Color tr = evalAttenuation(scene, r, BSDFSample(rng));
+                    if(lightIntersect.primitive->getAreaLight() == light) {
+                        Color Li = lightIntersect.Le(-wi);
+                        if(Li != Color::Black) {
+                            Ld += f * tr * Li * absdot(wi, n) * fWeight / bsdfPdf;
+                        }
+                    }
+                } else {
+                    // the radiance contribution from IBL
+                    Color tr = evalAttenuation(scene, r, BSDFSample(rng));
+                    Ld += f * tr * light->Le(r, bsdfPdf, sampledType) * 
+                        fWeight / bsdfPdf;
+                }
+            }
+            Li += throughput * Ld / pickLightPdf;
+
+            // indirect lighting
+            if( f == Color::Black || bsdfPdf == 0.0f) {
                 break;
             }
-            Vector3 p = intersection.fragment.getPosition();
-            Vector3 n = intersection.fragment.getNormal();
-            throughput *= f * absdot(wi, n) / pdf;
+            throughput *= f * absdot(wi, n) / bsdfPdf;
             currentRay = Ray(p, wi, epsilon);
-
             if(!scene->intersect(currentRay, &epsilon, &intersection)) {
                 break;
             }
-
-            debugRays.push_back(currentRay);
+            firstBounce = false;
+            //debugRays.push_back(currentRay);
         }
 
         if(debugData != NULL) {
             // feed in the interested debug ray/point for debug purpose
-            //if(debugRays.size() > 0) {
-            //    Vector3 delta = debugRays[0].o - Vector3(0, -2, 0);
-            //    if(squaredLength(delta) < 1e-4) {
-            //        debugRays[0].maxt = clamp(debugRays[0].maxt, 0.0f, 100.0f);
-            //        debugData->addRay(debugRays[0]);
-            //    }
-            //}
         }
 
         return Li;        
@@ -100,25 +203,19 @@ namespace Goblin {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
-        if(mPathSampleIndexes) {
-            delete [] mPathSampleIndexes;
-            mPathSampleIndexes = NULL;
-        }
 
-        int bounces = mSetting.maxRayDepth;
+        int bounces = mMaxRayDepth;
         mLightSampleIndexes = new LightSampleIndex[bounces];
         mBSDFSampleIndexes = new BSDFSampleIndex[bounces];
-        mPathSampleIndexes = new BSDFSampleIndex[bounces];
         mPickLightSampleIndexes = new SampleIndex[bounces];
         for(int i = 0; i < bounces; ++i) {
             mLightSampleIndexes[i] = LightSampleIndex(sampleQuota, 1);
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
-            mPathSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
             mPickLightSampleIndexes[i] = sampleQuota->requestOneDQuota(1);
         }
 
         mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
-            mSetting.bssrdfSampleNum);
+            mSetting.getInt("bssrdf_sample_num", 4));
         const vector<Light*>& lights = scene->getLights();
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {

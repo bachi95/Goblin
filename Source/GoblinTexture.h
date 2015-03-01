@@ -17,6 +17,14 @@ namespace Goblin {
         AddressBorder
     };
 
+    enum ImageChannel {
+        ChannelR,
+        ChannelG,
+        ChannelB,
+        ChannelA,
+        ChannelAll
+    };
+
     struct TextureCoordinate {
         Vector2 st;
     };
@@ -78,15 +86,19 @@ namespace Goblin {
     };
 
     struct TextureId {
-        TextureId(const string& f, float g): filename(f), gamma(g) {}
+        TextureId(const string& f, float g, ImageChannel c): 
+            filename(f), gamma(g), channel(c) {}
         string filename;
         float gamma;
+        ImageChannel channel;
         bool operator<(const TextureId &rhs) const;
     };
 
     inline bool TextureId::operator<(const TextureId & rhs) const {
         if(gamma != rhs.gamma) {
             return gamma < rhs.gamma;
+        } else if(channel != rhs.channel) {
+            return channel < rhs.channel;
         }
         return filename < rhs.filename;
     }
@@ -95,7 +107,8 @@ namespace Goblin {
     class ImageTexture : public Texture<T> {
     public:
         ImageTexture(const string& filename, TextureMapping* m, 
-            AddressMode address= AddressRepeat, float gamma = 1.0f);
+            AddressMode address= AddressRepeat, float gamma = 1.0f,
+            ImageChannel channel = ChannelAll);
         ~ImageTexture();
         T lookup(const Fragment& f) const;
         static void clearImageCache();
@@ -174,8 +187,9 @@ namespace Goblin {
     T* resizeImage(const T* srcBuffer, int srcWidth, int srcHeight, 
         int dstWidth, int dstHeight);
 
-    void gammaCorrect(const Color& in, float* out, float gamma);
-    void gammaCorrect(const Color& in, Color* out, float gamma);
+    template<typename T>
+    void convertTexel(const Color& in, T* out, float gamma, 
+        ImageChannel channel);
 
 }
 

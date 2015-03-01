@@ -44,18 +44,26 @@ namespace Goblin {
         return mVolumeRegion;
     }
 
-    bool Scene::intersect(const Ray& ray) {
-        return mAggregate->intersect(ray);
+    bool Scene::intersect(const Ray& ray, IntersectFilter f) const {
+        return mAggregate->intersect(ray, f);
     }
 
     bool Scene::intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection) {
-        bool isIntersect = mAggregate->intersect(ray, epsilon, intersection);
+        Intersection* intersection, IntersectFilter f) const {
+        bool isIntersect = mAggregate->intersect(ray, epsilon, intersection, f);
         if(isIntersect) {
             const MaterialPtr& material = intersection->getMaterial();
             material->perturb(&intersection->fragment);
         }
         return isIntersect;
+    }
+
+    Color Scene::evalEnvironmentLight(const Ray& ray) const {
+        Color Lenv(0.0f);
+        for(size_t i = 0; i < mLights.size(); ++i) {
+            Lenv += mLights[i]->Le(ray);
+        }
+        return Lenv;
     }
 
     void Scene::collectRenderList(RenderList& rList) {

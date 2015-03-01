@@ -3,8 +3,10 @@
 
 namespace Goblin {
 
-    WhittedRenderer::WhittedRenderer(const RenderSetting& setting): 
-        Renderer(setting) {}
+    WhittedRenderer::WhittedRenderer(const ParamSet& setting): 
+        Renderer(setting) {
+        mMaxRayDepth = setting.getInt("max_ray_depth", 5);
+    }
 
     WhittedRenderer::~WhittedRenderer() {}
 
@@ -26,7 +28,7 @@ namespace Goblin {
                 mLightSampleIndexes, mBSDFSampleIndexes,
                 BSDFType(BSDFAll & ~BSDFSpecular)); 
             // reflection and refraction
-            if(ray.depth < mSetting.maxRayDepth) {
+            if(ray.depth < mMaxRayDepth) {
                 Li += specularReflect(scene, ray, epsilon, intersection, 
                     sample, rng);
                 Li += specularRefract(scene, ray, epsilon, intersection,
@@ -34,11 +36,7 @@ namespace Goblin {
             }
         } else {
             // get image based lighting if ray didn't hit anything
-            const vector<Light*>& lights = scene->getLights();
-            for(size_t i = 0; i < lights.size(); ++i) {
-                Li += lights[i]->Le(ray);
-            }
-            return Li;
+            Li += scene->evalEnvironmentLight(ray);
         }
         return Li;        
     }
@@ -72,7 +70,7 @@ namespace Goblin {
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
         mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
-            mSetting.bssrdfSampleNum);
+            mSetting.getInt("bssrdf_sample_num", 4));
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {
             lightPowers.push_back(lights[i]->power(scene).luminance());

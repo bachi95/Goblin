@@ -81,9 +81,9 @@ namespace Goblin{
 
     template<typename T>
     ImageTexture<T>::ImageTexture(const string& filename, TextureMapping* m,
-        AddressMode address, float gamma): 
+        AddressMode address, float gamma, ImageChannel channel): 
         mMapping(m), mAddressMode(address) {
-        TextureId id(filename, gamma);
+        TextureId id(filename, gamma, channel);
         mImageBuffer = getImageBuffer(id);
     }
 
@@ -104,17 +104,6 @@ namespace Goblin{
         return mImageBuffer->lookup(s, t, mAddressMode);
     }
 
-    void gammaCorrect(const Color& in, float* out, float gamma) {
-        *out = pow(in.luminance(), gamma);
-    }
-
-    void gammaCorrect(const Color& in, Color* out, float gamma) {
-        (*out).r = gamma == 1.0f ? in.r : pow(in.r, gamma);
-        (*out).g = gamma == 1.0f ? in.g : pow(in.g, gamma);
-        (*out).b = gamma == 1.0f ? in.b : pow(in.b, gamma);
-        (*out).a = in.a;
-    }
-
     template<typename T>
     ImageBuffer<T>* ImageTexture<T>::getImageBuffer(const TextureId& id) {
         if(imageCache.find(id) != imageCache.end()) {
@@ -128,14 +117,14 @@ namespace Goblin{
                 id.filename << std::endl;
             texelBuffer = new T[1];
             T texel;
-            gammaCorrect(Color::Magenta, &texel, id.gamma);
+            convertTexel(Color::Magenta, &texel, id.gamma, id.channel);
             texelBuffer[0] = texel;
             width =  height = 1;
         } else {
             texelBuffer = new T[width * height];
-            // gamma correct it back to linear
             for(int i = 0; i < width * height; ++i) {
-                gammaCorrect(colorBuffer[i], &texelBuffer[i], id.gamma);
+                convertTexel(colorBuffer[i], &texelBuffer[i], 
+                    id.gamma, id.channel);
             }
             delete [] colorBuffer;
         }
@@ -266,16 +255,44 @@ namespace Goblin{
         return new ScaleTexture<float>(t, s);
     }
 
+    static void getImageTextureParams(const ParamSet& params,
+        const SceneCache& sceneCache,
+        string* filePath, float* gamma, AddressMode* addressMode,
+        ImageChannel* channel) {
+
+        string filename = params.getString("file");
+        *filePath = sceneCache.resolvePath(filename);
+        *gamma = params.getFloat("gamma", 1.0f);
+        string addressStr = params.getString("address", "repeat");
+        *addressMode = getAddressMode(params);
+        string channelStr = params.getString("channel", "All");
+        *channel = ChannelAll;
+        if(channelStr == "R") {
+            *channel = ChannelR;
+        } else if(channelStr == "G") {
+            *channel = ChannelG;
+        } else if(channelStr == "B") {
+            *channel = ChannelB;
+        } else if(channelStr == "A") {
+            *channel = ChannelA;
+        } else if(channelStr == "All") {
+            *channel = ChannelAll;
+        } else {
+            cerr << "unrecognize channel: " << channelStr << endl;
+        }
+    }
+
     Texture<float>* FloatImageTextureCreator::create(const ParamSet& params,
             const SceneCache& sceneCache) const {
         TextureMapping* m = getTextureMapping(params);
-        string filename = params.getString("file");
-        string filePath = sceneCache.resolvePath(filename);
-        float gamma = params.getFloat("gamma", 1.0f);
-        string addressStr = params.getString("address", "repeat");
-        AddressMode addressMode = getAddressMode(params);
+        string filePath;
+        float gamma;
+        AddressMode addressMode;
+        ImageChannel channel;
+        getImageTextureParams(params, sceneCache, &filePath, &gamma, 
+            &addressMode, &channel);
         return new ImageTexture<float>(filePath, m, 
-            addressMode, gamma);
+            addressMode, gamma, channel);
     }
 
     Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
@@ -296,13 +313,14 @@ namespace Goblin{
     Texture<Color>* ColorImageTextureCreator::create(const ParamSet& params,
             const SceneCache& sceneCache) const {
         TextureMapping* m = getTextureMapping(params);
-        string filename = params.getString("file");
-        string filePath = sceneCache.resolvePath(filename);
-        float gamma = params.getFloat("gamma", 1.0f);
-        string addressStr = params.getString("address", "repeat");
-        AddressMode addressMode = getAddressMode(params);
+        string filePath;
+        float gamma;
+        AddressMode addressMode;
+        ImageChannel channel;
+        getImageTextureParams(params, sceneCache, &filePath, &gamma, 
+            &addressMode, &channel);
         return new ImageTexture<Color>(filePath, m, 
-            addressMode, gamma);
+            addressMode, gamma, channel);
     }
 
     template struct ImageBuffer<float>;
@@ -316,8 +334,45 @@ namespace Goblin{
     template class ImageTexture<float>;
     template class ImageTexture<Color>;
 
-    template Color* resizeImage<Color>(const Color* srcBuffer, int srcWidth, int srcHeight,
+    template Color* resizeImage<Color>(const Color* srcBuffer, 
+        int srcWidth, int srcHeight,
         int dstWidth, int dstHeight);
-    template float* resizeImage<float>(const float* srcBuffer, int srcWidth, int srcHeight,
+    template float* resizeImage<float>(const float* srcBuffer, 
+        int srcWidth, int srcHeight,
         int dstWidth, int dstHeight);
+
+    template<>
+    void convertTexel<float>(const Color& in, float* out, float gamma,
+        ImageChannel channel) {
+        if(channel == ChannelR) {
+            *out = pow(in.r, gamma);
+        } else if(channel == ChannelG) {
+            *out = pow(in.g, gamma);
+        } else if(channel == ChannelB) {
+            *out = pow(in.b, gamma);
+        } else if(channel == ChannelA) {
+            *out = pow(in.a, gamma);
+        } else if(channel == ChannelAll) {
+            *out = pow(in.luminance(), gamma);
+        }
+    }
+
+    template<>
+    void convertTexel<Color>(const Color& in, Color* out, float gamma,
+        ImageChannel channel) {
+        Color c(in);
+        if(channel == ChannelR) {
+            c = Color(in.r);
+        } else if(channel == ChannelG) {
+            c = Color(in.g);
+        } else if(channel == ChannelB) {
+            c = Color(in.b);
+        } else if(channel == ChannelA) {
+            c = Color(in.a);
+        }
+        (*out).r = gamma == 1.0f ? c.r : pow(c.r, gamma);
+        (*out).g = gamma == 1.0f ? c.g : pow(c.g, gamma);
+        (*out).b = gamma == 1.0f ? c.b : pow(c.b, gamma);
+        (*out).a = c.a;
+    }
 }

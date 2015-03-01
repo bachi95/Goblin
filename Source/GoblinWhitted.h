@@ -6,7 +6,7 @@
 namespace Goblin {
     class WhittedRenderer : public Renderer {
     public:
-        WhittedRenderer(const RenderSetting& setting);
+        WhittedRenderer(const ParamSet& setting);
         ~WhittedRenderer();
         Color Li(const ScenePtr& scene, const Ray& ray, 
             const Sample& sample, const RNG& rng,
@@ -14,6 +14,8 @@ namespace Goblin {
     private:
         void querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota);
+    private:
+        int mMaxRayDepth;
     };
 }
 

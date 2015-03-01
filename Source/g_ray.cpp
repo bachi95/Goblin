@@ -10,16 +10,17 @@ int main(int argc, char** argv) {
         cout << "Usage: Ray scene.json" << endl;
         return 0;
     }
-    RenderSetting setting;
+    ParamSet setting;
     ScenePtr scene;
     if(scene = SceneLoader().load(argv[1], &setting)) {
         cout << "\nsuccessfully loaded scene, start rendering...\n"; 
         // TODO make this a factory method when we have more renderers...
+        string method = setting.getString("render_method", "path_tracing");
         Renderer* renderer;
-        if(setting.method == PathTracing) {
-            renderer = new PathTracer(setting);
-        } else {
+        if(method == "whitted") {
             renderer = new WhittedRenderer(setting);
+        } else {
+            renderer = new PathTracer(setting);
         }
         renderer->render(scene);
         cout << "render complete!" << endl; 
