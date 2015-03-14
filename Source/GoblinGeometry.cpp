@@ -8,6 +8,8 @@ namespace Goblin {
     Fragment::Fragment(const Vector3& p, const Vector3& n, const Vector2& uv,
         const Vector3& dpdu, const Vector3& dpdv):
         mPosition(p), mNormal(n), mUV(uv), mDPDU(dpdu), mDPDV(dpdv),
+        mDPDX(Vector3::Zero), mDPDY(Vector3::Zero),
+        mDUDX(0.0f), mDVDX(0.0f), mDUDY(0.0f), mDVDY(0.0f),
         mIsUpdated(false) {}
 
     /* 

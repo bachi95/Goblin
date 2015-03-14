@@ -29,6 +29,26 @@ namespace Goblin {
         return o + t * d;
     }
 
+
+    class RayDifferential : public Ray {
+    public:
+        RayDifferential();
+        RayDifferential(const Vector3& origin, const Vector3& dir, 
+            float start, float end = INFINITY, int depth = 0);
+    public:
+        Vector3 dxOrigin;
+        Vector3 dxDir;
+        Vector3 dyOrigin;
+        Vector3 dyDir;
+        bool hasDifferential;
+    };
+
+    inline RayDifferential::RayDifferential(): hasDifferential(false) {}
+
+    inline RayDifferential::RayDifferential(const Vector3& origin, 
+        const Vector3& dir, float start, float end, int depth):
+        Ray(origin, dir, start, end, depth),
+        hasDifferential(false) {}
 }
 
 #endif //GOBLIN_RAY_H

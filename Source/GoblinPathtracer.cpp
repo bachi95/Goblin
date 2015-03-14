@@ -46,7 +46,7 @@ namespace Goblin {
         return throughput;
     }
 
-    Color PathTracer::Li(const ScenePtr& scene, const Ray& ray, 
+    Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
         WorldDebugData* debugData) const {
         const vector<Light*>& lights = scene->getLights();
@@ -68,11 +68,12 @@ namespace Goblin {
         Li += Lsubsurface(scene, intersection, -ray.d, sample, 
             &mBSSRDFSampleIndex, debugData);
 
-        Ray currentRay = ray;
+        RayDifferential currentRay = ray;
         vector<Ray> debugRays;
         Color throughput(1.0f);
         bool firstBounce = true;
         for(int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
+            intersection.computeUVDifferential(currentRay);
             LightSample ls(sample, mLightSampleIndexes[bounces], 0);
             BSDFSample bs(sample, mBSDFSampleIndexes[bounces], 0);
             float pickSample = 
@@ -123,7 +124,7 @@ namespace Goblin {
                 // should punch through it with attenuation accounted
                 if(sampledType == BSDFNull) {
                     throughput *= (f / bsdfPdf);
-                    currentRay = Ray(p, wi, epsilon);
+                    currentRay = RayDifferential(p, wi, epsilon);
                     if(!scene->intersect(currentRay, &epsilon, &intersection)) {
                         // primary ray need to evaluate image based lighting
                         // in this case
@@ -170,7 +171,7 @@ namespace Goblin {
                 break;
             }
             throughput *= f * absdot(wi, n) / bsdfPdf;
-            currentRay = Ray(p, wi, epsilon);
+            currentRay = RayDifferential(p, wi, epsilon);
             if(!scene->intersect(currentRay, &epsilon, &intersection)) {
                 break;
             }

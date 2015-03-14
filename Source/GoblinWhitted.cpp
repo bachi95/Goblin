@@ -10,13 +10,15 @@ namespace Goblin {
 
     WhittedRenderer::~WhittedRenderer() {}
 
-    Color WhittedRenderer::Li(const ScenePtr& scene, const Ray& ray, 
+    Color WhittedRenderer::Li(const ScenePtr& scene, 
+        const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
         WorldDebugData* debugData) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
         if(scene->intersect(ray, &epsilon, &intersection)) {
+            intersection.computeUVDifferential(ray);
             // if intersect an area light
             Li += intersection.Le(-ray.d);
             // subsurface scattering 

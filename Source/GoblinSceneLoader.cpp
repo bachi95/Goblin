@@ -161,6 +161,8 @@ namespace Goblin {
         // texture
         mFloatTextureFactory->registerCreator("constant", 
             new FloatConstantTextureCreator);
+        mFloatTextureFactory->registerCreator("checkboard", 
+            new FloatCheckboardTextureCreator);
         mFloatTextureFactory->registerCreator("scale", 
             new FloatScaleTextureCreator);
         mFloatTextureFactory->registerCreator("image", 
@@ -169,6 +171,8 @@ namespace Goblin {
 
         mColorTextureFactory->registerCreator("constant", 
             new ColorConstantTextureCreator);
+        mColorTextureFactory->registerCreator("checkboard", 
+            new ColorCheckboardTextureCreator);
         mColorTextureFactory->registerCreator("scale", 
             new ColorScaleTextureCreator);
         mColorTextureFactory->registerCreator("image", 

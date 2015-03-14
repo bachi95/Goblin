@@ -9,7 +9,7 @@
 namespace Goblin {
     class Film;
     class Sample;
-    class Ray;
+    class RayDifferential;
     class Camera {
     public:
         Camera(const Vector3& position, const Quaternion& orientation,
@@ -22,7 +22,8 @@ namespace Goblin {
         const Quaternion& getOrientation() const;
 
         Film* getFilm();
-        virtual float generateRay(const Sample& sample, Ray* ray) const = 0;
+        virtual float generateRay(const Sample& sample, 
+            RayDifferential* ray) const = 0;
 
         bool isUpdated() const;
         void update();
@@ -148,7 +149,7 @@ namespace Goblin {
             float lensRadius, float focalDistance, 
             Film* film);
 
-        float generateRay(const Sample& sample, Ray* ray) const;
+        float generateRay(const Sample& sample, RayDifferential* ray) const;
     private:
         float mFOV;
         float mLensRadius;
@@ -162,7 +163,7 @@ namespace Goblin {
             const Quaternion& orientation,
             float zn, float zf, float filmWidth, Film* film);
 
-        float generateRay(const Sample& sample, Ray* ray) const;
+        float generateRay(const Sample& sample, RayDifferential* ray) const;
     private:
         float mFilmWidth;
         float mFilmHeight;

@@ -23,16 +23,25 @@ namespace Goblin {
 
         Vector3 getPosition() const;
         Vector3 getNormal() const;
+        Vector2 getUV() const;
         Vector3 getDPDU() const;
         Vector3 getDPDV() const;
-        Vector2 getUV() const;
+        Vector3 getDPDX() const;
+        Vector3 getDPDY() const;
+        float getDUDX() const;
+        float getDVDX() const;
+        float getDUDY() const;
+        float getDVDY() const;
         Matrix3 getWorldToShade() const;
 
         void setPosition(const Vector3& position);
         void setNormal(const Vector3& normal);
+        void setUV(const Vector2& uv);
         void setDPDU(const Vector3& dpdu);
         void setDPDV(const Vector3& dpdv);
-        void setUV(const Vector2& uv);
+        void setDPDX(const Vector3& dpdx);
+        void setDPDY(const Vector3& dpdy);
+        void setUVDifferential(float dudx, float dvdx, float dudy, float dvdy);
 
         void transform(const Transform& t);
     private:
@@ -41,16 +50,31 @@ namespace Goblin {
         Vector2 mUV;
         Vector3 mDPDU;
         Vector3 mDPDV;
+        Vector3 mDPDX;
+        Vector3 mDPDY;
+        float mDUDX;
+        float mDVDX;
+        float mDUDY;
+        float mDVDY;
         mutable bool mIsUpdated;
         mutable Matrix3 mWorldToShade;
     };
 
-    inline Fragment::Fragment():mIsUpdated(false) {}
+    inline Fragment::Fragment():
+        mDPDX(Vector3::Zero), mDPDY(Vector3::Zero),
+        mDUDX(0.0f), mDVDX(0.0f), mDUDY(0.0f), mDVDY(0.0f),
+        mIsUpdated(false) {}
     inline Vector3 Fragment::getPosition() const { return mPosition; }
     inline Vector3 Fragment::getNormal() const { return mNormal; }
     inline Vector2 Fragment::getUV() const { return mUV; }
     inline Vector3 Fragment::getDPDU() const { return mDPDU; }
     inline Vector3 Fragment::getDPDV() const { return mDPDV; }
+    inline Vector3 Fragment::getDPDX() const { return mDPDX; }
+    inline Vector3 Fragment::getDPDY() const { return mDPDY; }
+    inline float Fragment::getDUDX() const { return mDUDX; }
+    inline float Fragment::getDVDX() const { return mDVDX; }
+    inline float Fragment::getDUDY() const { return mDUDY; }
+    inline float Fragment::getDVDY() const { return mDVDY; }
 
     inline void Fragment::setPosition(const Vector3& position) { 
         mIsUpdated = false;
@@ -77,6 +101,24 @@ namespace Goblin {
         mDPDV = dpdv;
     }
 
+    inline void Fragment::setDPDX(const Vector3& dpdx) {
+        mIsUpdated = false;
+        mDPDX = dpdx;
+    }
+
+    inline void Fragment::setDPDY(const Vector3& dpdy) {
+        mIsUpdated = false;
+        mDPDY = dpdy;
+    }
+
+    inline void Fragment::setUVDifferential(float dudx, float dvdx, 
+        float dudy, float dvdy) {
+        mIsUpdated = false;
+        mDUDX = dudx;
+        mDVDX = dvdx;
+        mDUDY = dudy;
+        mDVDY = dvdy;
+    }
 
     struct TriangleIndex {
         unsigned int v[3];

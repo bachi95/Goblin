@@ -358,8 +358,9 @@ namespace Goblin {
 
     ImageBasedLight::ImageBasedLight(const string& radianceMap, 
         const Color& filter, const Quaternion& orientation,
-        int samplePerPixel): 
-        mRadiance(NULL), mDistribution(NULL),mSamplePerPixel(samplePerPixel) {
+        uint32_t samplesNum, int samplePerPixel): 
+        mRadiance(NULL), mDistribution(NULL),
+        mSamplesNum(samplesNum), mSamplePerPixel(samplePerPixel) {
         // Make default orientation facing the center of
         // environment map since spherical coordinate is z-up
         mToWorld.rotateX(-0.5f * PI);
@@ -377,43 +378,23 @@ namespace Goblin {
         for(int i = 0; i < width * height; ++i) {
             buffer[i] *= filter;
         }
-        // resize the image to power of 2 for easier mipmap process
-        if(!isPowerOf2(width) || !isPowerOf2(height)) {
-            int wPow2 = roundUpPow2(width);
-            int hPow2 = roundUpPow2(height);
-            Color* resizeBuffer = 
-                resizeImage<Color>(buffer, width, height, wPow2, hPow2);
-            delete [] buffer;
-            buffer = resizeBuffer;
-            width = wPow2;
-            height = hPow2;
-        }
-        // start building the mipmap
-        mRadiance.push_back(new ImageBuffer<Color>(buffer, width, height));
-        int levels = floorInt(
-            max(log2((float)width), log2((float)height))) + 1;
-        for(int i = 1; i < levels; ++i) {
-            const ImageBuffer<Color>* mipmap = mRadiance[i - 1];
-            int resizedW = max(1, mipmap->width >> 1);
-            int resizedH = max(1, mipmap->height >> 1);
-            Color* resizedBuffer = resizeImage<Color>(
-                mipmap->image, mipmap->width, mipmap->height,
-                resizedW, resizedH);
-            mRadiance.push_back(new ImageBuffer<Color>(
-                resizedBuffer, resizedW, resizedH));
-        }
-        mAverageRadiance = mRadiance[levels - 1]->lookup(0.0f, 0.0f);
 
-        int buildDistLevel = max(0, levels - 9);
-        Color* distBuffer = mRadiance[buildDistLevel]->image;
-        int distWidth = mRadiance[buildDistLevel]->width;
-        int distHeight = mRadiance[buildDistLevel]->height;
+        mRadiance = new MIPMap<Color>(buffer, width, height);
+        int maxLevel = mRadiance->getLevelsNum() - 1;
+        mAverageRadiance = mRadiance->lookup(maxLevel, 0.0f, 0.0f);
+
+        int buildDistLevel = max(0, maxLevel - 8);
+        const ImageBuffer<Color>* distBuffer = 
+            mRadiance->getImageBuffer(buildDistLevel);
+        Color* distImage = distBuffer->image;
+        int distWidth = distBuffer->width;
+        int distHeight = distBuffer->height;
         float* dist = new float[distWidth * distHeight];
         for(int i = 0; i < distHeight; ++i) {
             float sinTheta = sin(((float)i + 0.5f) / (float)distHeight * PI);
             for(int j = 0; j < distWidth; ++j) {
                 int index = i * distWidth + j;
-                dist[index] = distBuffer[index].luminance() * sinTheta;
+                dist[index] = distImage[index].luminance() * sinTheta;
             }
         }
         mDistribution = new CDF2D(dist, distWidth, distHeight);
@@ -421,9 +402,9 @@ namespace Goblin {
     }
 
     ImageBasedLight::~ImageBasedLight() {
-        for(size_t i = 0; i < mRadiance.size(); ++i) {
-            delete mRadiance[i];
-            mRadiance[i] = NULL;
+        if(mRadiance != NULL) {
+            delete mRadiance;
+            mRadiance = NULL;
         }
         if(mDistribution != NULL) {
             delete mDistribution;
@@ -433,24 +414,21 @@ namespace Goblin {
 
     Color ImageBasedLight::Le(const Ray& ray, float pdf, BSDFType type) const {
         const Vector3& w = mToWorld.invertVector(ray.d);
-        float theta = acos(w.z);
-        float phi = atan2(w.y, w.x);
-        if(phi < 0.0f) {
-            phi += TWO_PI;
-        }
+        float theta = sphericalTheta(w);
+        float phi = sphericalPhi(w);
         float s = phi * INV_TWOPI;
         float t = theta * INV_PI;
 
         int level = 0;
         if(!(type & BSDFSpecular)) {
-            int w = mRadiance[0]->width;
-            int h = mRadiance[0]->height;
+            int w = mRadiance->getWidth();
+            int h = mRadiance->getHeight();
             float invWp = w * h / (TWO_PI * PI * sin(theta));
             level = clamp(
                 floorInt(0.5f * log2(invWp / (pdf * mSamplePerPixel))), 
-                0, mRadiance.size() - 1);
+                0, mRadiance->getLevelsNum() - 1);
         }
-        return mRadiance[level]->lookup(s, t);
+        return mRadiance->lookup(level, s, t);
     }
 
     Color ImageBasedLight::sampleL(const Vector3& p, float epsilon,
@@ -478,12 +456,12 @@ namespace Goblin {
         shadowRay->mint = epsilon;
 
         int level = 0;
-        int w = mRadiance[0]->width;
-        int h = mRadiance[0]->height;
+        int w = mRadiance->getWidth();
+        int h = mRadiance->getHeight();
         level = clamp(
             floorInt(0.5f * log2(w * h / (pdfST * mSamplePerPixel))), 
-            0, mRadiance.size() - 1);
-        return mRadiance[level]->lookup(st[0], st[1]);
+            0, mRadiance->getLevelsNum() - 1);
+        return mRadiance->lookup(level, st[0], st[1]);
     }
 
     Color ImageBasedLight::sampleL(const ScenePtr& scene, 
@@ -516,7 +494,7 @@ namespace Goblin {
         if(pdf) {
             *pdf = pdfST / (TWO_PI * PI * sinTheta);
         }
-        return mRadiance[0]->lookup(st[0], st[1]);
+        return mRadiance->lookup(0, st[0], st[1]);
     }
 
     Color ImageBasedLight::power(const ScenePtr& scene) const {
@@ -530,16 +508,12 @@ namespace Goblin {
 
     float ImageBasedLight::pdf(const Vector3& p, const Vector3& wi) const {
         Vector3 wiLocal = mToWorld.invertVector(wi);
-        float theta = acos(wiLocal.z);
+        float theta = sphericalTheta(wiLocal);
         float sinTheta = sin(theta);
         if(sinTheta == 0.0f) {
             return 0.0f;
         }
-
-        float phi = atan2(wi.y, wi.x);
-        if(phi < 0.0f) {
-            phi += TWO_PI;
-        }
+        float phi = sphericalPhi(wiLocal);
         float pdf = mDistribution->pdf(phi * INV_TWOPI, theta * INV_PI) / 
             (TWO_PI * PI * sinTheta);
         return pdf;
@@ -577,17 +551,13 @@ namespace Goblin {
     Light* AreaLightCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
         Color radiance = params.getColor("radiance");
-        Vector3 position = params.getVector3("position");
-        Quaternion orientation = getQuaternion(params);
-        Vector3 scale = params.getVector3("scale", 
-            Vector3(1.0f, 1.0f, 1.0f));
         string geoName = params.getString("geometry");
         const Geometry* geometry = sceneCache.getGeometry(geoName);
         // TODO: this cause a problem that we can't run time modify
         // the transform for area light since it's not tied in between
         // instance in scene and the transform in area light itself..
         // need to find a way to improve this part
-        Transform toWorld(position, orientation, scale);
+        Transform toWorld = getTransform(params);
         int sampleNum = params.getInt("sample_num", 1);
         return new AreaLight(radiance, geometry, toWorld, sampleNum);
     }
@@ -600,7 +570,8 @@ namespace Goblin {
         Color filter = params.getColor("filter");
         Quaternion orientation = getQuaternion(params);
         int samplePerPixel = params.getInt("sample_per_pixel");
+        int sampleNum = params.getInt("sample_num", 1);
         return new ImageBasedLight(filePath, filter, orientation, 
-            samplePerPixel);
+            sampleNum, samplePerPixel);
     }
 }

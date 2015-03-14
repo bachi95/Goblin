@@ -38,7 +38,7 @@ namespace Goblin {
         int sampleNum = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for(int s = 0; s < sampleNum; ++s) {
-                Ray ray;
+                RayDifferential ray;
                 float w = mCamera->generateRay(samples[s], &ray);
                 Color L = mRenderer->Li(mScene, ray, samples[s], 
                     *mRNG, &debugData);
@@ -529,7 +529,8 @@ namespace Goblin {
         return irradiance;
     }
 
-    Color Renderer::specularReflect(const ScenePtr& scene, const Ray& ray, 
+    Color Renderer::specularReflect(const ScenePtr& scene, 
+        const RayDifferential& ray, 
         float epsilon, const Intersection& intersection,
         const Sample& sample, const RNG& rng) const {
         Color L(Color::Black);
@@ -546,7 +547,7 @@ namespace Goblin {
             wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFReflection));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
-            Ray reflectiveRay(p, wi, epsilon);
+            RayDifferential reflectiveRay(p, wi, epsilon);
             reflectiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, reflectiveRay, sample, rng);
             L += f * Lr * absdot(wi, n) / pdf;
@@ -554,7 +555,8 @@ namespace Goblin {
         return L;
     }
 
-    Color Renderer::specularRefract(const ScenePtr& scene, const Ray& ray, 
+    Color Renderer::specularRefract(const ScenePtr& scene, 
+        const RayDifferential& ray, 
         float epsilon, const Intersection& intersection,
         const Sample& sample, const RNG& rng) const {
         Color L(Color::Black);
@@ -571,7 +573,7 @@ namespace Goblin {
             wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFTransmission));
         if(f != Color::Black && absdot(wi, n) != 0.0f) {
-            Ray refractiveRay(p, wi, epsilon);
+            RayDifferential refractiveRay(p, wi, epsilon);
             refractiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, refractiveRay, sample, rng);
             L += f * Lr * absdot(wi, n) / pdf;

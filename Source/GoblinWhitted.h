@@ -8,7 +8,7 @@ namespace Goblin {
     public:
         WhittedRenderer(const ParamSet& setting);
         ~WhittedRenderer();
-        Color Li(const ScenePtr& scene, const Ray& ray, 
+        Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
             WorldDebugData* debugData) const;
     private:

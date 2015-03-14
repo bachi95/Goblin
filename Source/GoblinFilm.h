@@ -111,6 +111,8 @@ namespace Goblin {
 
         int getXResolution() const;
         int getYResolution() const;
+        float getInvXResolution() const;
+        float getInvYResolution() const;
         void getSampleRange(int* xStart, int* xEnd,
             int* yStart, int* yEnd) const;
         vector<ImageTile*>& getTiles();
@@ -120,6 +122,7 @@ namespace Goblin {
     private:
         int mXRes, mYRes;
         int mXStart, mYStart, mXCount, mYCount;
+        float mInvXRes, mInvYRes;
         float mFilterTable[FILTER_TABLE_WIDTH * FILTER_TABLE_WIDTH];
         float mCrop[4];
         Filter* mFilter;
@@ -133,7 +136,13 @@ namespace Goblin {
     };
 
     inline int Film::getXResolution() const { return mXRes; }
+
     inline int Film::getYResolution() const { return mYRes; }
+
+    inline float Film::getInvXResolution() const { return mInvXRes; }
+    
+    inline float Film::getInvYResolution() const { return mInvYRes; }
+
     inline vector<ImageTile*>& Film::getTiles() { return mTiles; }
 
     class ImageFilmCreator : public Creator<Film, const ParamSet&, Filter*> {

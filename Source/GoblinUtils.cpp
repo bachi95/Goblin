@@ -1,8 +1,8 @@
 #include "GoblinUtils.h"
-#include "GoblinVector.h"
 #include "GoblinColor.h"
 #include "GoblinQuaternion.h"
 #include "GoblinParamSet.h"
+#include "GoblinTransform.h"
 
 #include <ctime>
 #include <limits>
@@ -101,6 +101,15 @@ namespace Goblin {
             result = Quaternion(q[0], q[1], q[2], q[3]);
         }
         return result;
+    }
+
+    Transform getTransform(const ParamSet& params) {
+        Vector3 position = params.getVector3("position", 
+            Vector3(0.0f, 0.0f, 0.0f));
+        Quaternion orientation= getQuaternion(params);
+        Vector3 scale = params.getVector3("scale", 
+            Vector3(1.0f, 1.0f, 1.0f));
+        return Transform(position, orientation, scale);
     }
 
     bool quadratic(float A, float B, float C, float* t1, float* t2) {

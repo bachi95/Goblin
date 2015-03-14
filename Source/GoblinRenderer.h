@@ -81,7 +81,7 @@ namespace Goblin {
         Renderer(const ParamSet& setting);
         virtual ~Renderer();
         void render(const ScenePtr& scene);
-        virtual Color Li(const ScenePtr& scene, const Ray& ray, 
+        virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
             WorldDebugData* debugData = NULL) const = 0;
         // volume in scatter and emission contribution
@@ -121,11 +121,13 @@ namespace Goblin {
             float epsilon, const Intersection& intersection, 
             const Light* light, const LightSample& ls) const;
 
-        Color specularReflect(const ScenePtr& scene, const Ray& ray, 
+        Color specularReflect(const ScenePtr& scene, 
+            const RayDifferential& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample, const RNG& rng) const;
 
-        Color specularRefract(const ScenePtr& scene, const Ray& ray, 
+        Color specularRefract(const ScenePtr& scene, 
+            const RayDifferential& ray, 
             float epsilon, const Intersection& intersection,
             const Sample& sample, const RNG& rng) const;
 

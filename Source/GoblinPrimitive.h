@@ -13,6 +13,7 @@
 
 namespace Goblin {
     class Ray;
+    class RayDifferential;
     /* temp notes:
     three kinds of primitive: instance, model, aggregate
     model = geometry + material
@@ -48,6 +49,7 @@ namespace Goblin {
         Intersection(): primitive(NULL) {}
         Color Le(const Vector3& outDirection);
         const MaterialPtr& getMaterial() const;
+        void computeUVDifferential(const RayDifferential& ray);
         Fragment fragment;
         const Primitive* primitive;
     };

@@ -8,7 +8,7 @@
 namespace Goblin{
 
     template<typename T>
-    T ImageBuffer<T>::texel(int s, int t, AddressMode addressMode) {
+    T ImageBuffer<T>::texel(int s, int t, AddressMode addressMode) const {
         switch(addressMode) {
         case AddressClamp: {
             s = clamp(s, 0, width - 1);
@@ -37,17 +37,105 @@ namespace Goblin{
     }
 
     template<typename T>
-    T ImageBuffer<T>::lookup(float s, float t, AddressMode addressMode) {
-        float sRes = s * width - 0.5f;
-        float tRes = t * height - 0.5f;
+    MIPMap<T>::MIPMap(T* image, int w, int h): mWidth(w), mHeight(h) {
+        // resize the image to power of 2 for easier mipmap process
+        if(!isPowerOf2(mWidth) || !isPowerOf2(mHeight)) {
+            int wPow2 = roundUpPow2(mWidth);
+            int hPow2 = roundUpPow2(mHeight);
+            T* resizeBuffer = 
+                resizeImage(image, mWidth, mHeight, wPow2, hPow2);
+            delete [] image;
+            image = resizeBuffer;
+            mWidth = wPow2;
+            mHeight = hPow2;
+        }
+        // start building the mipmap
+        mPyramid.push_back(new ImageBuffer<T>(image, mWidth, mHeight));
+        mLevelsNum = floorInt(
+            max(log2((float)mWidth), log2((float)mHeight))) + 1;
+        for(int i = 1; i < mLevelsNum; ++i) {
+            const ImageBuffer<T>* buffer = mPyramid[i - 1];
+            int resizedW = max(1, buffer->width >> 1);
+            int resizedH = max(1, buffer->height >> 1);
+            T* resizedBuffer = resizeImage(buffer->image, 
+                buffer->width, buffer->height,
+                resizedW, resizedH);
+            mPyramid.push_back(
+                new ImageBuffer<T>(resizedBuffer, resizedW, resizedH));
+        }
+    }
+
+    template<typename T>
+    MIPMap<T>::~MIPMap() {
+        for(size_t i = 0; i < mPyramid.size(); ++i) {
+            delete mPyramid[i];
+            mPyramid[i] = NULL;
+        }
+        mPyramid.clear();
+    }
+
+    template<typename T>
+    T MIPMap<T>::lookup(const TextureCoordinate& tc, 
+        FilterType f, AddressMode m) const {
+        if(f == FilterNone) {
+            return lookupNearest(tc.st[0], tc.st[1], m);
+        } else if(f == FilterBilinear) {
+            float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
+                max(fabs(tc.dsdy), fabs(tc.dtdy)));
+            return lookupBilinear(tc.st[0], tc.st[1], width, m);
+        } else if(f == FilterTrilinear) {
+            float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
+                max(fabs(tc.dsdy), fabs(tc.dtdy)));
+            return lookupTrilinear(tc.st[0], tc.st[1], width, m);
+        } else {
+            return lookupNearest(tc.st[0], tc.st[1], m);
+        }
+    }
+
+    template<typename T>
+    T MIPMap<T>::lookupNearest(float s, float t, AddressMode m) const {
+        return lookup(0, s, t, m);
+    }
+
+    template<typename T>
+    T MIPMap<T>::lookupBilinear(float s, float t, float width,
+        AddressMode m) const {
+        float level = mLevelsNum - 1 + log2(max(width, 1e-8f));
+        int iLevel = roundInt(level);
+        return lookup(iLevel, s, t, m);
+    }
+
+    template<typename T>
+    T MIPMap<T>::lookupTrilinear(float s, float t, float width,
+        AddressMode m) const {
+        float level = mLevelsNum - 1 + log2(max(width, 1e-8f));
+        int iLevel = floorInt(level);
+        if(iLevel < 0) {
+            return lookup(0, s, t, m);
+        } else if(iLevel >= mLevelsNum - 1) {
+            return lookup(mLevelsNum - 1, s, t, m);
+        } else {
+            float delta = level - (float)iLevel;
+            return (1.0f - delta) * lookup(iLevel, s, t, m) +
+                   (       delta) * lookup(iLevel + 1, s, t, m);
+        }
+    }
+
+    template<typename T>
+    T MIPMap<T>::lookup(int level, float s, float t, 
+        AddressMode m) const {
+        level = clamp(level, 0, mLevelsNum);
+        const ImageBuffer<T>* image = mPyramid[level];
+        float sRes = s * image->width - 0.5f;
+        float tRes = t * image->height - 0.5f;
         int s0 = floorInt(sRes);
         float ds = sRes - (float)s0;
         int t0 = floorInt(tRes);
         float dt = tRes - (float)t0;
-        return (1.0f - ds) * (1.0f - dt) * texel(s0, t0, addressMode) +
-               (       ds) * (1.0f - dt) * texel(s0 + 1, t0, addressMode) +
-               (1.0f - ds) * (       dt) * texel(s0, t0 + 1, addressMode) +
-               (       ds) * (       dt) * texel(s0 + 1, t0 + 1, addressMode);
+        return (1.0f - ds) * (1.0f - dt) * image->texel(s0, t0, m) +
+               (       ds) * (1.0f - dt) * image->texel(s0 + 1, t0, m) +
+               (1.0f - ds) * (       dt) * image->texel(s0, t0 + 1, m) +
+               (       ds) * (       dt) * image->texel(s0 + 1, t0 + 1, m);
     }
 
     UVMapping::UVMapping(const Vector2& scale, const Vector2& offset):
@@ -57,6 +145,52 @@ namespace Goblin{
         const Vector2& uv = f.getUV();
         tc->st[0] = mScale[0] * uv[0] + mOffset[0];
         tc->st[1] = mScale[1] * uv[1] + mOffset[1];
+        tc->dsdx = mScale[0] * f.getDUDX();
+        tc->dtdx = mScale[1] * f.getDVDX();
+        tc->dsdy = mScale[0] * f.getDUDY();
+        tc->dtdy = mScale[1] * f.getDVDY();
+    }
+
+    SphericalMapping::SphericalMapping(const Transform& toTex): 
+        mToTex(toTex) {}
+
+    void SphericalMapping::map(const Fragment& f, TextureCoordinate* tc) const {
+        float s, t;
+        const Vector3& p = f.getPosition();
+        pointToST(p, &s, &t);
+        tc->st[0] = s;
+        tc->st[1] = t;
+        // foward difference approximation, delta 1 pixel
+        float sdx, tdx;
+        pointToST(p + f.getDPDX(), &sdx, &tdx);
+        float sdy, tdy;
+        pointToST(p + f.getDPDY(), &sdy, &tdy);
+        // take care of the discontinuous phi angle transition
+        float dsdx = sdx - s;
+        if(dsdx > 0.5f) {
+            dsdx -= 1.0f;
+        } else if(dsdx < -0.5f) {
+            dsdx += 1.0f;
+        }
+        float dsdy = sdy -s;
+        if(dsdy > 0.5f) {
+            dsdy -= 1.0f;
+        } else if(dsdy < -0.5f) {
+            dsdy += 1.0f;
+        }
+        tc->dsdx = dsdx;
+        tc->dtdx = tdx - t;
+        tc->dsdy = dsdy;
+        tc->dtdy = tdy - t;
+    }
+
+    void SphericalMapping::pointToST(const Vector3& p, 
+        float* s, float* t) const {
+        Vector3 v = normalize(mToTex.onPoint(p) - Vector3::Zero);
+        float theta = sphericalTheta(v);
+        float phi = sphericalPhi(v);
+        *s = phi * INV_TWOPI;
+        *t = theta * INV_PI;
     }
 
     template<typename T>
@@ -65,6 +199,68 @@ namespace Goblin{
     template<typename T>
     T ConstantTexture<T>::lookup(const Fragment& f) const {
         return mValue;
+    }
+
+    template<typename T>
+    CheckboardTexture<T>::CheckboardTexture(TextureMapping* m,
+        const boost::shared_ptr<Texture<T> >& T1,
+        const boost::shared_ptr<Texture<T> >& T2,
+        bool filter):
+        mMapping(m), mT1(T1), mT2(T2), mFilter(filter) {}
+
+    template<typename T>
+    CheckboardTexture<T>::~CheckboardTexture() {
+        if(mMapping) {
+            delete mMapping;
+        }
+        mMapping = NULL;
+    }
+
+    static float integrateChecker(float x) {
+        float xHalf = 0.5f * x;
+        return floor(xHalf) + 
+            2.0f * max(xHalf - floor(xHalf) - 0.5f, 0.0f);
+    }
+
+    template<typename T>
+    T CheckboardTexture<T>::lookup(const Fragment& f) const {
+        TextureCoordinate tc;
+        mMapping->map(f, &tc);
+        float s = tc.st[0];
+        float t = tc.st[1];
+        if(!mFilter) {
+            return (floorInt(s) + floorInt(t)) % 2 == 0 ?
+                mT1->lookup(f) : mT2->lookup(f);
+        }
+        float ds = max(fabs(tc.dsdx), fabs(tc.dsdy));
+        float dt = max(fabs(tc.dtdx), fabs(tc.dtdy));
+        float s0 = s - ds;
+        float s1 = s + ds;
+        float t0 = t - dt;
+        float t1 = t + dt;
+        if(floorInt(s0) == floorInt(s1) && floorInt(t0) == floorInt(t1)) {
+            return (floorInt(s) + floorInt(t)) % 2 == 0 ?
+                mT1->lookup(f) : mT2->lookup(f);
+        } else {
+            float sTex2Ratio = (integrateChecker(s1) - integrateChecker(s0)) / 
+                (2.0f * ds);
+            float tTex2Ratio = (integrateChecker(t1) - integrateChecker(t0)) /
+                (2.0f * dt);
+            /*
+             * draw a picture should make this clearer...but imagine this
+             * ds * dt uv box fall on the intersection of checker boarder
+             * the textur2 ratio of the total uv box would be:
+             * sTex2Ratio * (1 - tTex2Ratio) + tTex2Ratio * (1 - sTex2Ratio) =
+             * sTex2Ratio + tTex2Ratio - 2 * sTex2Ratio * tTex2Ratio
+             */
+            float tex2Area = sTex2Ratio + tTex2Ratio - 
+                2.0f * sTex2Ratio * tTex2Ratio;
+            if(ds > 1.0f || dt > 1.0f) {
+                tex2Area = 0.5f;
+            }
+            return (1.0f - tex2Area) * mT1->lookup(f) + 
+                tex2Area * mT2->lookup(f);
+        }
     }
 
     template<typename T>
@@ -77,14 +273,15 @@ namespace Goblin{
     }
 
     template<typename T>
-    std::map<TextureId, ImageBuffer<T>* > ImageTexture<T>::imageCache;
+    std::map<TextureId, MIPMap<T>* > ImageTexture<T>::imageCache;
 
     template<typename T>
     ImageTexture<T>::ImageTexture(const string& filename, TextureMapping* m,
-        AddressMode address, float gamma, ImageChannel channel): 
-        mMapping(m), mAddressMode(address) {
+        FilterType filter, AddressMode address, 
+        float gamma, ImageChannel channel): 
+        mMapping(m), mFilter(filter), mAddressMode(address) {
         TextureId id(filename, gamma, channel);
-        mImageBuffer = getImageBuffer(id);
+        mMIPMap = getMIPMap(id);
     }
 
     template<typename T>
@@ -99,13 +296,11 @@ namespace Goblin{
     T ImageTexture<T>::lookup(const Fragment& f) const {
         TextureCoordinate tc;
         mMapping->map(f, &tc);
-        float s = tc.st[0];
-        float t = tc.st[1];
-        return mImageBuffer->lookup(s, t, mAddressMode);
+        return mMIPMap->lookup(tc, mFilter, mAddressMode);
     }
 
     template<typename T>
-    ImageBuffer<T>* ImageTexture<T>::getImageBuffer(const TextureId& id) {
+    MIPMap<T>* ImageTexture<T>::getMIPMap(const TextureId& id) {
         if(imageCache.find(id) != imageCache.end()) {
             return imageCache[id];
         }
@@ -128,10 +323,46 @@ namespace Goblin{
             }
             delete [] colorBuffer;
         }
-        ImageBuffer<T>* ret = new ImageBuffer<T>(texelBuffer, width, height); 
+        MIPMap<T>* ret = new MIPMap<T>(texelBuffer, width, height); 
         imageCache[id] = ret;
         return ret;
     }
+
+    template<>
+    void ImageTexture<float>::convertTexel(const Color& in, float* out, 
+        float gamma, ImageChannel channel) {
+        if(channel == ChannelR) {
+            *out = pow(in.r, gamma);
+        } else if(channel == ChannelG) {
+            *out = pow(in.g, gamma);
+        } else if(channel == ChannelB) {
+            *out = pow(in.b, gamma);
+        } else if(channel == ChannelA) {
+            *out = pow(in.a, gamma);
+        } else if(channel == ChannelAll) {
+            *out = pow(in.luminance(), gamma);
+        }
+    }
+
+    template<>
+    void ImageTexture<Color>::convertTexel(const Color& in, Color* out, 
+        float gamma, ImageChannel channel) {
+        Color c(in);
+        if(channel == ChannelR) {
+            c = Color(in.r);
+        } else if(channel == ChannelG) {
+            c = Color(in.g);
+        } else if(channel == ChannelB) {
+            c = Color(in.b);
+        } else if(channel == ChannelA) {
+            c = Color(in.a);
+        }
+        (*out).r = gamma == 1.0f ? c.r : pow(c.r, gamma);
+        (*out).g = gamma == 1.0f ? c.g : pow(c.g, gamma);
+        (*out).b = gamma == 1.0f ? c.b : pow(c.b, gamma);
+        (*out).a = c.a;
+    }
+
 
     float gaussian(float x, float w, float falloff = 2.0f) {
         return max(0.0f, expf(-falloff * x * x) - expf(-falloff * w * w));
@@ -215,11 +446,14 @@ namespace Goblin{
 
     static TextureMapping* getTextureMapping(const ParamSet& params) {
         TextureMapping* m;
-        string type = params.getString("mapping");
+        string type = params.getString("mapping", "uv");
         if(type == "uv") {
             Vector2 scale = params.getVector2("scale", Vector2(1.0f, 1.0f));
             Vector2 offset = params.getVector2("offset", Vector2::Zero);
             m = new UVMapping(scale, offset);
+        } else if(type == "spherical") {
+            Transform toTex = getTransform(params);
+            m = new SphericalMapping(toTex);
         } else {
             cerr << "undefined mapping type " << type << endl;
             m = new UVMapping(Vector2(1.0f, 1.0f), Vector2::Zero);
@@ -227,27 +461,25 @@ namespace Goblin{
         return m;
     }
 
-    static AddressMode getAddressMode(const ParamSet& params) {
-        string addressStr = params.getString("address", "repeat");
-        AddressMode addressMode = AddressRepeat;
-        if(addressStr == "repeat") {
-            addressMode = AddressRepeat;
-        } else if(addressStr == "clamp") {
-            addressMode = AddressClamp;
-        } else if(addressStr == "border") {
-            addressMode = AddressBorder;
-        }
-        return addressMode;
-    }
-
     Texture<float>* FloatConstantTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
+        const SceneCache& sceneCache) const {
         float f = params.getFloat("float", 0.5f);
         return new ConstantTexture<float>(f);
     }
 
+    Texture<float>* FloatCheckboardTextureCreator::create(
+        const ParamSet& params, const SceneCache& sceneCache) const {
+        TextureMapping* mapping = getTextureMapping(params);
+        FloatTexturePtr T1 = sceneCache.getFloatTexture(
+            params.getString("texture1"));
+        FloatTexturePtr T2 = sceneCache.getFloatTexture(
+            params.getString("texture2"));
+        bool filter = params.getBool("filter", false);
+        return new CheckboardTexture<float>(mapping, T1, T2, filter);
+    }
+
     Texture<float>* FloatScaleTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
+        const SceneCache& sceneCache) const {
         string textureName = params.getString("texture");
         string scaleName = params.getString("scale");
         FloatTexturePtr s = sceneCache.getFloatTexture(scaleName);
@@ -255,80 +487,117 @@ namespace Goblin{
         return new ScaleTexture<float>(t, s);
     }
 
-    static void getImageTextureParams(const ParamSet& params,
-        const SceneCache& sceneCache,
-        string* filePath, float* gamma, AddressMode* addressMode,
-        ImageChannel* channel) {
+    struct ImageTextureParams {
+        string filePath;
+        TextureMapping* mapping;
+        FilterType filter;
+        AddressMode addressMode;
+        float gamma;
+        ImageChannel channel;
+    };
+
+    static ImageTextureParams getImageTextureParams(const ParamSet& params,
+        const SceneCache& sceneCache) {
+        ImageTextureParams ip;
+        ip.mapping = getTextureMapping(params);
 
         string filename = params.getString("file");
-        *filePath = sceneCache.resolvePath(filename);
-        *gamma = params.getFloat("gamma", 1.0f);
+        ip.filePath = sceneCache.resolvePath(filename);
+
+        string filterStr = params.getString("filter", "nearest");
+        if(filterStr == "nearest") {
+            ip.filter = FilterNone;
+        } else if(filterStr == "bilinear") {
+            ip.filter = FilterBilinear;
+        } else if(filterStr == "trilinear") {
+            ip.filter = FilterTrilinear;
+        } else {
+            cerr << "unrecognize filter: " << filterStr << endl;
+            ip.filter = FilterNone;
+        }
+
         string addressStr = params.getString("address", "repeat");
-        *addressMode = getAddressMode(params);
+        if(addressStr == "repeat") {
+            ip.addressMode = AddressRepeat;
+        } else if(addressStr == "clamp") {
+            ip.addressMode = AddressClamp;
+        } else if(addressStr == "border") {
+            ip.addressMode = AddressBorder;
+        } else {
+            cerr << "unrecognize address mode: " << addressStr << endl;
+            ip.addressMode = AddressRepeat;
+        }
+
+        ip.gamma = params.getFloat("gamma", 1.0f);
+
         string channelStr = params.getString("channel", "All");
-        *channel = ChannelAll;
         if(channelStr == "R") {
-            *channel = ChannelR;
+            ip.channel = ChannelR;
         } else if(channelStr == "G") {
-            *channel = ChannelG;
+            ip.channel = ChannelG;
         } else if(channelStr == "B") {
-            *channel = ChannelB;
+            ip.channel = ChannelB;
         } else if(channelStr == "A") {
-            *channel = ChannelA;
+            ip.channel = ChannelA;
         } else if(channelStr == "All") {
-            *channel = ChannelAll;
+            ip.channel = ChannelAll;
         } else {
             cerr << "unrecognize channel: " << channelStr << endl;
+            ip.channel = ChannelAll;
         }
+        return ip;
     }
 
     Texture<float>* FloatImageTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
-        TextureMapping* m = getTextureMapping(params);
-        string filePath;
-        float gamma;
-        AddressMode addressMode;
-        ImageChannel channel;
-        getImageTextureParams(params, sceneCache, &filePath, &gamma, 
-            &addressMode, &channel);
-        return new ImageTexture<float>(filePath, m, 
-            addressMode, gamma, channel);
+        const SceneCache& sceneCache) const {
+        ImageTextureParams ip = getImageTextureParams(params, sceneCache);
+        return new ImageTexture<float>(ip.filePath, ip.mapping, ip.filter,
+            ip.addressMode, ip.gamma, ip.channel);
     }
 
     Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
+        const SceneCache& sceneCache) const {
         Color c = params.getColor("color", Color::Magenta);
         return new ConstantTexture<Color>(c);
     }
 
+    Texture<Color>* ColorCheckboardTextureCreator::create(
+        const ParamSet& params, const SceneCache& sceneCache) const {
+        TextureMapping* mapping = getTextureMapping(params);
+        ColorTexturePtr T1 = sceneCache.getColorTexture(
+            params.getString("texture1"));
+        ColorTexturePtr T2 = sceneCache.getColorTexture(
+            params.getString("texture2"));
+        bool filter = params.getBool("filter", false);
+        return new CheckboardTexture<Color>(mapping, T1, T2, filter);
+    }
+
     Texture<Color>* ColorScaleTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
+        const SceneCache& sceneCache) const {
         string textureName = params.getString("texture");
         string scaleName = params.getString("scale");
-        FloatTexturePtr s = sceneCache.getFloatTexture(scaleName);
-        ColorTexturePtr t = sceneCache.getColorTexture(textureName);
-        return new ScaleTexture<Color>(t, s);
+        FloatTexturePtr scale = sceneCache.getFloatTexture(scaleName);
+        ColorTexturePtr texture = sceneCache.getColorTexture(textureName);
+        return new ScaleTexture<Color>(texture, scale);
     }
 
     Texture<Color>* ColorImageTextureCreator::create(const ParamSet& params,
-            const SceneCache& sceneCache) const {
-        TextureMapping* m = getTextureMapping(params);
-        string filePath;
-        float gamma;
-        AddressMode addressMode;
-        ImageChannel channel;
-        getImageTextureParams(params, sceneCache, &filePath, &gamma, 
-            &addressMode, &channel);
-        return new ImageTexture<Color>(filePath, m, 
-            addressMode, gamma, channel);
+        const SceneCache& sceneCache) const {
+        ImageTextureParams ip = getImageTextureParams(params, sceneCache);
+        return new ImageTexture<Color>(ip.filePath, ip.mapping, ip.filter,
+            ip.addressMode, ip.gamma, ip.channel);
     }
 
     template struct ImageBuffer<float>;
     template struct ImageBuffer<Color>; 
+    template class MIPMap<float>;
+    template class MIPMap<Color>; 
     template class Texture<float>;
     template class Texture<Color>;
     template class ConstantTexture<float>;
     template class ConstantTexture<Color>;
+    template class CheckboardTexture<float>;
+    template class CheckboardTexture<Color>;
     template class ScaleTexture<float>;
     template class ScaleTexture<Color>;
     template class ImageTexture<float>;
@@ -341,38 +610,4 @@ namespace Goblin{
         int srcWidth, int srcHeight,
         int dstWidth, int dstHeight);
 
-    template<>
-    void convertTexel<float>(const Color& in, float* out, float gamma,
-        ImageChannel channel) {
-        if(channel == ChannelR) {
-            *out = pow(in.r, gamma);
-        } else if(channel == ChannelG) {
-            *out = pow(in.g, gamma);
-        } else if(channel == ChannelB) {
-            *out = pow(in.b, gamma);
-        } else if(channel == ChannelA) {
-            *out = pow(in.a, gamma);
-        } else if(channel == ChannelAll) {
-            *out = pow(in.luminance(), gamma);
-        }
-    }
-
-    template<>
-    void convertTexel<Color>(const Color& in, Color* out, float gamma,
-        ImageChannel channel) {
-        Color c(in);
-        if(channel == ChannelR) {
-            c = Color(in.r);
-        } else if(channel == ChannelG) {
-            c = Color(in.g);
-        } else if(channel == ChannelB) {
-            c = Color(in.b);
-        } else if(channel == ChannelA) {
-            c = Color(in.a);
-        }
-        (*out).r = gamma == 1.0f ? c.r : pow(c.r, gamma);
-        (*out).g = gamma == 1.0f ? c.g : pow(c.g, gamma);
-        (*out).b = gamma == 1.0f ? c.b : pow(c.b, gamma);
-        (*out).a = c.a;
-    }
 }

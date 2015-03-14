@@ -80,9 +80,14 @@ namespace Goblin{
         update();
     }
 
-    float PerspectiveCamera::generateRay(const Sample& sample, Ray* ray) const {
-        float xNDC = +2.0f * sample.imageX / mFilm->getXResolution() - 1.0f;
-        float yNDC = -2.0f * sample.imageY / mFilm->getYResolution() + 1.0f;
+    float PerspectiveCamera::generateRay(const Sample& sample, 
+        RayDifferential* ray) const {
+        float invXRes = mFilm->getInvXResolution();
+        float invYRes = mFilm->getInvYResolution();
+        float xNDC = +2.0f * sample.imageX * invXRes - 1.0f;
+        float yNDC = -2.0f * sample.imageY * invYRes + 1.0f;
+        float dxNDC = +2.0f * (sample.imageX + 1.0f) * invXRes - 1.0f;
+        float dyNDC = -2.0f * (sample.imageY + 1.0f) * invYRes + 1.0f;
         // from NDC space to view space
         // xView = xNDC * zView * tan(fov / 2) * aspectRatio
         // yView = yNDC * zView * tan(fov / 2)
@@ -92,24 +97,39 @@ namespace Goblin{
         float zView = 1.0f;
         float xView = xNDC / mProj[0][0];
         float yView = yNDC / mProj[1][1];
-        Vector3 viewDir = normalize(Vector3(xView, yView, zView));
+        Vector3 viewDir = Vector3(xView, yView, zView);
+
+        float dxView = dxNDC / mProj[0][0];
+        Vector3 dxViewDir(dxView, yView, zView);
+        float dyView = dyNDC / mProj[1][1];
+        Vector3 dyViewDir(xView, dyView, zView);
+
         if(mLensRadius == 0.0f) {
             // view space to world space
-            ray->o = mPosition;
-            ray->d = mOrientation * viewDir;
+            ray->o = ray->dxOrigin = ray->dyOrigin = mPosition;
+            ray->d = mOrientation * normalize(viewDir);
+            ray->dxDir = mOrientation * normalize(dxViewDir);
+            ray->dyDir = mOrientation * normalize(dyViewDir);
+            
         } else {
             // perturb the ray direction for DOF effect
             float ft = mFocalDistance / viewDir.z;
             Vector3 pFocus = viewDir * ft;
+            Vector3 pDxFocus = dxViewDir * ft;
+            Vector3 pDyFocus = dyViewDir * ft;
             Vector2 lensSample = mLensRadius *
                 uniformSampleDisk(sample.lensU1, sample.lensU2);
             Vector3 viewOrigin(lensSample.x, lensSample.y, 0.0f);
-            ray->o = mOrientation * viewOrigin + mPosition;
+            ray->o = ray->dxOrigin = ray->dyOrigin = 
+                mOrientation * viewOrigin + mPosition;
             ray->d = mOrientation * normalize(pFocus - viewOrigin);
+            ray->dxDir = mOrientation * normalize(pDxFocus - viewOrigin);
+            ray->dyDir = mOrientation * normalize(pDyFocus - viewOrigin);
         }
         ray->mint = 0.0f;
         ray->maxt = INFINITY;
         ray->depth = 0;
+        ray->hasDifferential = true;
         return 1.0f;
     }
 
@@ -124,20 +144,32 @@ namespace Goblin{
     }
 
     float OrthographicCamera::generateRay(const Sample& sample, 
-        Ray* ray) const {
-        float xNDC = +2.0f * sample.imageX / mFilm->getXResolution() - 1.0f;
-        float yNDC = -2.0f * sample.imageY / mFilm->getYResolution() + 1.0f;
+        RayDifferential* ray) const {
+        float invXRes = mFilm->getInvXResolution();
+        float invYRes = mFilm->getInvYResolution();
+        float xNDC = +2.0f * sample.imageX * invXRes - 1.0f;
+        float yNDC = -2.0f * sample.imageY * invYRes + 1.0f;
+        float dxNDC = +2.0f * (sample.imageX + 1.0f) * invXRes - 1.0f;
+        float dyNDC = -2.0f * (sample.imageY + 1.0f) * invYRes + 1.0f;
+
         // from NDC space to view space
         float xView = 0.5f * mFilmWidth * xNDC;
         float yView = 0.5f * mFilmHeight * yNDC;
+        float dxView = 0.5f * mFilmWidth * dxNDC;
+        float dyView = 0.5f * mFilmHeight * dyNDC;
         Vector3 pView(xView, yView, 0.0f);
+        Vector3 pDxView(dxView, yView, 0.0f);
+        Vector3 pDyView(xView, dyView, 0.0f);
         Vector3 viewDir(0.0f, 0.0f, 1.0f);
         // view space to world space
         ray->o = mPosition + mOrientation * pView;
-        ray->d = mOrientation * viewDir;
+        ray->dxOrigin = mPosition + mOrientation * pDxView;
+        ray->dyOrigin = mPosition + mOrientation * pDyView;
+        ray->d = ray->dxDir = ray->dyDir = mOrientation * viewDir;
         ray->mint = 0.0f;
         ray->maxt = INFINITY;
         ray->depth = 0;
+        ray->hasDifferential = true;
         return 1.0f;
     }
 

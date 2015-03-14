@@ -152,6 +152,8 @@ namespace Goblin {
 
         mPixels = new Pixel[mXRes * mYRes];
 
+        mInvXRes = 1.0f / (float)mXRes;
+        mInvYRes = 1.0f / (float)mYRes;
         // precompute filter equation as a lookup table
         // we only computer the right up corner since for all the supported
         // filters: f(x, y) = f(|x|, |y|)

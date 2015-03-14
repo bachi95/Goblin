@@ -4,9 +4,8 @@
 #include "GoblinColor.h"
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
+#include "GoblinTransform.h"
 #include "GoblinFactory.h"
-
-#include <map>
 
 namespace Goblin {
     class Fragment;
@@ -25,25 +24,75 @@ namespace Goblin {
         ChannelAll
     };
 
+    enum FilterType {
+        FilterNone,
+        FilterBilinear,
+        FilterTrilinear
+    };
+
     struct TextureCoordinate {
         Vector2 st;
+        float dsdx, dtdx, dsdy, dtdy;
     };
 
     template<typename T>
     struct ImageBuffer {
         ImageBuffer(T* i, int w, int h): image(i), width(w), height(h) {}
         ~ImageBuffer() { delete [] image; image = NULL; }
-        T texel(int s, int t, AddressMode addressMode);
-        T lookup(float s, float t, AddressMode addressMode = AddressRepeat);
+        T texel(int s, int t, AddressMode addressMode) const;
         T* image;
         int width, height;
     };
+
+    template<typename T>
+    class MIPMap {
+    public:
+        MIPMap(T* image, int w, int h);
+        ~MIPMap();
+        T lookup(const TextureCoordinate& tc, 
+            FilterType f, AddressMode m) const;
+        // leave this explicitely select level lookup here for now...
+        // sinc IBL try to figure out the level in its own math instead
+        // of by ray differential
+        T lookup(int level, float s, float t, 
+            AddressMode m = AddressRepeat) const;
+        const ImageBuffer<T>* getImageBuffer(int level) const;
+        int getLevelsNum() const;
+        int getWidth() const;
+        int getHeight() const;
+
+    private:
+        T lookupNearest(float s, float t, AddressMode m) const;
+        T lookupBilinear(float s, float t, float width, AddressMode m) const;
+        T lookupTrilinear(float s, float t, float width, AddressMode m) const;
+
+    private:
+        int mLevelsNum;
+        int mWidth, mHeight;
+        vector<ImageBuffer<T>* > mPyramid;
+    };
+
+    template<typename T>
+    const ImageBuffer<T>* MIPMap<T>::getImageBuffer(int level) const {
+        level = clamp(level, 0, mLevelsNum - 1);
+        return mPyramid[level];
+    }
+
+    template<typename T>
+    int MIPMap<T>::getLevelsNum() const { return mLevelsNum; }
+
+    template<typename T>
+    int MIPMap<T>::getWidth() const { return mWidth; }
+
+    template<typename T>
+    int MIPMap<T>::getHeight() const { return mHeight; }
 
     class TextureMapping {
     public:
         virtual ~TextureMapping() {}
         virtual void map(const Fragment& f, TextureCoordinate* tc) const = 0;
     };
+
 
     class UVMapping : public TextureMapping {
     public:
@@ -53,6 +102,18 @@ namespace Goblin {
         Vector2 mScale;
         Vector2 mOffset;
     };
+
+
+    class SphericalMapping : public TextureMapping {
+    public:
+        SphericalMapping(const Transform& toTex);
+        void map(const Fragment& f, TextureCoordinate* tc) const;
+    private:
+        void pointToST(const Vector3& p, float* s, float* t) const;
+    private:
+        Transform mToTex;
+    };
+
 
     template<typename T>
     class Texture {
@@ -72,6 +133,21 @@ namespace Goblin {
         T lookup(const Fragment& f) const;
     private:
         T mValue;
+    };
+
+    template<typename T>
+    class CheckboardTexture : public Texture<T> {
+    public:
+        CheckboardTexture(TextureMapping* m,
+            const boost::shared_ptr<Texture<T> >& T1,
+            const boost::shared_ptr<Texture<T> >& T2,
+            bool mFilter);
+        ~CheckboardTexture();
+        T lookup(const Fragment& f) const;
+    private:
+        TextureMapping* mMapping;
+        boost::shared_ptr<Texture<T> > mT1, mT2;
+        bool mFilter;
     };
 
     template<typename T>
@@ -107,26 +183,29 @@ namespace Goblin {
     class ImageTexture : public Texture<T> {
     public:
         ImageTexture(const string& filename, TextureMapping* m, 
+            FilterType filter = FilterNone,
             AddressMode address= AddressRepeat, float gamma = 1.0f,
             ImageChannel channel = ChannelAll);
         ~ImageTexture();
         T lookup(const Fragment& f) const;
         static void clearImageCache();
     private:
-        ImageBuffer<T>* getImageBuffer(const TextureId& id);
+        MIPMap<T>* getMIPMap(const TextureId& id);
+        void convertTexel(const Color& in, T* out, float gamma, 
+            ImageChannel channel);
+
     private:
-        static std::map<TextureId, ImageBuffer<T>* > imageCache;
+        static std::map<TextureId, MIPMap<T>* > imageCache;
         TextureMapping* mMapping;
+        FilterType mFilter;
         AddressMode mAddressMode;
-        ImageBuffer<T>* mImageBuffer;
+        MIPMap<T>* mMIPMap;
     };
 
     template<typename T>
     void ImageTexture<T>::clearImageCache() {
-        typename std::map<TextureId, ImageBuffer<T>* >::iterator it;
+        typename std::map<TextureId, MIPMap<T>* >::iterator it;
         for(it = imageCache.begin(); it != imageCache.end(); ++it) {
-            std::cout << "clear image cache: " << it->first.filename << 
-                std::endl;
             delete it->second;
         }
         imageCache.clear();
@@ -136,6 +215,14 @@ namespace Goblin {
     class SceneCache;
 
     class FloatConstantTextureCreator : public 
+        Creator<Texture<float> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<float>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class FloatCheckboardTextureCreator : public 
         Creator<Texture<float> , const ParamSet&, const SceneCache&> {
     public:
         Texture<float>* create(const ParamSet& params, 
@@ -160,6 +247,14 @@ namespace Goblin {
 
 
     class ColorConstantTextureCreator : public 
+        Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
+    public:
+        Texture<Color>* create(const ParamSet& params, 
+            const SceneCache& sceneCache) const;
+    };
+
+
+    class ColorCheckboardTextureCreator : public 
         Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
     public:
         Texture<Color>* create(const ParamSet& params, 

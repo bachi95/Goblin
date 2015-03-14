@@ -228,7 +228,7 @@ namespace Goblin {
     public:
         ImageBasedLight(const string& radianceMap, const Color& filter,
             const Quaternion& orientation = Quaternion::Identity,
-            int samplePerPixel = 1);
+            uint32_t samplesNum = 1, int samplePerPixel = 1);
         ~ImageBasedLight();
         Color Le(const Ray& ray, float pdf = INFINITY, 
             BSDFType type = BSDFAll) const;
@@ -240,12 +240,12 @@ namespace Goblin {
         float pdf(const Vector3& p, const Vector3& wi) const;
         bool isDelta() const;
         Color power(const ScenePtr& scene) const;
+        uint32_t getSamplesNum() const;
     private:
-        int getLodLevel(float pdfUV) const;
-    private:
-        vector<ImageBuffer<Color>* > mRadiance;
+        MIPMap<Color>* mRadiance;
         CDF2D* mDistribution;
         Color mAverageRadiance;
+        uint32_t mSamplesNum;
         int mSamplePerPixel;
     };
 
@@ -253,6 +253,9 @@ namespace Goblin {
         return false;
     }
 
+    inline uint32_t ImageBasedLight::getSamplesNum() const {
+        return mSamplesNum;
+    }
 
     class PointLightCreator : public 
         Creator<Light , const ParamSet&, const SceneCache&> {

@@ -14,6 +14,8 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "GoblinVector.h"
+
 using namespace std;
 // VS2008 doesn't have stdint.h
 #if (defined _MSC_VER && _MSC_VER < 1500)
@@ -52,12 +54,11 @@ namespace Goblin {
     using std::pair;
 
     class Color;
-    class Vector2;
-    class Vector3;
     class Camera;
     class ParamSet;
     class Quaternion;
     class Scene;
+    class Transform;
     typedef boost::shared_ptr<Camera> CameraPtr;
     typedef boost::shared_ptr<Scene> ScenePtr;
 
@@ -142,11 +143,37 @@ namespace Goblin {
 	    return (radians / PI) * 180.0f;
     }
 
+    inline float sphericalTheta(const Vector3& v) {
+        return acos(clamp(v.z, -1.0f, 1.0f));
+    }
+
+    inline float sphericalPhi(const Vector3& v) {
+        float phi = atan2(v.y, v.x);
+        return phi < 0.0f ? phi + TWO_PI : phi;
+    }
+
+    // solve the 2x2 linear equation B = A * [x, y]
+    inline bool solve2x2LinearSystem(const float A[2][2], const float B[2],
+        float* x, float* y) {
+        float det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+        if(fabs(det) < 1e-10f) {
+            return false;
+        }
+        *x = (+A[1][1] * B[0] - A[0][1] * B[1]) / det;
+        *y = (-A[1][0] * B[0] + A[0][0] * B[1]) / det;
+        if(isNaN(*x) || isNaN(*y)) {
+            return false;
+        }
+        return true;
+    }
+
     // utils that let you form a local coordinate with feed in random axis,
     // ex: form a local coordinate based on surface normal vector
     void coordinateAxises(const Vector3& a1, Vector3* a2, Vector3* a3);
 
     Quaternion getQuaternion(const ParamSet& params);
+
+    Transform getTransform(const ParamSet& params);
 
     // utils for quadratic equation, solution stored in t1 and t2
     // if it return true
