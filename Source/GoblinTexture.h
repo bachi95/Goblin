@@ -27,7 +27,8 @@ namespace Goblin {
     enum FilterType {
         FilterNone,
         FilterBilinear,
-        FilterTrilinear
+        FilterTrilinear,
+        FilterEWA
     };
 
     struct TextureCoordinate {
@@ -47,7 +48,7 @@ namespace Goblin {
     template<typename T>
     class MIPMap {
     public:
-        MIPMap(T* image, int w, int h);
+        MIPMap(T* image, int w, int h, float maxAniso = 10.0f);
         ~MIPMap();
         T lookup(const TextureCoordinate& tc, 
             FilterType f, AddressMode m) const;
@@ -65,11 +66,18 @@ namespace Goblin {
         T lookupNearest(float s, float t, AddressMode m) const;
         T lookupBilinear(float s, float t, float width, AddressMode m) const;
         T lookupTrilinear(float s, float t, float width, AddressMode m) const;
-
+        T lookupEWA(const TextureCoordinate& tc, AddressMode m) const;
+        T EWA(int level, float s, float t, float A, float B, float C, 
+            AddressMode m) const;
+        static void initEWALut();
     private:
         int mLevelsNum;
         int mWidth, mHeight;
+        float mMaxAnisotropy;
         vector<ImageBuffer<T>* > mPyramid;
+
+        static const size_t EWA_LUT_SIZE = 128;
+        static vector<float> EWALut;
     };
 
     template<typename T>
@@ -162,11 +170,12 @@ namespace Goblin {
     };
 
     struct TextureId {
-        TextureId(const string& f, float g, ImageChannel c): 
-            filename(f), gamma(g), channel(c) {}
+        TextureId(const string& f, float g, ImageChannel c, float maxAniso): 
+            filename(f), gamma(g), channel(c), maxAnisotropy(maxAniso) {}
         string filename;
         float gamma;
         ImageChannel channel;
+        float maxAnisotropy;
         bool operator<(const TextureId &rhs) const;
     };
 
@@ -175,6 +184,8 @@ namespace Goblin {
             return gamma < rhs.gamma;
         } else if(channel != rhs.channel) {
             return channel < rhs.channel;
+        } else if(maxAnisotropy != rhs.maxAnisotropy) {
+            return maxAnisotropy < rhs.maxAnisotropy;
         }
         return filename < rhs.filename;
     }
@@ -185,7 +196,7 @@ namespace Goblin {
         ImageTexture(const string& filename, TextureMapping* m, 
             FilterType filter = FilterNone,
             AddressMode address= AddressRepeat, float gamma = 1.0f,
-            ImageChannel channel = ChannelAll);
+            ImageChannel channel = ChannelAll, float maxAnisotropy = 10.0f);
         ~ImageTexture();
         T lookup(const Fragment& f) const;
         static void clearImageCache();

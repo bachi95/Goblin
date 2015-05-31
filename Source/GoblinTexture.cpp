@@ -37,7 +37,8 @@ namespace Goblin{
     }
 
     template<typename T>
-    MIPMap<T>::MIPMap(T* image, int w, int h): mWidth(w), mHeight(h) {
+    MIPMap<T>::MIPMap(T* image, int w, int h, float maxAniso): 
+        mWidth(w), mHeight(h), mMaxAnisotropy(maxAniso) {
         // resize the image to power of 2 for easier mipmap process
         if(!isPowerOf2(mWidth) || !isPowerOf2(mHeight)) {
             int wPow2 = roundUpPow2(mWidth);
@@ -63,6 +64,10 @@ namespace Goblin{
             mPyramid.push_back(
                 new ImageBuffer<T>(resizedBuffer, resizedW, resizedH));
         }
+
+        if(EWALut.empty()) {
+            initEWALut();
+        }
     }
 
     template<typename T>
@@ -87,6 +92,8 @@ namespace Goblin{
             float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
                 max(fabs(tc.dsdy), fabs(tc.dtdy)));
             return lookupTrilinear(tc.st[0], tc.st[1], width, m);
+        } else if(f == FilterEWA) {
+            return lookupEWA(tc, m);
         } else {
             return lookupNearest(tc.st[0], tc.st[1], m);
         }
@@ -122,6 +129,148 @@ namespace Goblin{
     }
 
     template<typename T>
+    T MIPMap<T>::lookupEWA(const TextureCoordinate& tc, AddressMode m) const {
+        float ds0 = tc.dsdx;
+        float dt0 = tc.dtdx;
+        float ds1 = tc.dsdy;
+        float dt1 = tc.dtdy;
+        float majorLength = sqrt(ds0 * ds0 + dt0 * dt0);
+        float minorLength = sqrt(ds1 * ds1 + dt1 * dt1);
+        if(majorLength < minorLength) {
+            swap(ds0, ds1);
+            swap(dt0, dt1);
+            swap(majorLength, minorLength);
+        }
+        // clamp the eccentricity to a reasonable number
+        if(minorLength * mMaxAnisotropy < majorLength && minorLength > 0.0f) {
+            float scale = majorLength / (minorLength * mMaxAnisotropy);
+            minorLength *= scale;
+            ds1 *= scale;
+            dt1 *= scale;
+        }
+        /* 
+         * compute the ellipse equation coefficient
+         * ellipse equation Ax^2 + Bxy +Cy^2 = F in matrix form:
+         * P = [x, y]
+         * Q = [A    B/2]
+         *     [B/2  C  ]
+         * PQPt = F (t stands for transpose)
+         * now mapping a unit sphere to space formed by (ds0, dt0), (ds1, dt1)
+         * ie: mapping (1, 0) to (ds0, dt0)
+         *             (0, 1) to (ds1, dt1)
+         * P' = PM = [cosTheta, sinTheta] [ds0 dt0]
+         *                                [ds1 dt1]
+         * where M is the transform matrix (jacobian)
+         * since P = P'M^-1 and PPt = [cosTheta sinTheta] [cosTheta] = 1
+         *                                                [sinTheta]
+         * P'M^-1M^1tP't = 1 -> M^-1M^-1t = Q
+         * Q = [A    B/2] = [ dt1 -dt0][ dt1 -ds1] ->
+         *     [B/2  C  ]   [-ds1  ds0][-dt0  ds0] 
+         * A = dt0^2 + dt1^2
+         * B = -2(ds0dt0 + ds1dt1)
+         * C = ds0^2 + ds1^2
+         * F = (ds0dt1 -dt0ds1)^2 = AC - B^2/4
+         */
+        float A = dt0 * dt0 + dt1 * dt1;
+        float B = -2.0f * (ds0 * dt0 + ds1 * dt1);
+        float C = ds0 * ds0 + ds1 * ds1;
+        float F =  A * C - 0.25f * B * B;
+        // unable to form an ellipse, fallback to trilinear filter then
+        float s = tc.st[0];
+        float t = tc.st[1];
+        if(minorLength == 0.0f || F <= 0.0f) {
+            return lookupTrilinear(s, t, minorLength, m);
+        }
+        float invF = 1.0f / F;
+        A *= invF;
+        B *= invF;
+        C *= invF;
+        float level = mLevelsNum - 1 + log2(minorLength);
+        int iLevel = floorInt(level);
+        if(iLevel < 0) {
+            return lookup(0, s, t, m);
+        } else if(iLevel >= mLevelsNum - 1) {
+            return lookup(mLevelsNum - 1, s, t, m);
+        } else {
+            float delta = level - (float)iLevel;
+            return (1.0f - delta) * EWA(iLevel, s, t, A, B, C, m) +
+                   (       delta) * EWA(iLevel + 1, s, t, A, B, C, m);
+        }
+    }
+
+    template<typename T>
+    T MIPMap<T>::EWA(int level, float s, float t, float A, float B, float C,
+        AddressMode m) const {
+        const ImageBuffer<T>* image = mPyramid[level];
+        float sRes = (float)image->width;
+        float tRes = (float)image->height;
+        s = s * image->width - 0.5f;
+        t = t * image->height - 0.5f;
+        /*
+         * transform the ellipse coefficient to pixel space
+         * since dt0' = dt0 * tRes   ds0' = ds0 * sRes
+         *       dt1' = dt1 * tRes   ds1' = ds1 * sRes
+         * plug in back to the transform equation and we can get
+         * (A'/F') = (A/F)/sRes^2
+         * (B'/F') = (B/F)/(sRestRes)
+         * (C'/F') = (C/F)/tRes^2
+         */
+        A = A / (sRes * sRes);
+        B = B / (sRes * tRes);
+        C = C / (tRes * tRes);
+        /* 
+         * compute the bounding box of ellipse
+         * f = As^2 + Bst + Ct^2 -1
+         * s bound happens in wehre dfdt = Bs + 2Ct = 0 ->
+         * t = -Bs/2C -> As^2 + -B^2s^2/2C + B^2Cs^2/4C^2 - 1 = 0
+         * s = +-2sqrt(C/(-B^2 + 4AC))
+         * t bound happens in where dfds = 2As + Bt = 0 ->
+         * s = -Bt/2A -> AB^2t^2/4A^2 + -B^2t^2/2A + Ct^2 - 1 = 0
+         * t = +-2sqrt(A/(-B^2 + 4AC))
+         */
+        float invDet = 1.0f / (-B * B + 4.0f * A * C);
+        float offsetS = 2.0f * sqrt(C * invDet);
+        float offsetT = 2.0f * sqrt(A * invDet);
+        int s0 = ceilInt(s - offsetS);
+        int s1 = floorInt(s + offsetS);
+        int t0 = ceilInt(t - offsetT);
+        int t1 = floorInt(t + offsetT);
+        // loop over bounding box region and accumulate pixel contribution
+        float weightSum = 0.0f;
+        T result(0.0f);
+        for(int is = s0; is <= s1; ++is) {
+            for(int it = t0; it <= t1; ++it) {
+                float ss = is - s;
+                float tt = it - t;
+                float r2 = A * ss * ss + B * ss * tt + C * tt * tt;
+                if(r2 <= 1.0f) {
+                    size_t lutIndex = (size_t)floorInt(r2 * EWA_LUT_SIZE);
+                    float weight = EWALut[min(lutIndex, EWA_LUT_SIZE - 1)];
+                    result += weight * image->texel(is, it, m);
+                    weightSum += weight;
+                }
+            }
+        }
+        if(weightSum > 0.0f) {
+            result /= weightSum;
+        } else {
+            result = image->texel((int)s, (int)t, m);
+        }
+        return result;
+    }
+
+    template<typename T>
+    void MIPMap<T>::initEWALut() {
+        EWALut.resize(EWA_LUT_SIZE);
+        const float falloff = 2.0f;
+        for(size_t i = 0; i < EWA_LUT_SIZE; ++i) {
+            float r2 = float(i) / float(EWA_LUT_SIZE - 1);
+            // offset the whole lut so the r2 >= 1 cases have weight 0
+            EWALut[i] = expf(-falloff * r2) - expf(-falloff);
+        }
+    }
+
+    template<typename T>
     T MIPMap<T>::lookup(int level, float s, float t, 
         AddressMode m) const {
         level = clamp(level, 0, mLevelsNum);
@@ -137,6 +286,9 @@ namespace Goblin{
                (1.0f - ds) * (       dt) * image->texel(s0, t0 + 1, m) +
                (       ds) * (       dt) * image->texel(s0 + 1, t0 + 1, m);
     }
+
+    template<typename T>
+    std::vector<float> MIPMap<T>::EWALut;
 
     UVMapping::UVMapping(const Vector2& scale, const Vector2& offset):
         mScale(scale), mOffset(offset) {}
@@ -278,9 +430,9 @@ namespace Goblin{
     template<typename T>
     ImageTexture<T>::ImageTexture(const string& filename, TextureMapping* m,
         FilterType filter, AddressMode address, 
-        float gamma, ImageChannel channel): 
+        float gamma, ImageChannel channel, float maxAniso): 
         mMapping(m), mFilter(filter), mAddressMode(address) {
-        TextureId id(filename, gamma, channel);
+        TextureId id(filename, gamma, channel, maxAniso);
         mMIPMap = getMIPMap(id);
     }
 
@@ -323,7 +475,8 @@ namespace Goblin{
             }
             delete [] colorBuffer;
         }
-        MIPMap<T>* ret = new MIPMap<T>(texelBuffer, width, height); 
+        MIPMap<T>* ret = new MIPMap<T>(texelBuffer, width, height, 
+            id.maxAnisotropy);
         imageCache[id] = ret;
         return ret;
     }
@@ -494,6 +647,7 @@ namespace Goblin{
         AddressMode addressMode;
         float gamma;
         ImageChannel channel;
+        float maxAnisotropy;
     };
 
     static ImageTextureParams getImageTextureParams(const ParamSet& params,
@@ -511,6 +665,8 @@ namespace Goblin{
             ip.filter = FilterBilinear;
         } else if(filterStr == "trilinear") {
             ip.filter = FilterTrilinear;
+        } else if(filterStr == "EWA") {
+            ip.filter = FilterEWA;
         } else {
             cerr << "unrecognize filter: " << filterStr << endl;
             ip.filter = FilterNone;
@@ -545,6 +701,7 @@ namespace Goblin{
             cerr << "unrecognize channel: " << channelStr << endl;
             ip.channel = ChannelAll;
         }
+        ip.maxAnisotropy = params.getFloat("max_anisotropy", 10.0f);
         return ip;
     }
 
@@ -552,7 +709,7 @@ namespace Goblin{
         const SceneCache& sceneCache) const {
         ImageTextureParams ip = getImageTextureParams(params, sceneCache);
         return new ImageTexture<float>(ip.filePath, ip.mapping, ip.filter,
-            ip.addressMode, ip.gamma, ip.channel);
+            ip.addressMode, ip.gamma, ip.channel, ip.maxAnisotropy);
     }
 
     Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
