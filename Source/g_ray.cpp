@@ -1,30 +1,19 @@
-#include "GoblinScene.h"
-#include "GoblinSceneLoader.h"
-#include "GoblinWhitted.h"
-#include "GoblinPathtracer.h"
+#include "GoblinRenderContext.h"
+#include "GoblinContextLoader.h"
 
 using namespace Goblin;
 
 int main(int argc, char** argv) {
     if(argc != 2) {
-        cout << "Usage: Ray scene.json" << endl;
+        cout << "Usage: g_ray scene.json" << endl;
         return 0;
     }
-    ParamSet setting;
-    ScenePtr scene;
-    if(scene = SceneLoader().load(argv[1], &setting)) {
+    boost::scoped_ptr<RenderContext> renderContext(
+        ContextLoader().load(argv[1]));
+    if(renderContext) {
         cout << "\nsuccessfully loaded scene, start rendering...\n"; 
-        // TODO make this a factory method when we have more renderers...
-        string method = setting.getString("render_method", "path_tracing");
-        Renderer* renderer;
-        if(method == "whitted") {
-            renderer = new WhittedRenderer(setting);
-        } else {
-            renderer = new PathTracer(setting);
-        }
-        renderer->render(scene);
+        renderContext->render();
         cout << "render complete!" << endl; 
-        delete renderer;
     }
     return 0;
 }

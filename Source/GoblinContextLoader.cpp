@@ -1,12 +1,16 @@
-#include "GoblinSceneLoader.h"
+#include "GoblinContextLoader.h"
 #include "GoblinBBox.h"
 #include "GoblinBVH.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
+#include "GoblinAO.h"
+#include "GoblinPathtracer.h"
 #include "GoblinPropertyTree.h"
 #include "GoblinRenderer.h"
 #include "GoblinSphere.h"
+#include "GoblinWhitted.h"
 #include "GoblinUtils.h"
+
 
 namespace Goblin {
     static Vector2 parseVector2(const PropertyTree& pt, const char* key,
@@ -98,30 +102,11 @@ namespace Goblin {
         cout << "---------------------------------" << endl;
     }
 
-    static void parseRenderSetting(const PropertyTree& pt, 
-        ParamSet* setting) {
-        PropertyTree settingPt;
-        pt.getChild("render_setting", &settingPt);
-        parseParamSet(settingPt, setting);
-        if(!setting->hasInt("sample_per_pixel")) {
-            setting->setInt("sample_per_pixel", 1);
-        }
-        if(!setting->hasInt("max_ray_depth")) {
-            setting->setInt("max_ray_depth", 5);
-        }
-        if(!setting->hasInt("thread_num")) {
-            setting->setInt("thread_num", 
-                boost::thread::hardware_concurrency());
-        }
-        if(!setting->hasInt("bssrdf_sample_num")) {
-            setting->setInt("bssrdf_sample_num", 4);
-        }
-    }
-
-    SceneLoader::SceneLoader():
+    ContextLoader::ContextLoader():
         mFilterFactory(new Factory<Filter, const ParamSet&>()),
         mFilmFactory(new Factory<Film, const ParamSet&, Filter*>()),
         mCameraFactory(new Factory<Camera, const ParamSet&, Film*>()),
+        mRendererFactory(new Factory<Renderer, const ParamSet&>()),
         mVolumeFactory(new Factory<VolumeRegion, const ParamSet&>()),
         mGeometryFactory(
             new Factory<Geometry, const ParamSet&, const SceneCache&>()),
@@ -151,6 +136,13 @@ namespace Goblin {
         mCameraFactory->registerCreator("orthographic", 
             new OrthographicCameraCreator);
         mCameraFactory->setDefault("perspective");
+        // renderer
+        mRendererFactory->registerCreator("ao",
+            new AORendererCreator);
+        mRendererFactory->registerCreator("whitted", 
+            new WhittedRendererCreator);
+        mRendererFactory->registerCreator("path_tracing",
+            new PathTracerCreator);
         // volume
         mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
         mVolumeFactory->setDefault("homogeneous");
@@ -212,7 +204,7 @@ namespace Goblin {
         mLightFactory->setDefault("point");
     }
 
-    Filter* SceneLoader::parseFilter(const PropertyTree& pt) {
+    Filter* ContextLoader::parseFilter(const PropertyTree& pt) {
         cout << "filter" << endl;
         PropertyTree filterPt;
         pt.getChild("filter", &filterPt);
@@ -222,7 +214,7 @@ namespace Goblin {
         return mFilterFactory->create(type, filterParams);
     }
 
-    Film* SceneLoader::parseFilm(const PropertyTree& pt, Filter* filter) {
+    Film* ContextLoader::parseFilm(const PropertyTree& pt, Filter* filter) {
         cout << "film" << endl;
         PropertyTree filmPt;
         pt.getChild("film", &filmPt);
@@ -232,7 +224,7 @@ namespace Goblin {
         return mFilmFactory->create(type, filmParams, filter);
     }
 
-    CameraPtr SceneLoader::parseCamera(const PropertyTree& pt, Film* film) {
+    CameraPtr ContextLoader::parseCamera(const PropertyTree& pt, Film* film) {
         cout << "camera" << endl;
         PropertyTree cameraPt;
         pt.getChild("camera", &cameraPt);
@@ -242,7 +234,18 @@ namespace Goblin {
         return CameraPtr(mCameraFactory->create(type, cameraParams, film));
     }
 
-    VolumeRegion* SceneLoader::parseVolume(const PropertyTree& pt) {
+    RendererPtr ContextLoader::parseRenderer(const PropertyTree& pt, 
+        int* samplePerPixel) {
+        PropertyTree settingPt;
+        pt.getChild("render_setting", &settingPt);
+        ParamSet setting;
+        parseParamSet(settingPt, &setting);
+        *samplePerPixel = setting.getInt("sample_per_pixel");
+        string method = setting.getString("render_method", "path_tracing");
+        return RendererPtr(mRendererFactory->create(method, setting));
+    }
+
+    VolumeRegion* ContextLoader::parseVolume(const PropertyTree& pt) {
         if(!pt.hasChild("volume")) {
             return NULL;
         }
@@ -255,7 +258,7 @@ namespace Goblin {
         return mVolumeFactory->create(type, volumeParams);
     }
 
-    void SceneLoader::parseGeometry(const PropertyTree& pt, 
+    void ContextLoader::parseGeometry(const PropertyTree& pt, 
         SceneCache* sceneCache) {
         cout << "geometry" <<endl;
         ParamSet geometryParams;
@@ -275,7 +278,7 @@ namespace Goblin {
         sceneCache->addGeometry(name, geometry);
     }
 
-    void SceneLoader::parseTexture(const PropertyTree& pt,
+    void ContextLoader::parseTexture(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "texture" <<endl;
         ParamSet textureParams;
@@ -297,7 +300,7 @@ namespace Goblin {
         }
     }
 
-    void SceneLoader::parseMaterial(const PropertyTree& pt,
+    void ContextLoader::parseMaterial(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "material" <<endl;
         ParamSet materialParams;
@@ -309,7 +312,7 @@ namespace Goblin {
         sceneCache->addMaterial(name, material);
     }
 
-    void SceneLoader::parsePrimitive(const PropertyTree& pt,
+    void ContextLoader::parsePrimitive(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "primitive" <<endl;
         ParamSet primitiveParams;
@@ -325,7 +328,7 @@ namespace Goblin {
         }
     }
 
-    void SceneLoader::parseLight(const PropertyTree& pt, SceneCache* sceneCache,
+    void ContextLoader::parseLight(const PropertyTree& pt, SceneCache* sceneCache,
         int samplePerPixel) {
         cout << "light" << endl;
         ParamSet lightParams;
@@ -363,21 +366,20 @@ namespace Goblin {
         }
     }
 
-    ScenePtr SceneLoader::load(const string& filename, 
-        ParamSet* setting) {
-        ScenePtr scene;
+    RenderContext* ContextLoader::load(const string& filename) {
         PropertyTree pt;
         path scenePath(filename);
         if(!exists(scenePath) || !pt.read(filename)) {
             cerr << "error reading scene file: " << filename << endl;
-            return scene;
+            return NULL;
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));
-        parseRenderSetting(pt, setting);
         Filter* filter = parseFilter(pt);
         Film* film = parseFilm(pt, filter);
         CameraPtr camera = parseCamera(pt, film);
         VolumeRegion* volume = parseVolume(pt);
+        int samplePerPixel;
+        RendererPtr renderer = parseRenderer(pt, &samplePerPixel);
 
         PtreeList geometryNodes;
         pt.getChildren("geometry", &geometryNodes);
@@ -402,13 +404,14 @@ namespace Goblin {
         PtreeList lightNodes;
         pt.getChildren("light", &lightNodes);
         for(size_t i = 0; i < lightNodes.size(); ++i) {
-            parseLight(lightNodes[i].second, &sceneCache, 
-                setting->getInt("sample_per_pixel"));
+            parseLight(lightNodes[i].second, &sceneCache, samplePerPixel);
         }
-
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
             1, "equal_count"));
-        return ScenePtr(new Scene(aggregate, camera, 
+        ScenePtr scene(new Scene(aggregate, camera, 
             sceneCache.getLights(), volume));
+
+        RenderContext* ctx = new RenderContext(renderer, scene);
+        return ctx;
     }
 }

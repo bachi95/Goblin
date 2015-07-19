@@ -192,17 +192,13 @@ namespace Goblin {
             // directly...
             float alphaLow = 0.0f;
             float alphaHigh = 1.0f;
-            float rdLow = diffuseReflectance(alphaLow, A);
-            float rdHigh = diffuseReflectance(alphaHigh, A);
             for(int j = 0; j < 16; ++j) {
                 float alphaMid =  0.5f * (alphaLow + alphaHigh);                
                 float rdMid = diffuseReflectance(alphaMid, A);
                 if(rdMid > diffuse[i]) {
                     alphaHigh = alphaMid;
-                    rdHigh = rdMid;
                 } else {
                     alphaLow = alphaMid;
-                    rdLow = rdMid;
                 }
             }
             float alphaPrime = 0.5f * (alphaLow + alphaHigh); 

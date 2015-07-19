@@ -10,10 +10,11 @@ namespace Goblin {
         return !isOpaque(p, r);
     }
 
-    PathTracer::PathTracer(const ParamSet& setting): 
-        Renderer(setting) {
-        mMaxRayDepth = setting.getInt("max_ray_depth", 5);
-    }
+    PathTracer::PathTracer(int samplePerPixel, int threadNum, 
+        int maxRayDepth, int bssrdfSampleNum): 
+        Renderer(samplePerPixel, threadNum),
+        mMaxRayDepth(maxRayDepth),
+        mBssrdfSampleNum(bssrdfSampleNum) {}
 
     PathTracer::~PathTracer() {}
 
@@ -216,7 +217,7 @@ namespace Goblin {
         }
 
         mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
-            mSetting.getInt("bssrdf_sample_num", 4));
+            mBssrdfSampleNum);
         const vector<Light*>& lights = scene->getLights();
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {
@@ -224,4 +225,15 @@ namespace Goblin {
         }
         mPowerDistribution = new CDF1D(lightPowers);
     }
+
+    Renderer* PathTracerCreator::create(const ParamSet& params) const {
+        int samplePerPixel = params.getInt("sample_per_pixel", 1);
+        int threadNum = params.getInt("thread_num", 
+            boost::thread::hardware_concurrency());
+        int maxRayDepth = params.getInt("max_ray_depth", 5);
+        int bssrdfSampleNum = params.getInt("bssrdf_sample_num", 4);
+        return new PathTracer(samplePerPixel, threadNum, 
+            maxRayDepth, bssrdfSampleNum);
+    }
+
 }

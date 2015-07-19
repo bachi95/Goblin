@@ -1,12 +1,14 @@
 #ifndef GOBLIN_PATHTRACER_H
 #define GOBLIN_PATHTRACER_H
 
+#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 
 namespace Goblin {
     class PathTracer : public Renderer {
     public:
-        PathTracer(const ParamSet& setting);
+        PathTracer(int samplePerPixel = 1, int threadNum = 1, 
+            int maxRayDepth = 5, int bssrdfSampleNum = 4);
         ~PathTracer();
         Color Li(const ScenePtr& scene, const RayDifferential& ray,
             const Sample& sample, const RNG& rng,
@@ -20,6 +22,13 @@ namespace Goblin {
             SampleQuota* sampleQuota);
     private:
         int mMaxRayDepth;
+        int mBssrdfSampleNum;
+    };
+
+    class PathTracerCreator : public 
+        Creator<Renderer , const ParamSet&> {
+    public:
+        Renderer* create(const ParamSet& params) const;
     };
 }
 

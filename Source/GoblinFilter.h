@@ -9,6 +9,7 @@ namespace Goblin {
     class Filter {
     public:
         Filter(float xWidth, float yWidth);
+        virtual ~Filter() {}
         float getXWidth() const;
         float getYWidth() const;
         virtual float evaluate(float x, float y) const = 0;

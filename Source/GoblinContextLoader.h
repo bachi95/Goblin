@@ -1,5 +1,5 @@
-#ifndef GOBLIN_SCENE_LOADER_H
-#define GOBLIN_SCENE_LOADER_H
+#ifndef GOBLIN_CONTEXT_LOADER_H
+#define GOBLIN_CONTEXT_LOADER_H
 
 #include <string>
 #include "GoblinFactory.h"
@@ -7,6 +7,7 @@
 #include "GoblinFilm.h"
 #include "GoblinCamera.h"
 #include "GoblinPrimitive.h"
+#include "GoblinRenderContext.h"
 #include "GoblinScene.h"
 #include "GoblinTexture.h"
 #include "GoblinVolume.h"
@@ -16,16 +17,16 @@ namespace Goblin {
     class PropertyTree;
     class ParamSet;
 
-    class SceneLoader {
+    class ContextLoader {
     public:
-        SceneLoader();
-        ScenePtr load(const std::string& filename, 
-            ParamSet* setting);
+        ContextLoader();
+        RenderContext* load(const std::string& filename);
     private:
         Filter* parseFilter(const PropertyTree& pt);
         Film* parseFilm(const PropertyTree& pt, Filter* filter);
         CameraPtr parseCamera(const PropertyTree& pt, Film* film);
         VolumeRegion* parseVolume(const PropertyTree& pt);
+        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel);
         void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache);
         void parseTexture(const PropertyTree& pt, SceneCache* sceneCache);
         void parseMaterial(const PropertyTree& pt, SceneCache* sceneCache);
@@ -36,6 +37,7 @@ namespace Goblin {
         scoped_ptr<Factory<Filter, const ParamSet&> > mFilterFactory;
         scoped_ptr<Factory<Film, const ParamSet&, Filter*> > mFilmFactory;
         scoped_ptr<Factory<Camera, const ParamSet&, Film*> > mCameraFactory;
+        scoped_ptr<Factory<Renderer, const ParamSet&> > mRendererFactory;
         scoped_ptr<Factory<VolumeRegion, const ParamSet& > > mVolumeFactory;
         scoped_ptr<Factory<Geometry, const ParamSet&, const SceneCache&> > 
             mGeometryFactory;
@@ -52,4 +54,4 @@ namespace Goblin {
     };
 }
 
-#endif //GOBLIN_SCENE_LOADER_H
+#endif //GOBLIN_CONTEXT_LOADER_H

@@ -95,11 +95,12 @@ namespace Goblin {
         }
     }
 
-    Renderer::Renderer(const ParamSet& setting):
+    Renderer::Renderer(int samplePerPixel, int threadNum):
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mPickLightSampleIndexes(NULL),
         mPowerDistribution(NULL), 
-        mSetting(setting) {}
+        mSamplePerPixel(samplePerPixel),
+        mThreadNum(threadNum) {}
 
     Renderer::~Renderer() {
         if(mLightSampleIndexes) {
@@ -125,17 +126,16 @@ namespace Goblin {
         Film* film = camera->getFilm();
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
-        int samplePerPixel = mSetting.getInt("sample_per_pixel", 1);
 
         vector<ImageTile*>& tiles = film->getTiles();
         vector<Task*> renderTasks;
         RenderProgress progress((int)tiles.size());
         for(size_t i = 0; i < tiles.size(); ++i) {
             renderTasks.push_back(new RenderTask(tiles[i], this, 
-                camera, scene, sampleQuota, samplePerPixel, &progress));
+                camera, scene, sampleQuota, mSamplePerPixel, &progress));
         }
         
-        ThreadPool threadPool(mSetting.getInt("thread_num", 1));
+        ThreadPool threadPool(mThreadNum);
         threadPool.enqueue(renderTasks);
         threadPool.waitForAll();
         //clean up

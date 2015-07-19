@@ -78,7 +78,7 @@ namespace Goblin {
 
     class Renderer {
     public:
-        Renderer(const ParamSet& setting);
+        Renderer(int samplePerPixel = 1, int threadNum = 1);
         virtual ~Renderer();
         void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
@@ -152,7 +152,8 @@ namespace Goblin {
         SampleIndex* mPickLightSampleIndexes;
         BSSRDFSampleIndex mBSSRDFSampleIndex;
         CDF1D* mPowerDistribution;
-        ParamSet mSetting;
+        int mSamplePerPixel;
+        int mThreadNum;
     };
 }
 

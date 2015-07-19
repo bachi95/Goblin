@@ -3,10 +3,11 @@
 
 namespace Goblin {
 
-    WhittedRenderer::WhittedRenderer(const ParamSet& setting): 
-        Renderer(setting) {
-        mMaxRayDepth = setting.getInt("max_ray_depth", 5);
-    }
+    WhittedRenderer::WhittedRenderer(int samplePerPixel, int threadNum, 
+        int maxRayDepth, int bssrdfSampleNum): 
+        Renderer(samplePerPixel, threadNum),
+        mMaxRayDepth(maxRayDepth),
+        mBssrdfSampleNum(bssrdfSampleNum) {}
 
     WhittedRenderer::~WhittedRenderer() {}
 
@@ -71,12 +72,21 @@ namespace Goblin {
         }
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
-        mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
-            mSetting.getInt("bssrdf_sample_num", 4));
+        mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, mBssrdfSampleNum);
         vector<float> lightPowers;
         for(size_t i = 0; i < lights.size(); ++i) {
             lightPowers.push_back(lights[i]->power(scene).luminance());
         }
         mPowerDistribution = new CDF1D(lightPowers);
+    }
+
+    Renderer* WhittedRendererCreator::create(const ParamSet& params) const {
+        int samplePerPixel = params.getInt("sample_per_pixel", 1);
+        int threadNum = params.getInt("thread_num", 
+            boost::thread::hardware_concurrency());
+        int maxRayDepth = params.getInt("max_ray_depth", 5);
+        int bssrdfSampleNum = params.getInt("bssrdf_sample_num", 4);
+        return new WhittedRenderer(samplePerPixel, threadNum, 
+            maxRayDepth, bssrdfSampleNum);
     }
 }

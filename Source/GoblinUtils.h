@@ -57,9 +57,11 @@ namespace Goblin {
     class Camera;
     class ParamSet;
     class Quaternion;
+    class Renderer;
     class Scene;
     class Transform;
     typedef boost::shared_ptr<Camera> CameraPtr;
+    typedef boost::shared_ptr<Renderer> RendererPtr;
     typedef boost::shared_ptr<Scene> ScenePtr;
 
     const float PI = 3.14159265358979323f;
