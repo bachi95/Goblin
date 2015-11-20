@@ -159,12 +159,14 @@ namespace Goblin {
         // filters: f(x, y) = f(|x|, |y|)
         float deltaX = mFilter->getXWidth() / FILTER_TABLE_WIDTH;
         float deltaY = mFilter->getYWidth() / FILTER_TABLE_WIDTH;
+        float normalizeTerm = mFilter->getNormalizeTerm();
         size_t index = 0;
         for(int y = 0; y < FILTER_TABLE_WIDTH; ++y) {
             float fy = y * deltaY;
             for(int x = 0; x < FILTER_TABLE_WIDTH; ++x) {
                 float fx = x * deltaX;
-                mFilterTable[index++] = mFilter->evaluate(fx, fy);
+                mFilterTable[index++] = normalizeTerm *
+                    mFilter->evaluate(fx, fy);
             }
         }
 

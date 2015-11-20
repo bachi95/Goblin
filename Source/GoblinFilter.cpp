@@ -19,11 +19,21 @@ namespace Goblin {
         return 1.0f;
     }
 
+    float BoxFilter::getNormalizeTerm() const {
+        return 4.0f * mXWidth * mYWidth;
+    }
+
     TriangleFilter::TriangleFilter(float xWidth, float yWidth):
         Filter(xWidth, yWidth) {}
 
     float TriangleFilter::evaluate(float x, float y) const {
         return  max(0.0f, mXWidth - fabsf(x)) * max(0.0f, mYWidth - fabsf(y));
+    }
+
+    float TriangleFilter::getNormalizeTerm() const {
+        // 4 * integrate (integrate (w - x) * (h - y) over 0-w) over 0-h =
+        // w * w * h * h
+        return mXWidth * mXWidth * mYWidth * mYWidth;
     }
 
     GaussianFilter::GaussianFilter(float xWidth, float yWidth,
@@ -33,6 +43,24 @@ namespace Goblin {
 
     float GaussianFilter::evaluate(float x, float y) const {
         return gaussian(x, mExpX) * gaussian(y, mExpY);
+    }
+
+    float GaussianFilter::getNormalizeTerm() const {
+        // for now just simply use numercal approximation
+        // this integration actually involves an erf function
+        // that need to be approximated anyway...
+        size_t step = 20;
+        float deltaX = mXWidth / static_cast<float>(step);
+        float deltaY = mYWidth / static_cast<float>(step);
+        float result = 0.0f;
+        for (size_t i = 0; i < step; ++i) {
+            for (size_t j = 0; j < step; ++j) {
+                result += 4.0f * deltaX *deltaY *
+                    gaussian(i * deltaX, mExpX) *
+                    gaussian(j * deltaY, mExpY);
+            }
+        }
+        return result;
     }
 
     float GaussianFilter::gaussian(float v, float expbase) const {
@@ -46,6 +74,13 @@ namespace Goblin {
 
     float MitchellFilter::evaluate(float x, float y) const {
         return Mitchell(x * mInvWidthX) * Mitchell(y * mInvWidthY);
+    }
+
+    float MitchellFilter::getNormalizeTerm() const {
+        return 4.0f * ((12 - 9 * mB - 6 * mC) / 4 +
+            (-18 + 12 * mB +6 * mC) / 3 + (6 - 2 * mB) +
+            15 * (-mB - 6 * mB) / 4 + 7 *(6 * mB + 30 * mC) / 3 +
+            3 * (-12 * mB - 48 * mC) / 2 + (8 * mB + 24 * mC)) / 6.0f;
     }
 
     float MitchellFilter::Mitchell(float x) const {

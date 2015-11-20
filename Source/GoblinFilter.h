@@ -13,6 +13,8 @@ namespace Goblin {
         float getXWidth() const;
         float getYWidth() const;
         virtual float evaluate(float x, float y) const = 0;
+        // 2D integration result from -filterWidht->filterWidth
+        virtual float getNormalizeTerm() const = 0;
     protected:
         float mXWidth, mYWidth;
     };
@@ -22,6 +24,7 @@ namespace Goblin {
     public:
         BoxFilter(float xWidth, float yWidth);
         float evaluate(float x, float y) const;
+        float getNormalizeTerm() const;
     };
 
 
@@ -29,6 +32,7 @@ namespace Goblin {
     public:
         TriangleFilter(float xWidth, float yWidth);
         float evaluate(float x, float y) const;
+        float getNormalizeTerm() const;
     };
 
 
@@ -36,6 +40,7 @@ namespace Goblin {
     public:
         GaussianFilter(float xWidth, float yWidth, float falloff);
         float evaluate(float x, float y) const;
+        float getNormalizeTerm() const;
     private:
         float gaussian(float v, float expbase) const;
     private:
@@ -47,9 +52,10 @@ namespace Goblin {
     class MitchellFilter: public Filter {
     public:
         MitchellFilter(float xWidth, float yWidth, float b, float c);
+        float evaluate(float x, float y) const;
+        float getNormalizeTerm() const;
     private:
         float Mitchell(float x) const;
-        float evaluate(float x, float y) const;
     private:
         const float mInvWidthX, mInvWidthY;
         const float mB, mC;
