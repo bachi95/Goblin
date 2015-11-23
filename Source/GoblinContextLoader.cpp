@@ -1,6 +1,7 @@
 #include "GoblinContextLoader.h"
 #include "GoblinBBox.h"
 #include "GoblinBVH.h"
+#include "GoblinDisk.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinAO.h"
@@ -148,6 +149,7 @@ namespace Goblin {
         mVolumeFactory->setDefault("homogeneous");
         // geometry
         mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);
+        mGeometryFactory->registerCreator("disk", new DiskGeometryCreator);
         mGeometryFactory->registerCreator("mesh", new MeshGeometryCreator);
         mGeometryFactory->setDefault("sphere");
         // texture

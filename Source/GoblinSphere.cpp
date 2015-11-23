@@ -89,7 +89,7 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
      */
     float phi = atan2(pHit.y, pHit.x); 
     if(phi < 0.0f) {
-        phi += 2.0f * PI;
+        phi += TWO_PI;
     }
     float u = phi * INV_TWOPI;
     float theta = acos(pHit.z / mRadius);
@@ -166,7 +166,7 @@ void Sphere::buildStacks() {
     // (r * sinTheta * cosPhi, r * sinTheta * sinPhi,r * cosTheta)
 
     float thetaStep = PI / mNumStacks;
-    float phiStep = 2.0f * PI / mNumSlices;
+    float phiStep = TWO_PI / mNumSlices;
     // two poles of the sphere are not counted as ring
     size_t numRings = mNumStacks - 1;
     for(size_t i = 1; i <= numRings; ++i) {
