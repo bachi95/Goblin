@@ -2,6 +2,7 @@
 #include "GoblinBBox.h"
 #include "GoblinBVH.h"
 #include "GoblinDisk.h"
+#include "GoblinLightTracer.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinAO.h"
@@ -144,6 +145,9 @@ namespace Goblin {
             new WhittedRendererCreator);
         mRendererFactory->registerCreator("path_tracing",
             new PathTracerCreator);
+        mRendererFactory->registerCreator("light_tracing",
+            new LightTracerCreator);
+        mRendererFactory->setDefault("path_tracing");
         // volume
         mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
         mVolumeFactory->setDefault("homogeneous");
@@ -348,7 +352,7 @@ namespace Goblin {
             ParamSet modelParams;
             modelParams.setString("geometry", 
                 lightParams.getString("geometry"));
-            ColorTexturePtr white(new ConstantTexture<Color>(Color::White));
+            ColorTexturePtr white(new ConstantTexture<Color>(Color::Black));
             MaterialPtr mtl(new LambertMaterial(white));
             string materialName = type + "_" + name + "_material";
             sceneCache->addMaterial(materialName, mtl);
