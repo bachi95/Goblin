@@ -72,6 +72,7 @@ namespace Goblin {
         void addSample(const Sample& sample, const Color& L);
         void addDebugLine(const DebugLine& l, const Color& c);
         void addDebugPoint(const Vector2& p, const Color& c);
+        void setInvPixelArea(float invPixelArea);
     private:
         int mTileWidth;
         int mRowId, mRowNum;
@@ -82,6 +83,7 @@ namespace Goblin {
         const Filter* mFilter;
         const float* mFilterTable;
         DebugInfo mDebugInfo;
+        float mInvPixelArea;
     };
 
     inline const Pixel* ImageTile::getTileBuffer() const {
@@ -100,6 +102,9 @@ namespace Goblin {
         mDebugInfo.addPoint(p, c);
     }
 
+    inline void ImageTile::setInvPixelArea(float invPixelArea) {
+        mInvPixelArea = invPixelArea;
+    }
 
     class Film {
     public:
@@ -116,8 +121,12 @@ namespace Goblin {
         void getSampleRange(int* xStart, int* xEnd,
             int* yStart, int* yEnd) const;
         vector<ImageTile*>& getTiles();
-        void addSample(const Sample& sample, const Color& L);
-        void writeImage();
+        void addSample(float imageX, float imageY, const Color& L);
+        void setFilmArea(float filmArea);
+        float getFilmArea() const;
+        void mergeTiles();
+        void scaleImage(float s);
+        void writeImage(bool normalize = true);
 
     private:
         int mXRes, mYRes;
@@ -133,6 +142,8 @@ namespace Goblin {
         bool mToneMapping;
         float mBloomRadius;
         float mBloomWeight;
+        float mFilmArea;
+        float mInvPixelArea;
     };
 
     inline int Film::getXResolution() const { return mXRes; }
@@ -142,6 +153,8 @@ namespace Goblin {
     inline float Film::getInvXResolution() const { return mInvXRes; }
     
     inline float Film::getInvYResolution() const { return mInvYRes; }
+
+    inline float Film::getFilmArea() const { return mFilmArea; }
 
     inline vector<ImageTile*>& Film::getTiles() { return mTiles; }
 

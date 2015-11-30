@@ -80,7 +80,7 @@ namespace Goblin {
     public:
         Renderer(int samplePerPixel = 1, int threadNum = 1);
         virtual ~Renderer();
-        void render(const ScenePtr& scene);
+        virtual void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
             WorldDebugData* debugData = NULL) const = 0;

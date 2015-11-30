@@ -143,6 +143,7 @@ namespace Goblin {
             delete renderTasks[i];
         }
         renderTasks.clear();
+        film->mergeTiles();
         film->writeImage();
     }
 

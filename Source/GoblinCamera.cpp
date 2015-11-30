@@ -6,10 +6,14 @@
 
 namespace Goblin{
 
+    const Vector3 Camera::sInvalidPixel =
+        Vector3(-INFINITY, -INFINITY, -INFINITY);
+
     Camera::Camera(const Vector3& position, const Quaternion& orientation,
         float zn, float zf, Film* film):
         mPosition(position), mOrientation(orientation),
-        mZNear(zn), mZFar(zf), mFilm(film), mIsUpdated(false) {
+        mZNear(zn), mZFar(zf), mFilm(film), mFilmArea(0.0f),
+        mPixelArea(0.0f), mIsUpdated(false) {
         float xRes = static_cast<float>(film->getXResolution());
         float yRes = static_cast<float>(film->getYResolution());
         mAspectRatio = xRes / yRes; 
@@ -44,6 +48,11 @@ namespace Goblin{
         float screenY = (1.0f - pNDC.y) * 0.5f * mFilm->getYResolution();
         return Vector3(screenX, screenY, pView.z);
     }
+
+    Vector3 Camera::worldToScreen(const Vector3& pWorld,
+        const Vector3& pLens) const {
+        return worldToScreen(pWorld);
+    }
     
     void Camera::update() {
         Matrix4 R = mOrientation.toMatrix();
@@ -77,6 +86,14 @@ namespace Goblin{
         Camera(position, orientation, zn, zf, film),
         mFOV(fov), mLensRadius(lensRadius), mFocalDistance(focalDistance) {
         mProj = matrixPerspectiveLHD3D(mFOV, mAspectRatio, mZNear, mZFar);
+        // pro[0][0] = 1 / (tan(fov / 2) * aspectRatio)
+        // pro[1][1] = 1 / (tan(fov / 2))
+        float filmWorldHeight = 2.0f * mFocalDistance * tan(0.5f * mFOV);
+        float filmWorldWidth = filmWorldHeight * mAspectRatio;
+        mFilmArea = filmWorldHeight * filmWorldWidth;
+        mPixelArea = mFilmArea *
+            mFilm->getInvXResolution() * mFilm->getInvYResolution();
+        mFilm->setFilmArea(mFilmArea);
         update();
     }
 
@@ -133,12 +150,126 @@ namespace Goblin{
         return 1.0f;
     }
 
+    Vector3 PerspectiveCamera::samplePosition(const Sample& sample,
+        Vector3* surfaceNormal, float* pdfArea) const {
+        Vector3 pCamera;
+        if (mLensRadius > 0.0f) {
+            Vector2 lensSample = mLensRadius *
+                uniformSampleDisk(sample.lensU1, sample.lensU2);
+            Vector3 viewOrigin(lensSample.x, lensSample.y, 0.0f);
+            pCamera = mOrientation * viewOrigin + mPosition;
+        } else {
+            pCamera = mPosition;
+        }
+        if (pdfArea) {
+            *pdfArea = mLensRadius > 0.0f ?
+                1.0f / (mLensRadius * mLensRadius * PI) : 1.0f;
+        }
+        *surfaceNormal = getLook();
+        return pCamera;
+    }
+
+    Vector3 PerspectiveCamera::sampleDirection(const Sample& sample,
+        const Vector3& pCamera, float* We, float* pdfW) const {
+        float invXRes = mFilm->getInvXResolution();
+        float invYRes = mFilm->getInvYResolution();
+        float xNDC = +2.0f * sample.imageX * invXRes - 1.0f;
+        float yNDC = -2.0f * sample.imageY * invYRes + 1.0f;
+        // from NDC space to view space
+        // xView = xNDC * zView * tan(fov / 2) * aspectRatio
+        // yView = yNDC * zView * tan(fov / 2)
+        // in projection matrix pro,
+        // pro[0][0] = 1 / (tan(fov / 2) * aspectRatio)
+        // pro[1][1] = 1 / (tan(fov / 2))
+        float zView = 1.0f;
+        float xView = xNDC / mProj[0][0];
+        float yView = yNDC / mProj[1][1];
+        Vector3 viewDir = Vector3(xView, yView, zView);
+        Vector3 pFocusView = mFocalDistance * viewDir;
+        Vector3 pFocusWorld = mOrientation * pFocusView + mPosition;
+        Vector3 sampleDir = pFocusWorld - pCamera;
+        float lensToFilmDistance2 = sampleDir.squaredLength();
+        sampleDir.normalize();
+        // let w be soilid angle start on a a point in lens and extend by film
+        // Power = integrate(integrate(L *cosTheta) over w) over lensArea
+        // the estimator for the above integration is:
+        // L * cosTheta / (pdf(leansArea) * pdf(w)) =
+        // L * cosTheta * lensArea * filmArea * cosTheta / (lensToFilm^2) =
+        // L * filmArea * lensArea * G where G is the geometry term
+        // expectationValue(L) = expectationValue(Power * We)
+        // We = 1 / (filmArea * lensArea * G)
+        float cosTheta = absdot(mOrientation * Vector3::UnitZ, sampleDir);
+        float G = cosTheta * cosTheta / lensToFilmDistance2;
+        float lensArea = mLensRadius * mLensRadius * PI;
+        *We = mLensRadius > 0.0f ?
+            1.0f / (mFilmArea * lensArea * G) : 1.0f / (mFilmArea * G);
+        if (pdfW) {
+            *pdfW = 1.0f / (mFilmArea * G);
+        }
+        return sampleDir;
+    }
+
+    float PerspectiveCamera::evalWe(const Vector3& pCamera,
+        const Vector3& pWorld) const {
+        if (worldToScreen(pWorld, pCamera) == Camera::sInvalidPixel) {
+            return 0.0f;
+        }
+        Vector4 pView = mView * Vector4(pWorld, 1.0f);
+        Vector4 pLensLocal = mView * Vector4(pCamera, 1.0f);
+        Vector4 dir(pView - pLensLocal);
+        Vector4 pFocus = pLensLocal + (mFocalDistance / dir.z) * dir; 
+        Vector3 lensToFilm(
+            pFocus.x - pLensLocal.x,
+            pFocus.y - pLensLocal.y,
+            pFocus.z - pLensLocal.z);
+        float lensToFilmDistance2 = lensToFilm.squaredLength();
+        float cosTheta = absdot(getLook(), normalize(lensToFilm));
+        float G = cosTheta * cosTheta / lensToFilmDistance2;
+        float lensArea = mLensRadius * mLensRadius * PI; 
+        float We = mLensRadius > 0.0f ?
+            1.0f / (mFilmArea * lensArea * G) :
+            1.0f / (mFilmArea * G);
+        return We;
+    }
+
+    Vector3 PerspectiveCamera::worldToScreen(const Vector3&pWorld,
+        const Vector3& pLens) const {
+        Vector4 pView = mView * Vector4(pWorld, 1.0f);
+        Vector4 pLensLocal = mView * Vector4(pLens, 1.0f);
+        Vector3 invalidScreenPoint(0.0f, 0.0f, -1.0f);
+        // pWorld is behind camera lens
+        if (pView.z < 0.0f) {
+            return sInvalidPixel;
+        }
+        // pLens is not on the lens, invalid input
+        if (mLensRadius > 0.0f &&
+            pLensLocal.x * pLensLocal.x + pLensLocal.y * pLensLocal.y >
+            mLensRadius * mLensRadius) {
+            return sInvalidPixel;
+        }
+        Vector4 dir(pView - pLensLocal);
+        // pWorld is on the plane of of lens, it won't be in the screen
+        if (fabs(dir.z) < 1e-7f) {
+            return sInvalidPixel;
+        }
+        Vector4 pFocus = pLensLocal + (mFocalDistance / dir.z) * dir;
+        Vector4 pNDC = mProj * pFocus;
+        pNDC /= pNDC.w;
+        float screenX = (pNDC.x + 1.0f) * 0.5f * mFilm->getXResolution();
+        float screenY = (1.0f - pNDC.y) * 0.5f * mFilm->getYResolution();
+        return Vector3(screenX, screenY, pView.z);
+    }
+
     OrthographicCamera::OrthographicCamera(const Vector3& position, 
         const Quaternion& orientation, float zn, float zf, 
         float filmWidth, Film* film):
         Camera(position, orientation, zn, zf, film),
         mFilmWidth(filmWidth) {
         mFilmHeight = mFilmWidth / mAspectRatio;
+        mFilmArea = mFilmWidth * mFilmHeight;
+        mPixelArea = mFilmArea *
+            mFilm->getInvXResolution() * mFilm->getInvYResolution();
+        mFilm->setFilmArea(mFilmArea);
         mProj = matrixOrthoLHD3D(mFilmWidth, mFilmHeight, mZNear, mZFar);
         update();
     }
@@ -173,6 +304,40 @@ namespace Goblin{
         return 1.0f;
     }
 
+    Vector3 OrthographicCamera::samplePosition(const Sample& sample,
+        Vector3* surfaceNormal, float* pdfArea) const {
+        float invXRes = mFilm->getInvXResolution();
+        float invYRes = mFilm->getInvYResolution();
+        float xNDC = +2.0f * sample.imageX * invXRes - 1.0f;
+        float yNDC = -2.0f * sample.imageY * invYRes + 1.0f;
+        float dxNDC = +2.0f * (sample.imageX + 1.0f) * invXRes - 1.0f;
+        float dyNDC = -2.0f * (sample.imageY + 1.0f) * invYRes + 1.0f;
+        // from NDC space to view space
+        float xView = 0.5f * mFilmWidth * xNDC;
+        float yView = 0.5f * mFilmHeight * yNDC;
+        if (pdfArea) {
+            *pdfArea = 1.0f / mFilmArea;
+        }
+        *surfaceNormal = getLook();
+        return mOrientation * Vector3(xView, yView, 0.0f) + mPosition;
+    }
+
+    Vector3 OrthographicCamera::sampleDirection(const Sample& sample,
+        const Vector3& pCamera, float* We, float* pdfW) const {
+        *We = 1.0f / mFilmArea;
+        if (pdfW) {
+            *pdfW = 1.0f;
+        }
+        return mOrientation * Vector3::UnitZ;
+    }
+
+    float OrthographicCamera::evalWe(const Vector3& pCamera,
+        const Vector3& pWorld) const {
+        // OrthographicCamera is not even intersectable, this method
+        // should never get called anyway since there won't be particle
+        // lands on this type of camera
+        return 0.0f;
+    }
 
     Camera* PerspectiveCameraCreator::create(const ParamSet& params, 
         Film* film) const {
@@ -182,7 +347,7 @@ namespace Goblin{
         float zn = params.getFloat("near_plane", 0.1f);
         float zf = params.getFloat("far_plane", 1000.0f);
         float lensRadius = params.getFloat("lens_radius", 0.0f);
-        float focalDistance = params.getFloat("focal_distance", 1e+10f);
+        float focalDistance = params.getFloat("focal_distance", 1.0f);
         return new PerspectiveCamera(position, orientation, radians(fov), 
             zn, zf, lensRadius, focalDistance, film);
     }

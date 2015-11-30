@@ -93,14 +93,27 @@ namespace Goblin {
         return mIntensity / squaredDistance;
     }
 
-    Color PointLight::sampleL(const ScenePtr& scene, const LightSample& ls,
-        float u1, float u2, Ray* ray, float* pdf) const {
-        Vector3 dir = uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
-        *ray = Ray(mToWorld.getPosition(), dir, 0.0f);
-        if(pdf) {
-            *pdf = uniformSpherePdf();
-        }
-        return mIntensity;
+    Vector3 PointLight::samplePosition(const ScenePtr& scene,
+        const LightSample& ls, Vector3* surfaceNormal,
+        float* pdfArea) const {
+        // there is only one possible position for point light
+        *surfaceNormal = Vector3::Zero;
+        *pdfArea = 1.0f;
+        return mToWorld.getPosition();
+    }
+
+    Vector3 PointLight::sampleDirection(const Vector3& surfaceNormal,
+        float u1, float u2, float* pdfW) const {
+        *pdfW = uniformSpherePdf();
+        return uniformSampleSphere(u1, u2);
+    }
+
+    Color PointLight::evalL(const Vector3& pLight, const Vector3& nLight,
+        const Vector3& pSurface) const {
+        // TODO assert pLight == mToWorld.getPosition()?
+        float squaredDistance =
+            squaredLength(mToWorld.getPosition() - pSurface);
+        return mIntensity / squaredDistance;
     }
 
     Color PointLight::power(const ScenePtr& scene) const {
@@ -133,9 +146,8 @@ namespace Goblin {
      * then offset it back world radius distance as ray origin
      * ray dir is simply light dir
      */
-    Color DirectionalLight::sampleL(const ScenePtr& scene, 
-        const LightSample& ls,
-        float u1, float u2, Ray* ray, float* pdf) const {
+    Vector3 DirectionalLight::samplePosition(const ScenePtr& scene,
+        const LightSample& ls, Vector3* surfaceNormal, float* pdfArea) const {
         Vector3 worldCenter;
         float worldRadius;
         scene->getBoundingSphere(&worldCenter, &worldRadius);
@@ -143,13 +155,22 @@ namespace Goblin {
         Vector3 zAxis = getDirection();
         coordinateAxises(zAxis, &xAxis, &yAxis);
         Vector2 diskXY = uniformSampleDisk(ls.uGeometry[0], ls.uGeometry[1]);
-        Vector3 worldDiskSample = worldCenter + 
-            worldRadius * (diskXY.x * xAxis + diskXY.y * yAxis);
-        Vector3 origin = worldDiskSample - zAxis * worldRadius;
-        *ray = Ray(origin, zAxis, 0.0f);
-        if(pdf) {
-            *pdf = INV_PI / (worldRadius * worldRadius);
-        }
+        Vector3 worldDiskSample = worldCenter +
+            worldRadius * (diskXY.x *xAxis +diskXY.y *yAxis);
+        *surfaceNormal = Vector3::Zero;
+        *pdfArea = 1.0f / (PI * worldRadius * worldRadius);
+        return worldDiskSample - zAxis * worldRadius;
+    }
+
+    Vector3 DirectionalLight::sampleDirection(const Vector3& surfaceNormal,
+        float u1, float u2, float* pdfW) const {
+        *pdfW = 1.0f;
+        return getDirection();
+    }
+
+    Color DirectionalLight::evalL(const Vector3& pLight, const Vector3& nLight,
+        const Vector3& pSurface) const {
+        // TODO assert (pLight - pSurface) is parallel to direction?
         return mRadiance;
     }
 
@@ -188,15 +209,25 @@ namespace Goblin {
         return falloff(-(*wi)) * mIntensity / squaredDistance;
     }
 
-    Color SpotLight::sampleL(const ScenePtr& scene, const LightSample& ls,
-        float u1, float u2, Ray* ray, float* pdf) const {
-        Vector3 v = uniformSampleCone(ls.uGeometry[0], ls.uGeometry[1], 
-            mCosThetaMax);
-        *ray = Ray(mToWorld.getPosition(), mToWorld.onVector(v), 0.0f);
-        if(pdf) {
-            *pdf = 1.0f / (TWO_PI * (1.0f - mCosThetaMax));
-        }
-        return mIntensity * falloff(ray->d);
+    Vector3 SpotLight::samplePosition(const ScenePtr& scene,
+        const LightSample& ls, Vector3* surfaceNormal, float* pdfArea) const {
+        *surfaceNormal = Vector3::Zero;
+        *pdfArea = 1.0f;
+        return mToWorld.getPosition();
+    }
+
+    Vector3 SpotLight::sampleDirection(const Vector3& surfaceNormal,
+        float u1, float u2, float* pdfW) const {
+        Vector3 dLocal = uniformSampleCone(u1, u2, mCosThetaMax);
+        *pdfW = uniformConePdf(mCosThetaMax);
+        return mToWorld.onVector(dLocal);
+    }
+
+    Color SpotLight::evalL(const Vector3& pLight, const Vector3& nLight,
+        const Vector3& pSurface) const {
+        // TODO assert pLight == mToWorld.getPosition() ?
+        Vector3 dir = pSurface - mToWorld.getPosition();
+        return falloff(normalize(dir)) * mIntensity / squaredLength(dir);
     }
 
     Color SpotLight::power(const ScenePtr& scene) const {
@@ -320,33 +351,45 @@ namespace Goblin {
         return L(ps, ns, -*wi);
     }
 
-    Color AreaLight::sampleL(const ScenePtr& scene, const LightSample& ls,
-        float u1, float u2, Ray* ray, float* pdf) const {
-        Vector3 n;
-        Vector3 origin = mGeometrySet->sample(ls, &n);
+    Vector3 AreaLight::samplePosition(const ScenePtr& scene,
+        const LightSample& ls, Vector3* surfaceNormal,
+        float* pdfArea) const {
+        Vector3 worldScale = mToWorld.getScale();
+        float worldArea = mGeometrySet->area() *
+            worldScale.x * worldScale.y * worldScale.z;
+        *pdfArea = 1.0f / worldArea;
+        Vector3 nLocal;
+        Vector3 pLocal = mGeometrySet->sample(ls, &nLocal);
+        *surfaceNormal = normalize(mToWorld.onNormal(nLocal));
+        return mToWorld.onPoint(pLocal);
+    }
+
+    Vector3 AreaLight::sampleDirection(const Vector3& surfaceNormal,
+        float u1, float u2, float* pdfW) const {
         Vector3 dir = uniformSampleSphere(u1, u2);
         // the case sampled dir is in the opposite hemisphere of area light
         // surface normal
-        if(dot(n, dir) < 0.0f) {
+        if(dot(surfaceNormal, dir) < 0.0f) {
             dir *= -1.0f;
         }
-        *ray = Ray(origin, dir, 1e-3f);
-        // each point on the area light has uniform hemisphere distribution
-        // output radiance
-        if(pdf) {
-            Vector3 worldScale = mToWorld.getScale();
-            float worldArea = mGeometrySet->area() *
-                worldScale.x * worldScale.y * worldScale.z;
-            *pdf = (1.0f / worldArea) * INV_TWOPI;
-        }
-        return mLe;
+        *pdfW = INV_TWOPI;
+        return dir;
+    }
+
+    Color AreaLight::evalL(const Vector3& pLight, const Vector3& nLight,
+        const Vector3& pSurface) const {
+        // only front face of geometry emit radiance
+        return dot(nLight, pSurface - pLight) > 0.0f ? mLe : Color::Black;
     }
 
     Color AreaLight::power(const ScenePtr& scene) const {
         // if any random angle output mLe on the area light surface,
         // we can think of the input radience with perpendular angle
         // per unit area mLe * PI (similar to how we get lambert bsdf)
-        return mLe * PI * mGeometrySet->area();
+        Vector3 worldScale = mToWorld.getScale();
+        float worldArea = mGeometrySet->area() *
+            worldScale.x * worldScale.y * worldScale.z;
+        return mLe * PI * worldArea;
     }
 
     float AreaLight::pdf(const Vector3& p, const Vector3& wi) const {
@@ -464,13 +507,23 @@ namespace Goblin {
         return mRadiance->lookup(level, st[0], st[1]);
     }
 
-    Color ImageBasedLight::sampleL(const ScenePtr& scene, 
-        const LightSample& ls, float u1, float u2, 
-        Ray* ray, float* pdf) const {
+    Vector3 ImageBasedLight::samplePosition(const ScenePtr& scene,
+        const LightSample& ls, Vector3* surfaceNormal, float* pdfArea) const {
+        Vector3 worldCenter;
+        float worldRadius;
+        scene->getBoundingSphere(&worldCenter, &worldRadius);
+        Vector3 sphereSample =
+            uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
+        *surfaceNormal = Vector3::Zero;
+        *pdfArea = 4.0f * PI * worldRadius *worldRadius;
+        return worldCenter + worldRadius * sphereSample;
+    }
 
+    Vector3 ImageBasedLight::sampleDirection(const Vector3& surfaceNormal,
+        float u1, float u2, float* pdfW) const {
+        // TODO this is definitely buggy...revisit this later
         float pdfST;
-        Vector2 st = mDistribution->sampleContinuous(
-            ls.uGeometry[0], ls.uGeometry[1], &pdfST);
+        Vector2 st = mDistribution->sampleContinuous(u1, u2, &pdfST);
         float theta = st[1] * PI;
         float phi = st[0] * TWO_PI;
         float cosTheta = cos(theta);
@@ -479,22 +532,19 @@ namespace Goblin {
         float sinPhi = sin(phi);
         Vector3 w = mToWorld.onVector(
             Vector3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta));
+        *pdfW = pdfST / (TWO_PI * PI * sinTheta);
+        return -1.0f * w;
+    }
 
-        Vector3 worldCenter;
-        float worldRadius;
-        scene->getBoundingSphere(&worldCenter, &worldRadius);
-        Vector3 xAxis, yAxis;
-        coordinateAxises(-w, &xAxis, &yAxis);
-        Vector2 diskXY = uniformSampleDisk(u1, u2);
-        Vector3 worldDiskSample = worldCenter + 
-            worldRadius * (diskXY.x * xAxis + diskXY.y * yAxis);
-        Vector3 origin = worldRadius * w;
-        Vector3 direction = normalize(worldDiskSample - origin);
-        *ray = Ray(origin, direction, 0.0f);
-        if(pdf) {
-            *pdf = pdfST / (TWO_PI * PI * sinTheta);
-        }
-        return mRadiance->lookup(0, st[0], st[1]);
+    Color ImageBasedLight::evalL(const Vector3& pLight, const Vector3& nLight,
+        const Vector3& pSurface) const {
+        const Vector3& w = mToWorld.invertVector(pLight - pSurface);
+        float theta = sphericalTheta(w);
+        float phi = sphericalPhi(w);
+        float s = phi * INV_TWOPI;
+        float t = theta * INV_PI;
+        int level = 0;
+        return mRadiance->lookup(level, s, t);
     }
 
     Color ImageBasedLight::power(const ScenePtr& scene) const {

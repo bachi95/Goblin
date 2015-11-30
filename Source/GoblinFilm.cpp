@@ -13,7 +13,8 @@ namespace Goblin {
         const Filter* filter, const float* filterTable):
         mTileWidth(tileWidth), mRowId(rowId), mRowNum(rowNum),
         mColId(colId), mColNum(colNum), mImageRect(imageRect), mPixels(NULL),  
-        mFilter(filter), mFilterTable(filterTable) {
+        mFilter(filter), mFilterTable(filterTable),
+        mInvPixelArea(1.0f) {
         int xStart = mImageRect.xStart + mTileWidth * mColId;
         int yStart = mImageRect.yStart + mTileWidth * mRowId;
         int xEnd = xStart + mTileWidth;
@@ -125,7 +126,8 @@ namespace Goblin {
             for(int x = x0; x <= x1; ++x) {
                 float fx = fabs(FILTER_TABLE_WIDTH * (x - dImageX) / xWidth);
                 int ix = min(floorInt(fx), FILTER_TABLE_WIDTH - 1);
-                float weight = mFilterTable[iy * FILTER_TABLE_WIDTH + ix];
+                float weight = mFilterTable[iy * FILTER_TABLE_WIDTH + ix] *
+                    mInvPixelArea;
                 int index = (y - mTileRect.yStart) * mTileRect.xCount + 
                     (x - mTileRect.xStart);
                 mPixels[index].color += weight * L;
@@ -141,7 +143,8 @@ namespace Goblin {
         float bloomRadius, float bloomWeight): 
         mXRes(xRes), mYRes(yRes), mFilter(filter), mFilename(filename),
         mTileWidth(tileWidth), mToneMapping(toneMapping), 
-        mBloomRadius(bloomRadius), mBloomWeight(bloomWeight) {
+        mBloomRadius(bloomRadius), mBloomWeight(bloomWeight),
+        mInvPixelArea(1.0f) {
 
         memcpy(mCrop, crop, 4 * sizeof(float));
 
@@ -165,8 +168,8 @@ namespace Goblin {
             float fy = y * deltaY;
             for(int x = 0; x < FILTER_TABLE_WIDTH; ++x) {
                 float fx = x * deltaX;
-                mFilterTable[index++] = normalizeTerm *
-                    mFilter->evaluate(fx, fy);
+                mFilterTable[index++] = mFilter->evaluate(fx, fy) /
+                    normalizeTerm;
             }
         }
 
@@ -209,15 +212,15 @@ namespace Goblin {
         *yEnd = floorInt(mYStart + 0.5f + mYCount + yWidth);
     }
 
-    void Film::addSample(const Sample& sample, const Color& L) {
+    void Film::addSample(float imageX, float imageY, const Color& L) {
         if(L.isNaN()) {
-            cout << "sample ("<< sample.imageX << " " << sample.imageY
+            cout << "sample ("<< imageX << " " << imageY
                 << ") generate NaN point, discard this sample" << endl;
             return;
         }
         // transform continuous space sample to discrete space
-        float dImageX = sample.imageX - 0.5f;
-        float dImageY = sample.imageY - 0.5f;
+        float dImageX = imageX - 0.5f;
+        float dImageY = imageY - 0.5f;
         // calculate the pixel range covered by filter center at sample
         float xWidth = mFilter->getXWidth();
         float yWidth = mFilter->getYWidth();
@@ -236,16 +239,25 @@ namespace Goblin {
             for(int x = x0; x <= x1; ++x) {
                 float fx = fabs(FILTER_TABLE_WIDTH * (x - dImageX) / xWidth);
                 int ix = min(floorInt(fx), FILTER_TABLE_WIDTH - 1);
-                float weight = mFilterTable[iy * FILTER_TABLE_WIDTH + ix];
+                float weight = mFilterTable[iy * FILTER_TABLE_WIDTH + ix] *
+                    mInvPixelArea;
                 int index = y * mXRes + x;
-                // TODO atomic add when this come to multi thread
                 mPixels[index].color += weight * L;
                 mPixels[index].weight += weight; 
             }
         }
     } 
 
-    void Film::writeImage() {
+    void Film::setFilmArea(float filmArea) {
+        mFilmArea = filmArea;
+        float pixelArea = filmArea * mInvXRes * mInvYRes;
+        mInvPixelArea = 1.0f / pixelArea;
+        for (size_t i = 0; i < mTiles.size(); ++i) {
+            mTiles[i]->setInvPixelArea(mInvPixelArea);
+        }
+    }
+
+    void Film::mergeTiles() {
         // merget tiles
         for(size_t i = 0; i < mTiles.size(); ++i) {
             int xStart, xEnd, yStart, yEnd;
@@ -261,12 +273,25 @@ namespace Goblin {
                 }
             }
         }
+    }
 
+    void Film::scaleImage(float scale) {
+        for (int y = 0; y < mYRes; ++y) {
+            for (int x = 0; x < mXRes; ++x) {
+                int index = mXRes * y + x;
+                mPixels[index].color *= scale;
+            }
+        }
+    }
+
+    void Film::writeImage(bool normalize) {
         Color* colors = new Color[mXRes * mYRes];
         for(int y = 0; y < mYRes; ++y) {
             for(int x = 0; x < mXRes; ++x) {
                 int index = mXRes * y + x;
-                colors[index] = mPixels[index].color / mPixels[index].weight;
+                colors[index] = normalize?
+                    mPixels[index].color / mPixels[index].weight:
+                    mPixels[index].color;
             }
         }
 
