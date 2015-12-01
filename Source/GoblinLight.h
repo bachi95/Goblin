@@ -66,7 +66,6 @@ namespace Goblin {
             Spot = 2,
             Area = 3,
             IBL = 4
-        
         };
         virtual ~Light() {};
 
@@ -89,7 +88,7 @@ namespace Goblin {
             float u1, float u2, float* pdfW) const = 0;
 
         // given a point on light and a point in world, evaluate
-        // the radiance contribution from 
+        // the radiance contribution from
         virtual Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const = 0;
 

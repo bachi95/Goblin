@@ -250,8 +250,7 @@ namespace Goblin {
 
     void Film::setFilmArea(float filmArea) {
         mFilmArea = filmArea;
-        float pixelArea = filmArea * mInvXRes * mInvYRes;
-        mInvPixelArea = 1.0f / pixelArea;
+        mInvPixelArea = mXRes * mYRes / filmArea;
         for (size_t i = 0; i < mTiles.size(); ++i) {
             mTiles[i]->setInvPixelArea(mInvPixelArea);
         }

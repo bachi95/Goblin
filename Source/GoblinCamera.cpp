@@ -310,8 +310,6 @@ namespace Goblin{
         float invYRes = mFilm->getInvYResolution();
         float xNDC = +2.0f * sample.imageX * invXRes - 1.0f;
         float yNDC = -2.0f * sample.imageY * invYRes + 1.0f;
-        float dxNDC = +2.0f * (sample.imageX + 1.0f) * invXRes - 1.0f;
-        float dyNDC = -2.0f * (sample.imageY + 1.0f) * invYRes + 1.0f;
         // from NDC space to view space
         float xView = 0.5f * mFilmWidth * xNDC;
         float yView = 0.5f * mFilmHeight * yNDC;

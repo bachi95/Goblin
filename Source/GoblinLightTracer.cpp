@@ -64,8 +64,7 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            mPathVertices[lightVertex] = PathVertex(throughput,
-                frag.getPosition(), frag.getNormal(),
+            mPathVertices[lightVertex] = PathVertex(throughput, frag,
                 isect.getMaterial().get());
             BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
             Vector3 wo = -normalize(ray.d);
@@ -76,44 +75,42 @@ namespace Goblin {
             // be fine....
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW);
-            // should be wo here, not wi since we are tracing from light
-            throughput *= f * absdot(wo, frag.getNormal()) / pdfW;
+            throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray.o = frag.getPosition();
             ray.d = wi;
-            ray.mint = 1e-6f;
+            ray.mint = 1e-4f;
         }
 
         for (int s = 1; s <= lightVertex; ++s) {
 
             const PathVertex& pv = mPathVertices[s  - 1];
+            const Vector3& pvPos = pv.fragment.getPosition();
             Vector3 filmPixel = camera->worldToScreen(
-                pv.position, pCamera);
+                pv.fragment.getPosition(), pCamera);
             if (filmPixel == Camera::sInvalidPixel) {
                 continue;
             }
             // occlude test
-            Vector3 pv2Cam(pCamera - pv.position);
-            Ray occludeRay(pv.position, normalize(pv2Cam),
+            Vector3 pv2Cam(pCamera - pvPos);
+            Ray occludeRay(pvPos, normalize(pv2Cam),
                 1e-5f, length(pv2Cam));
             if (scene->intersect(occludeRay)) {
                 continue;
             }
-            Fragment frag(pv.position, pv.normal, Vector2::Zero,
-                Vector3::Zero, Vector3::Zero);
             Color fsL;
-            Vector3 wo = normalize(pCamera - pv.position);
+            Vector3 wo = normalize(pCamera - pvPos);
             if (s > 1) {
                 Vector3 wi =
-                    normalize(mPathVertices[s - 2].position - pv.position);
-                Color f = pv.material->bsdf(frag, wo, wi);
+                    normalize(mPathVertices[s - 2].fragment.getPosition() - pvPos);
+                Color f = pv.material->bsdf(pv.fragment, wo, wi);
                 fsL = f * light->evalL(pLight, nLight,
-                    mPathVertices[1].position);
+                    mPathVertices[1].fragment.getPosition());
             } else {
-                fsL = pv.light->evalL(pv.position, pv.normal, pCamera);
+                fsL = pv.light->evalL(pLight, nLight, pCamera);
             }
-            float fsE = camera->evalWe(pCamera, pv.position);
-            float G = absdot(pv.normal, wo) * absdot(nCamera, wo) /
-                squaredLength(pv.position - pCamera);
+            float fsE = camera->evalWe(pCamera, pvPos);
+            float G = absdot(pv.fragment.getNormal(), wo) * absdot(nCamera, wo) /
+                squaredLength(pvPos - pCamera);
             
             Color pathContribution = fsL * fsE * G *
                 pv.throughput * cVertex.throughput;

@@ -108,7 +108,7 @@ namespace Goblin {
                     // we don't do MIS for delta distribution light
                     // since there is only one sample need for it
                     if(light->isDelta()) {
-                        return f * tr * L * absdot(n, wi) / lightPdf;
+                        Ld += f * tr * L * absdot(n, wi) / lightPdf;
                     } else {
                         bsdfPdf = material->pdf(fragment, wo, wi);
                         float lWeight = powerHeuristic(1, lightPdf, 1, bsdfPdf);
