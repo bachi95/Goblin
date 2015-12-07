@@ -22,17 +22,29 @@ namespace Goblin {
         ContextLoader();
         RenderContext* load(const std::string& filename);
     private:
+        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel,
+            bool* requireLightMap);
+
         Filter* parseFilter(const PropertyTree& pt);
-        Film* parseFilm(const PropertyTree& pt, Filter* filter);
+
+        Film* parseFilm(const PropertyTree& pt, Filter* filter,
+            bool requireLightMap);
+
         CameraPtr parseCamera(const PropertyTree& pt, Film* film);
+
         VolumeRegion* parseVolume(const PropertyTree& pt);
-        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel);
+
         void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache);
+
         void parseTexture(const PropertyTree& pt, SceneCache* sceneCache);
+
         void parseMaterial(const PropertyTree& pt, SceneCache* sceneCache);
+
         void parsePrimitive(const PropertyTree& pt, SceneCache* sceneCache);
+
         void parseLight(const PropertyTree& pt, SceneCache* sceneCache, 
             int samplePerPixel);
+
     private:
         scoped_ptr<Factory<Filter, const ParamSet&> > mFilterFactory;
         scoped_ptr<Factory<Film, const ParamSet&, Filter*> > mFilmFactory;

@@ -10,47 +10,57 @@ namespace Goblin {
 
     ImageTile::ImageTile(int tileWidth, int rowId, int rowNum, 
         int colId, int colNum, const ImageRect& imageRect, 
-        const Filter* filter, const float* filterTable):
+        const Filter* filter, const float* filterTable,
+        bool requireLightMap):
         mTileWidth(tileWidth), mRowId(rowId), mRowNum(rowNum),
         mColId(colId), mColNum(colNum), mImageRect(imageRect), mPixels(NULL),  
         mFilter(filter), mFilterTable(filterTable),
-        mInvPixelArea(1.0f) {
-        int xStart = mImageRect.xStart + mTileWidth * mColId;
-        int yStart = mImageRect.yStart + mTileWidth * mRowId;
-        int xEnd = xStart + mTileWidth;
-        int yEnd = yStart + mTileWidth;
-        if(mColId == mColNum - 1) {
-            xEnd = min(mImageRect.xStart + mImageRect.xCount, xEnd);
-        }
-        if(mRowId == mRowNum - 1) {
-            yEnd = min(mImageRect.yStart + mImageRect.yCount, yEnd);
-        }
-        // neighbor tiles will share an area that both get updated
-        // because of the image filter, make each one has its own
-        // local area of that share part so we don't need to worry
-        // about concurrency issue
-        float filterXWidth = mFilter->getXWidth();
-        float filterYWidth = mFilter->getYWidth();
-        if(mColId != 0) {
-            xStart = floorInt(xStart + 0.5f - filterXWidth);
-        }
-        if(mRowId != 0) {
-            yStart = floorInt(yStart + 0.5f - filterYWidth);
-        }
-        if(mColId != colNum - 1) {
-            xEnd = floorInt(xEnd + 0.5f + filterXWidth);
-        }
-        if(mRowId != rowNum - 1) {
-            yEnd = floorInt(yEnd + 0.5f + filterYWidth);
-        }
+        mInvPixelArea(1.0f), mTotalSampleCount(0) {
+        if (requireLightMap) {
+            // when rendering involve photon splatting on film, we need to
+            // allocate the full size image for each tile since photon can
+            // splat on any location on the film instead of just one
+            // particular square zone
+            mTileRect = mImageRect;
+            mPixels = new Pixel[mImageRect.xCount * mImageRect.yCount];
+        } else {
+            int xStart = mImageRect.xStart + mTileWidth * mColId;
+            int yStart = mImageRect.yStart + mTileWidth * mRowId;
+            int xEnd = xStart + mTileWidth;
+            int yEnd = yStart + mTileWidth;
+            if(mColId == mColNum - 1) {
+                xEnd = min(mImageRect.xStart + mImageRect.xCount, xEnd);
+            }
+            if(mRowId == mRowNum - 1) {
+                yEnd = min(mImageRect.yStart + mImageRect.yCount, yEnd);
+            }
+            // neighbor tiles will share an area that both get updated
+            // because of the image filter, make each one has its own
+            // local area of that share part so we don't need to worry
+            // about concurrency issue
+            float filterXWidth = mFilter->getXWidth();
+            float filterYWidth = mFilter->getYWidth();
+            if(mColId != 0) {
+                xStart = floorInt(xStart + 0.5f - filterXWidth);
+            }
+            if(mRowId != 0) {
+                yStart = floorInt(yStart + 0.5f - filterYWidth);
+            }
+            if(mColId != colNum - 1) {
+                xEnd = floorInt(xEnd + 0.5f + filterXWidth);
+            }
+            if(mRowId != rowNum - 1) {
+                yEnd = floorInt(yEnd + 0.5f + filterYWidth);
+            }
 
-        int xCount = xEnd - xStart;
-        int yCount = yEnd - yStart;
-        mTileRect.xStart = xStart;
-        mTileRect.yStart = yStart;
-        mTileRect.xCount = xCount;
-        mTileRect.yCount = yCount;
-        mPixels = new Pixel[xCount * yCount];
+            int xCount = xEnd - xStart;
+            int yCount = yEnd - yStart;
+            mTileRect.xStart = xStart;
+            mTileRect.yStart = yStart;
+            mTileRect.xCount = xCount;
+            mTileRect.yCount = yCount;
+            mPixels = new Pixel[xCount * yCount];
+        }
     }
 
     ImageTile::~ImageTile() {
@@ -99,15 +109,15 @@ namespace Goblin {
         }
     }
 
-    void ImageTile::addSample(const Sample& sample, const Color& L) {
+    void ImageTile::addSample(float imageX, float imageY, const Color& L) {
         if(L.isNaN()) {
-            cout << "sample ("<< sample.imageX << " " << sample.imageY
+            cout << "sample ("<< imageX << " " << imageY
                 << ") generate NaN point, discard this sample" << endl;
             return;
         }
         // transform continuous space sample to discrete space
-        float dImageX = sample.imageX - 0.5f;
-        float dImageY = sample.imageY - 0.5f;
+        float dImageX = imageX - 0.5f;
+        float dImageY = imageY - 0.5f;
         // calculate the pixel range covered by filter center at sample
         float xWidth = mFilter->getXWidth();
         float yWidth = mFilter->getYWidth();
@@ -134,15 +144,22 @@ namespace Goblin {
                 mPixels[index].weight += weight; 
             }
         }
-    } 
+    }
 
+    void ImageTile::setTotalSampleCount(uint64_t totalSampleCount) {
+        mTotalSampleCount = totalSampleCount;
+    }
+
+    uint64_t ImageTile::getTotalSampleCount() const {
+        return mTotalSampleCount;
+    }
 
     Film::Film(int xRes, int yRes, const float crop[4],
         Filter* filter, const std::string& filename,
-        int tileWidth, bool toneMapping, 
-        float bloomRadius, float bloomWeight): 
+        bool requireLightMap, bool toneMapping,
+        float bloomRadius, float bloomWeight):
         mXRes(xRes), mYRes(yRes), mFilter(filter), mFilename(filename),
-        mTileWidth(tileWidth), mToneMapping(toneMapping), 
+        mTileWidth(64), mToneMapping(toneMapping),
         mBloomRadius(bloomRadius), mBloomWeight(bloomWeight),
         mInvPixelArea(1.0f) {
 
@@ -180,7 +197,8 @@ namespace Goblin {
         for(int i = 0; i < rowNum; ++i) {
             for(int j = 0; j < colNum; ++j) {
                 ImageTile* tile = new ImageTile(mTileWidth, 
-                    i, rowNum, j, colNum, r, mFilter, mFilterTable);
+                    i, rowNum, j, colNum, r, mFilter, mFilterTable,
+                    requireLightMap);
                 mTiles.push_back(tile);
             }
         }
@@ -336,9 +354,9 @@ namespace Goblin {
         bool toneMapping = params.getBool("tone_mapping");
         float bloomRadius = params.getFloat("bloom_radius");
         float bloomWeight = params.getFloat("bloom_weight");
-        int tileWidth = params.getInt("tile_width", 16);
+        bool requireLightMap = params.getBool("require_light_map");
         return new Film(xRes, yRes, crop, filter, filePath, 
-            tileWidth, toneMapping, bloomRadius, bloomWeight);
+            requireLightMap, toneMapping, bloomRadius, bloomWeight);
     }
 
 }

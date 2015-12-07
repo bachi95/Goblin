@@ -44,7 +44,8 @@ namespace Goblin {
                     *mRNG, &debugData);
                 Color tr = mRenderer->transmittance(mScene, ray);
                 Color Lv = mRenderer->Lv(mScene, ray, *mRNG);
-                mTile->addSample(samples[s], w * (tr * L + Lv));
+                mTile->addSample(samples[s].imageX, samples[s].imageY,
+                    w * (tr * L + Lv));
             }
         }
         delete [] samples;

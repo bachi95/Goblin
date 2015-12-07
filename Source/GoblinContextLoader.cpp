@@ -220,12 +220,14 @@ namespace Goblin {
         return mFilterFactory->create(type, filterParams);
     }
 
-    Film* ContextLoader::parseFilm(const PropertyTree& pt, Filter* filter) {
+    Film* ContextLoader::parseFilm(const PropertyTree& pt, Filter* filter,
+        bool requireLightMap) {
         cout << "film" << endl;
         PropertyTree filmPt;
         pt.getChild("film", &filmPt);
         ParamSet filmParams;
         parseParamSet(filmPt, &filmParams);
+        filmParams.setBool("require_light_map", requireLightMap);
         string type = filmParams.getString("type");
         return mFilmFactory->create(type, filmParams, filter);
     }
@@ -241,13 +243,19 @@ namespace Goblin {
     }
 
     RendererPtr ContextLoader::parseRenderer(const PropertyTree& pt, 
-        int* samplePerPixel) {
+        int* samplePerPixel, bool* requireLightMap) {
         PropertyTree settingPt;
         pt.getChild("render_setting", &settingPt);
         ParamSet setting;
         parseParamSet(settingPt, &setting);
         *samplePerPixel = setting.getInt("sample_per_pixel");
         string method = setting.getString("render_method", "path_tracing");
+        // all the render method that involves photon splatting on film
+        // need to turn this flag on. This will notify film to allocate
+        // film size tiles when splitting up the works (since photon may
+        // splat on any location on the film instead of just one particular
+        // square zone
+        *requireLightMap = (method == "light_tracing");
         return RendererPtr(mRendererFactory->create(method, setting));
     }
 
@@ -380,12 +388,18 @@ namespace Goblin {
             return NULL;
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));
-        Filter* filter = parseFilter(pt);
-        Film* film = parseFilm(pt, filter);
-        CameraPtr camera = parseCamera(pt, film);
-        VolumeRegion* volume = parseVolume(pt);
+
         int samplePerPixel;
-        RendererPtr renderer = parseRenderer(pt, &samplePerPixel);
+        bool requireLightMap;
+        RendererPtr renderer = parseRenderer(pt, &samplePerPixel,
+            &requireLightMap);
+
+        Filter* filter = parseFilter(pt);
+        Film* film = parseFilm(pt, filter, requireLightMap);
+
+        CameraPtr camera = parseCamera(pt, film);
+
+        VolumeRegion* volume = parseVolume(pt);
 
         PtreeList geometryNodes;
         pt.getChildren("geometry", &geometryNodes);

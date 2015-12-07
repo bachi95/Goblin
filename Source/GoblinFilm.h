@@ -61,18 +61,30 @@ namespace Goblin {
     public:
         ImageTile(int tileWidth, int rowId, int rowNum, int colId, int colNum, 
             const ImageRect& imageRect, const Filter* filter, 
-            const float* filterTable);
+            const float* filterTable, bool requireLightMap);
         ~ImageTile();
+
         void getImageRange(int* xStart, int *xEnd,
             int* yStart, int* yEnd) const;
+
         void getSampleRange(int* xStart, int* xEnd,
             int* yStart, int* yEnd) const;
+
         const Pixel* getTileBuffer() const;
+
         const DebugInfo& getDebugInfo() const;
-        void addSample(const Sample& sample, const Color& L);
+
+        void addSample(float imageX, float imageY, const Color& L);
+
         void addDebugLine(const DebugLine& l, const Color& c);
+
         void addDebugPoint(const Vector2& p, const Color& c);
+
         void setInvPixelArea(float invPixelArea);
+
+        void setTotalSampleCount(uint64_t totalSampleCount);
+
+        uint64_t getTotalSampleCount() const;
     private:
         int mTileWidth;
         int mRowId, mRowNum;
@@ -82,8 +94,13 @@ namespace Goblin {
         Pixel* mPixels;
         const Filter* mFilter;
         const float* mFilterTable;
+        // TODO the current ImageTile is kinda abused to serve almost
+        // like a thread local state that it contains lots of image unrelated
+        // data. Should move them (DebugInfo, totalSampleCount) out of here
+        // to a ThreadLocalState object in the future
         DebugInfo mDebugInfo;
         float mInvPixelArea;
+        uint64_t mTotalSampleCount;
     };
 
     inline const Pixel* ImageTile::getTileBuffer() const {
@@ -108,9 +125,9 @@ namespace Goblin {
 
     class Film {
     public:
-        Film(int xRes, int yRes, const float crop[4], 
-            Filter* filter, const std::string& filename, 
-            int tileWidth, bool toneMapping = false, 
+        Film(int xRes, int yRes, const float crop[4],
+            Filter* filter, const std::string& filename,
+            bool requireLightMap, bool toneMapping = false,
             float bloomRadius = 0.0f, float bloomWeight = 0.0f);
         ~Film();
 

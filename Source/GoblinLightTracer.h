@@ -38,7 +38,7 @@ namespace Goblin {
 
     class LightTracer : public Renderer {
     public:
-        LightTracer(int samplePerPixel = 1,
+        LightTracer(int samplePerPixel, int threadNum,
             int maxPathLength = 5);
 
         ~LightTracer();
@@ -48,17 +48,16 @@ namespace Goblin {
             WorldDebugData* debugData = NULL) const;
 
         void render(const ScenePtr& scene);
-    private:
         
         void splatFilm(const ScenePtr& scene, const Sample& sample,
-            const RNG& rng);
+            const RNG& rng, std::vector<PathVertex>& pathVertices,
+            ImageTile* tile) const;
 
         void querySampleQuota(const ScenePtr& scene,
             SampleQuota* sampleQuota);
     private:
         uint64_t mTotalSamplesNum;
         int mMaxPathLength;
-        std::vector<PathVertex> mPathVertices;
     };
 
     class LightTracerCreator : public

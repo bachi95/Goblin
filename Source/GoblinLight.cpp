@@ -356,7 +356,7 @@ namespace Goblin {
         float* pdfArea) const {
         Vector3 worldScale = mToWorld.getScale();
         float worldArea = mGeometrySet->area() *
-            worldScale.x * worldScale.y * worldScale.z;
+            sqrt(worldScale.squaredLength() / 3.0f);
         *pdfArea = 1.0f / worldArea;
         Vector3 nLocal;
         Vector3 pLocal = mGeometrySet->sample(ls, &nLocal);
@@ -366,14 +366,16 @@ namespace Goblin {
 
     Vector3 AreaLight::sampleDirection(const Vector3& surfaceNormal,
         float u1, float u2, float* pdfW) const {
-        Vector3 dir = uniformSampleSphere(u1, u2);
-        // the case sampled dir is in the opposite hemisphere of area light
-        // surface normal
-        if(dot(surfaceNormal, dir) < 0.0f) {
-            dir *= -1.0f;
-        }
-        *pdfW = INV_TWOPI;
-        return dir;
+        Vector3 localDir = cosineSampleHemisphere(u1, u2);
+        float cosTheta = localDir.z;
+        Vector3 right, up;
+        coordinateAxises(surfaceNormal, &right, &up);
+        Matrix3 surfaceToWorld(
+            right.x, up.x, surfaceNormal.x,
+            right.y, up.y, surfaceNormal.y,
+            right.z, up.z, surfaceNormal.z);
+        *pdfW = cosTheta * INV_PI;
+        return surfaceToWorld * localDir;
     }
 
     Color AreaLight::evalL(const Vector3& pLight, const Vector3& nLight,

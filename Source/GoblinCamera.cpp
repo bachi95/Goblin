@@ -204,7 +204,7 @@ namespace Goblin{
         *We = mLensRadius > 0.0f ?
             1.0f / (mFilmArea * lensArea * G) : 1.0f / (mFilmArea * G);
         if (pdfW) {
-            *pdfW = 1.0f / (mFilmArea * G);
+            *pdfW = lensToFilmDistance2 / (mFilmArea * cosTheta);
         }
         return sampleDir;
     }

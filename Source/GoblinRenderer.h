@@ -65,7 +65,7 @@ namespace Goblin {
             RenderProgress* renderProgress);
         ~RenderTask();
         void run();
-    private:
+    protected:
         ImageTile* mTile;
         Renderer* mRenderer;
         const CameraPtr& mCamera;

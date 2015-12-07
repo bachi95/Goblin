@@ -5,10 +5,55 @@
 
 namespace Goblin {
 
-    LightTracer::LightTracer(int samplePerPixel, int maxPathLength):
-        Renderer(samplePerPixel, 1),
-        mTotalSamplesNum(0), mMaxPathLength(maxPathLength),
-        mPathVertices(mMaxPathLength){}
+    class LightTraceTask : public RenderTask {
+    public:
+        LightTraceTask(ImageTile* tile, LightTracer* mLightTracer,
+            const CameraPtr& camera, const ScenePtr& scene,
+            const SampleQuota& sampleQuota, int samplePerPixel,
+            int maxPathLength, RenderProgress* renderProgress);
+        ~LightTraceTask();
+        void run();
+    private:
+        const LightTracer* mLightTracer;
+        std::vector<PathVertex> mPathVertices;
+    };
+
+    LightTraceTask::LightTraceTask(ImageTile* tile, LightTracer* lightTracer,
+        const CameraPtr& camera, const ScenePtr& scene,
+        const SampleQuota& sampleQuota, int samplePerPixel,
+        int maxPathLength, RenderProgress* renderProgress):
+        RenderTask(tile, lightTracer, camera, scene, sampleQuota,
+        samplePerPixel, renderProgress),
+        mLightTracer(lightTracer), mPathVertices(maxPathLength) {}
+
+    LightTraceTask::~LightTraceTask() {}
+
+    void LightTraceTask::run() {
+        int xStart, xEnd, yStart, yEnd;
+        mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
+        Sampler sampler(xStart, xEnd, yStart, yEnd,
+            mSamplePerPixel, mSampleQuota, mRNG);
+        int batchAmount = sampler.maxSamplesPerRequest();
+        Sample* samples = sampler.allocateSampleBuffer(batchAmount);
+        WorldDebugData debugData;
+        int sampleNum = 0;
+        uint64_t totalSampleCount = 0;
+        while((sampleNum = sampler.requestSamples(samples)) > 0) {
+            for (int s = 0; s <sampleNum; ++s) {
+                mLightTracer->splatFilm(mScene, samples[s], *mRNG,
+                    mPathVertices, mTile);
+            }
+            totalSampleCount += sampleNum;
+        }
+        mTile->setTotalSampleCount(totalSampleCount);
+        delete [] samples;
+        mRenderProgress->update();
+    }
+
+    LightTracer::LightTracer(int samplePerPixel, int threadNum,
+        int maxPathLength):
+        Renderer(samplePerPixel, threadNum),
+        mTotalSamplesNum(0), mMaxPathLength(maxPathLength) {}
 
     LightTracer::~LightTracer() {}
 
@@ -20,14 +65,14 @@ namespace Goblin {
     }
 
     void LightTracer::splatFilm(const ScenePtr& scene, const Sample& sample,
-        const RNG& rng) {
+        const RNG& rng, std::vector<PathVertex>& pathVertices,
+        ImageTile* tile) const {
         const vector<Light*>& lights = scene->getLights();
         if (lights.size() == 0) {
             return;
         }
         // get the camera point
         const CameraPtr camera = scene->getCamera();
-        Film* film = camera->getFilm();
         Vector3 nCamera;
         float pdfCamera;
         Vector3 pCamera = camera->samplePosition(sample, &nCamera, &pdfCamera);
@@ -46,14 +91,14 @@ namespace Goblin {
         Vector3 pLight = light->samplePosition(scene, ls, &nLight,
             &pdfLightArea);
 
-        mPathVertices[0] = PathVertex(
+        pathVertices[0] = PathVertex(
             Color(1.0f / (pdfLightArea * pickLightPdf)),
             pLight, nLight, light);
         float pdfLightDirection;
         BSDFSample bs(sample, mBSDFSampleIndexes[0], 0);
         Vector3 dir = light->sampleDirection(
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
-        Color throughput = mPathVertices[0].throughput *
+        Color throughput = pathVertices[0].throughput *
             absdot(nLight, dir) / pdfLightDirection;
         Ray ray(pLight, dir, 1e-5f);
         int lightVertex = 1;
@@ -64,7 +109,7 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            mPathVertices[lightVertex] = PathVertex(throughput, frag,
+            pathVertices[lightVertex] = PathVertex(throughput, frag,
                 isect.getMaterial().get());
             BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
             Vector3 wo = -normalize(ray.d);
@@ -76,14 +121,11 @@ namespace Goblin {
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW);
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
-            ray.o = frag.getPosition();
-            ray.d = wi;
-            ray.mint = 1e-4f;
+            ray = Ray(frag.getPosition(), wi, epsilon);
         }
 
         for (int s = 1; s <= lightVertex; ++s) {
-
-            const PathVertex& pv = mPathVertices[s  - 1];
+            const PathVertex& pv = pathVertices[s  - 1];
             const Vector3& pvPos = pv.fragment.getPosition();
             Vector3 filmPixel = camera->worldToScreen(
                 pv.fragment.getPosition(), pCamera);
@@ -101,10 +143,10 @@ namespace Goblin {
             Vector3 wo = normalize(pCamera - pvPos);
             if (s > 1) {
                 Vector3 wi =
-                    normalize(mPathVertices[s - 2].fragment.getPosition() - pvPos);
+                    normalize(pathVertices[s - 2].fragment.getPosition() - pvPos);
                 Color f = pv.material->bsdf(pv.fragment, wo, wi);
                 fsL = f * light->evalL(pLight, nLight,
-                    mPathVertices[1].fragment.getPosition());
+                    pathVertices[1].fragment.getPosition());
             } else {
                 fsL = pv.light->evalL(pLight, nLight, pCamera);
             }
@@ -114,7 +156,7 @@ namespace Goblin {
             
             Color pathContribution = fsL * fsE * G *
                 pv.throughput * cVertex.throughput;
-            film->addSample(filmPixel.x, filmPixel.y, pathContribution);
+            tile->addSample(filmPixel.x, filmPixel.y, pathContribution);
         }
     }
 
@@ -123,23 +165,31 @@ namespace Goblin {
         Film* film = camera->getFilm();
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
-        int xStart, xEnd, yStart, yEnd;
-        film->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        RNG rng;
-        Sampler sampler(xStart, xEnd, yStart, yEnd, mSamplePerPixel,
-            sampleQuota, &rng);
-        int batchAmount = sampler.maxSamplesPerRequest();
-        Sample* samples = sampler.allocateSampleBuffer(batchAmount);
-        mTotalSamplesNum = sampler.maxTotalSamples();
-        cout <<"total samples N: " <<mTotalSamplesNum << endl;
-        int sampleNum = 0;
-        while((sampleNum = sampler.requestSamples(samples)) > 0) {
-            for (int s = 0; s <sampleNum; ++s) {
-                splatFilm(scene, samples[s], rng);
-            }
+
+        vector<ImageTile*>& tiles = film->getTiles();
+        vector<Task*> lightTraceTasks;
+        RenderProgress progress((int)tiles.size());
+        for(size_t i = 0; i < tiles.size(); ++i) {
+            lightTraceTasks.push_back(new LightTraceTask(tiles[i], this,
+                camera, scene, sampleQuota, mSamplePerPixel,
+                mMaxPathLength, &progress));
         }
-        delete [] samples;
-        film->scaleImage(film->getFilmArea() / mTotalSamplesNum);
+
+        ThreadPool threadPool(mThreadNum);
+        threadPool.enqueue(lightTraceTasks);
+        threadPool.waitForAll();
+        //clean up
+        for(size_t i = 0; i < lightTraceTasks.size(); ++i) {
+            delete lightTraceTasks[i];
+        }
+        lightTraceTasks.clear();
+
+        uint64_t totalSampleCount = 0;
+        for (size_t i = 0; i < tiles.size(); ++i) {
+            totalSampleCount += tiles[i]->getTotalSampleCount();
+        }
+        film->mergeTiles();
+        film->scaleImage(film->getFilmArea() / totalSampleCount);
         film->writeImage(false);
     }
 
@@ -182,7 +232,9 @@ namespace Goblin {
 
     Renderer* LightTracerCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
+        int threadNum = params.getInt("thread_num",
+            boost::thread::hardware_concurrency());
         int maxPathLength = params.getInt("max_path_length", 5);
-        return new LightTracer(samplePerPixel, maxPathLength);
+        return new LightTracer(samplePerPixel, threadNum, maxPathLength);
     }
 }
