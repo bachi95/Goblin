@@ -341,40 +341,40 @@ namespace Goblin {
     }
 
     float Material::specularRefract(const Fragment& fragment,
-        const Vector3& wo, Vector3* wi, float etai, float etat) const {
+        const Vector3& wo, Vector3* wi, float etao, float etai) const {
         // wo(face outward) is the input ray(with n form angle i), 
         // wi is the refract ray(with -n form angle t)
         Vector3 n = fragment.getNormal();
         // wo(face outward) is the input ray(with n form angle i), 
-        // wi is the reflect ray
-        float cosi = dot(n, wo);
+        // wi is the refract ray
+        float coso = dot(n, wo);
+        float et = etao;
         float ei = etai;
-        float et = etat;
-        bool entering = cosi > 0.0f;
+        bool entering = coso > 0.0f;
         if(!entering) {
             swap(ei, et);
             n = -n;
-            cosi = -cosi;
+            coso = -coso;
         }
-        float f = fresnelDieletric(cosi, ei, et);
+        float f = fresnelDieletric(coso, et, ei);
         // total reflection
         if(f == 1.0f) {
             return 0.0f;
         }
         /*
-         * Wi = -N * cost - WoPerpN * sint / sini =
-         * -N * cost - (sint / sini) * (Wo - dot(N, Wo) * N) =
-         * -N * sqrt(1 - (etai / etat)^2 * (1 - (dot(N, Wo))^2))) +
-         * etai / etat * (Wo - dot(N, Wo) * N) =
-         * N * (etai/etat * dot(N, Wo) - 
-         * sqrt(1 - (etai/etat)^2(1 - (dot(N, Wo))^2)) -
-         * etai / etat * Wo
+         * Wi = -N * cosi - WoPerpN * sini / sino =
+         * -N * cosi - (sini / sino) * (Wo - dot(N, Wo) * N) =
+         * -N * sqrt(1 - (etao / etai)^2 * (1 - (dot(N, Wo))^2))) +
+         * etao / etai * (Wo - dot(N, Wo) * N) =
+         * N * (etao / etai * dot(N, Wo) -
+         * sqrt(1 - (etao / etai)^2(1 - (dot(N, Wo))^2)) -
+         * etao / etai * Wo
          */
-        float eta = ei / et;
-        *wi = normalize(n * (eta * cosi - 
-            sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - cosi * cosi)))) - 
+        float eta = et / ei;
+        *wi = normalize(n * (eta * coso -
+            sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - coso * coso)))) -
             eta * wo);
-        return (1.0f - f) / absdot(*wi, n);
+        return eta * eta * (1.0f - f) / absdot(*wi, n);
     }
 
     // close approximation fresnel for dieletric material
@@ -681,7 +681,6 @@ namespace Goblin {
                 *pdf = reflectChance;
             } else {
                 f = mRefractFactor->lookup(fragment) * refract;
-                    specularRefract(fragment, wo, wi, mEtai, mEtat);
                 *wi = wRefract;
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFTransmission);
