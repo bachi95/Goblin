@@ -341,7 +341,8 @@ namespace Goblin {
     }
 
     float Material::specularRefract(const Fragment& fragment,
-        const Vector3& wo, Vector3* wi, float etao, float etai) const {
+        const Vector3& wo, Vector3* wi, float etao, float etai,
+        BSDFMode mode) const {
         // wo(face outward) is the input ray(with n form angle i), 
         // wi is the refract ray(with -n form angle t)
         Vector3 n = fragment.getNormal();
@@ -374,7 +375,15 @@ namespace Goblin {
         *wi = normalize(n * (eta * coso -
             sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - coso * coso)))) -
             eta * wo);
-        return eta * eta * (1.0f - f) / absdot(*wi, n);
+        /*
+         * see Veach 97 Chapter 5: The Sources of Non-Symmetric Scattering
+         * for detail derivation, solid angle would be "squeezed" from
+         * smaller IOR to bigger IOR and cause radiance increase, while
+         * it doesn't apply to importance
+         */
+        return mode == BSDFRadiance ?
+            eta * eta * (1.0f - f) / absdot(*wi, n) :
+            (1.0f - f) / absdot(*wi, n);
     }
 
     // close approximation fresnel for dieletric material
@@ -426,7 +435,7 @@ namespace Goblin {
 
 
     Color LambertMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
-        const Vector3& wi, BSDFType type) const {
+        const Vector3& wi, BSDFType type, BSDFMode mode) const {
         Color f(Color::Black);
         type = getSampleType(wo, wi, fragment, type);
         if(matchType(type, getType())) {
@@ -437,7 +446,8 @@ namespace Goblin {
 
     Color LambertMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
@@ -528,7 +538,7 @@ namespace Goblin {
      *
      */
     Color BlinnMaterial::bsdf(const Fragment& fragment, const Vector3& wo, 
-        const Vector3& wi, BSDFType type) const {
+        const Vector3& wi, BSDFType type, BSDFMode mode) const {
         type = getSampleType(wo, wi, fragment, type);
         if(matchType(type, getType())) {
             Vector3 n = fragment.getNormal();
@@ -583,7 +593,8 @@ namespace Goblin {
      */
     Color BlinnMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
@@ -608,7 +619,7 @@ namespace Goblin {
         if(sampledType) {
             *sampledType = materialType;
         }
-        return bsdf(fragment, wo, *wi, materialType);
+        return bsdf(fragment, wo, *wi, materialType, mode);
     }
 
     /* 
@@ -635,7 +646,8 @@ namespace Goblin {
 
     Color TransparentMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         int nMatch = 0;
         if(matchType(type, BSDFType(BSDFSpecular | BSDFReflection))) {
             nMatch++;
@@ -654,7 +666,7 @@ namespace Goblin {
                 }
             } else {
                 f = mRefractFactor->lookup(fragment) *
-                    specularRefract(fragment, wo, wi, mEtai, mEtat);
+                    specularRefract(fragment, wo, wi, mEtai, mEtat, mode);
                 if(sampledType) {
                     *sampledType = BSDFType(BSDFSpecular | BSDFTransmission);
                 }
@@ -666,7 +678,7 @@ namespace Goblin {
             float reflect = specularReflectDieletric(fragment, wo, 
                 &wReflect, mEtai, mEtat);
             float refract = specularRefract(fragment, wo, 
-                &wRefract, mEtai, mEtat);
+                &wRefract, mEtai, mEtat, mode);
             // use fresnel factor to do importance sampling
             float fresnel = reflect * absdot(wReflect, fragment.getNormal());
             float reflectChance = fresnel;
@@ -696,7 +708,8 @@ namespace Goblin {
 
     Color MirrorMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
@@ -714,7 +727,8 @@ namespace Goblin {
 
     Color SubsurfaceMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi, 
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         BSDFType materialType = getType();
         if(!matchType(type, materialType)) {
             *pdf = 0.0f;
@@ -731,7 +745,7 @@ namespace Goblin {
     }
 
     Color MaskMaterial::bsdf(const Fragment& fragment, const Vector3& wo,
-        const Vector3& wi, BSDFType type) const {
+        const Vector3& wi, BSDFType type, BSDFMode mode) const {
         if(type == BSDFNull) {
             return Color::Black;
         } else {
@@ -742,7 +756,8 @@ namespace Goblin {
 
     Color MaskMaterial::sampleBSDF(const Fragment& fragment, 
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi,
-        float* pdf, BSDFType type, BSDFType* sampledType) const {
+        float* pdf, BSDFType type, BSDFType* sampledType,
+        BSDFMode mode) const {
         bool sampleAlpha = matchType(type, BSDFNull);
         // if this request ask us to evaluate masked material
         bool sampleMasked = type != BSDFNull;
