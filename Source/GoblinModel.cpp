@@ -9,8 +9,9 @@ namespace Goblin {
     vector<Model*> Model::refinedModels;
 
     Model::Model(const Geometry* geometry, const MaterialPtr& material,
-        const AreaLight* areaLight): 
-        mGeometry(geometry), mMaterial(material), mAreaLight(areaLight) {}
+        const AreaLight* areaLight, bool isCameraLens):
+        mGeometry(geometry), mMaterial(material), mAreaLight(areaLight),
+        mIsCameraLens(isCameraLens) {}
 
     bool Model::intersect(const Ray& ray, IntersectFilter f) const {
         if(f != NULL && !f(this, ray)) {
@@ -70,7 +71,9 @@ namespace Goblin {
         if(params.hasString("area_light")) {
             areaLight = sceneCache.getAreaLight(params.getString("area_light"));
         }
-        Primitive* model = new Model(geometry, material, areaLight);
+        bool isCameraLens = params.getBool("is_camera_lens");
+        Primitive* model = new Model(geometry, material, areaLight,
+            isCameraLens);
         Primitive::allocatedPrimitives.push_back(model);
 
         if(!model->intersectable()) {

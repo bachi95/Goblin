@@ -232,13 +232,42 @@ namespace Goblin {
         return mFilmFactory->create(type, filmParams, filter);
     }
 
-    CameraPtr ContextLoader::parseCamera(const PropertyTree& pt, Film* film) {
+    CameraPtr ContextLoader::parseCamera(const PropertyTree& pt, Film* film,
+        SceneCache* sceneCache) {
         cout << "camera" << endl;
         PropertyTree cameraPt;
         pt.getChild("camera", &cameraPt);
         ParamSet cameraParams;
         parseParamSet(cameraPt, &cameraParams);
         string type = cameraParams.getString("type");
+        // need to add lens into scene so that it can be intersected by
+        // light particles
+        float lensRadius = cameraParams.getFloat("lens_radius");
+        if(lensRadius != 0.0f) {
+            // we need to push this geometry into scene so that it can
+            // be intersection tested. the run time material/model
+            // creation is pretty awkward at this moment...definitly should
+            // be improved....
+            ParamSet modelParams;
+            Geometry* lensGeom = new Disk(lensRadius);
+            string lensGeomName =  type + "_lens_geom";
+            sceneCache->addGeometry(lensGeomName, lensGeom);
+            modelParams.setString("geometry", lensGeomName);
+            modelParams.setBool("is_camera_lens", true);
+            ColorTexturePtr black(new ConstantTexture<Color>(Color::Black));
+            MaterialPtr mtl(new LambertMaterial(black));
+            string materialName = type + "_lens_material";
+            sceneCache->addMaterial(materialName, mtl);
+            modelParams.setString("material", materialName);
+            const Primitive* model(mPrimitiveFactory->create("model",
+                modelParams, *sceneCache));
+            string modelName = type + "_lens_model";
+            sceneCache->addPrimitive(modelName, model);
+            cameraParams.setString("model" , modelName);
+            const Primitive* instance(mPrimitiveFactory->create("instance",
+                cameraParams, *sceneCache));
+            sceneCache->addInstance(instance);
+        }
         return CameraPtr(mCameraFactory->create(type, cameraParams, film));
     }
 
@@ -360,8 +389,8 @@ namespace Goblin {
             ParamSet modelParams;
             modelParams.setString("geometry", 
                 lightParams.getString("geometry"));
-            ColorTexturePtr white(new ConstantTexture<Color>(Color::Black));
-            MaterialPtr mtl(new LambertMaterial(white));
+            ColorTexturePtr black(new ConstantTexture<Color>(Color::Black));
+            MaterialPtr mtl(new LambertMaterial(black));
             string materialName = type + "_" + name + "_material";
             sceneCache->addMaterial(materialName, mtl);
             modelParams.setString("material", materialName);
@@ -397,7 +426,7 @@ namespace Goblin {
         Filter* filter = parseFilter(pt);
         Film* film = parseFilm(pt, filter, requireLightMap);
 
-        CameraPtr camera = parseCamera(pt, film);
+        CameraPtr camera = parseCamera(pt, film, &sceneCache);
 
         VolumeRegion* volume = parseVolume(pt);
 

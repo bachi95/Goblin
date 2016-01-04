@@ -18,6 +18,10 @@ namespace Goblin {
         return primitive->getMaterial();
     }
 
+    bool Intersection::isCameraLens() const {
+        return primitive->isCameraLens();
+    }
+
     void Intersection::computeUVDifferential(const RayDifferential& ray) {
         float dudx, dvdx, dudy, dvdy;
         dudx = dvdx = dudy = dvdy = 0.0f;

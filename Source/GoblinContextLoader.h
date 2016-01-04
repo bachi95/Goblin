@@ -30,7 +30,8 @@ namespace Goblin {
         Film* parseFilm(const PropertyTree& pt, Filter* filter,
             bool requireLightMap);
 
-        CameraPtr parseCamera(const PropertyTree& pt, Film* film);
+        CameraPtr parseCamera(const PropertyTree& pt, Film* film,
+            SceneCache* sceneCache);
 
         VolumeRegion* parseVolume(const PropertyTree& pt);
 

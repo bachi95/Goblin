@@ -47,10 +47,16 @@ namespace Goblin {
 
     struct Intersection {
         Intersection(): primitive(NULL) {}
+
         Color Le(const Vector3& outDirection);
+
         const MaterialPtr& getMaterial() const;
+
+        bool isCameraLens() const;
+
         void computeUVDifferential(const RayDifferential& ray);
         Fragment fragment;
+
         const Primitive* primitive;
     };
 
@@ -59,18 +65,28 @@ namespace Goblin {
     class Primitive {
     public:
         virtual ~Primitive() {}
+
         virtual bool intersectable() const;
+
         virtual void refine(PrimitiveList& refinedPrimitives) const;
+
         virtual bool intersect(const Ray& ray, 
-            IntersectFilter f = NULL) const = 0; 
+            IntersectFilter f = NULL) const = 0;
+
         virtual bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection, IntersectFilter f = NULL) const = 0;
 
         virtual BBox getAABB() const = 0;
+
         virtual const MaterialPtr& getMaterial() const;
+
         virtual const AreaLight* getAreaLight() const;
+
+        virtual bool isCameraLens() const;
+
         virtual void collectRenderList(RenderList& rList, 
             const Matrix4& m = Matrix4::Identity) const = 0;
+
         static void clearAllocatedPrimitives();
     protected:
         Primitive() {}
@@ -78,8 +94,8 @@ namespace Goblin {
         static vector<Primitive*> allocatedPrimitives;
     };
 
-
     inline bool Primitive::intersectable() const { return true; }
+
     inline void Primitive::refine(PrimitiveList& refinedPrimitives) const {
         std::cerr << "unimplemented Primitive::refine" << std::endl; 
         throw std::exception();
@@ -88,12 +104,17 @@ namespace Goblin {
     // TODO meh......instance should have the right to do 
     //material override, add it in later...
     inline const MaterialPtr& Primitive::getMaterial() const {
-        std::cerr << "unimplemented Primitive::getMaterial" << std::endl; 
+        std::cerr << "unimplemented Primitive::getMaterial" << std::endl;
         throw std::exception();
     }
 
     inline const AreaLight* Primitive::getAreaLight() const {
-        std::cerr << "unimplemented Primitive::getAreaLight" << std::endl; 
+        std::cerr << "unimplemented Primitive::getAreaLight" << std::endl;
+        throw std::exception();
+    }
+
+    inline bool Primitive::isCameraLens() const {
+        std::cerr << "unimplemented Primitive::isCameraLens" << std::endl;
         throw std::exception();
     }
 

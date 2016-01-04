@@ -24,7 +24,7 @@ namespace Goblin {
         int maxPathLength, RenderProgress* renderProgress):
         RenderTask(tile, lightTracer, camera, scene, sampleQuota,
         samplePerPixel, renderProgress),
-        mLightTracer(lightTracer), mPathVertices(maxPathLength) {}
+        mLightTracer(lightTracer), mPathVertices(maxPathLength + 1) {}
 
     LightTraceTask::~LightTraceTask() {}
 
@@ -40,8 +40,14 @@ namespace Goblin {
         uint64_t totalSampleCount = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
-                mLightTracer->splatFilm(mScene, samples[s], *mRNG,
+                //mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
+                //    mPathVertices, mTile);
+
+                mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
                     mPathVertices, mTile);
+
+                //mLightTracer->splatFilmS1(mScene, samples[s], *mRNG,
+                //    mPathVertices, mTile);
             }
             totalSampleCount += sampleNum;
         }
@@ -60,11 +66,11 @@ namespace Goblin {
     Color LightTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,
         WorldDebugData* debugData) const {
-        // light tracing method don't use this camera based method actually
+        // light tracing method doesn't use this camera based method actually
         return Color::Black;
     }
 
-    void LightTracer::splatFilm(const ScenePtr& scene, const Sample& sample,
+    void LightTracer::splatFilmT1(const ScenePtr& scene, const Sample& sample,
         const RNG& rng, std::vector<PathVertex>& pathVertices,
         ImageTile* tile) const {
         const vector<Light*>& lights = scene->getLights();
@@ -115,11 +121,8 @@ namespace Goblin {
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
             float pdfW;
-            // we should add an adjoint option to bsdf, for now
-            // we are testing only on lambert case so it should
-            // be fine....
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
-                &wi, &pdfW);
+                &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
@@ -135,7 +138,7 @@ namespace Goblin {
             // occlude test
             Vector3 pv2Cam(pCamera - pvPos);
             Ray occludeRay(pvPos, normalize(pv2Cam),
-                1e-5f, length(pv2Cam));
+                1e-5f, length(pv2Cam) - 1e-5f);
             if (scene->intersect(occludeRay)) {
                 continue;
             }
@@ -156,6 +159,163 @@ namespace Goblin {
             
             Color pathContribution = fsL * fsE * G *
                 pv.throughput * cVertex.throughput;
+            tile->addSample(filmPixel.x, filmPixel.y, pathContribution);
+        }
+    }
+
+    void LightTracer::splatFilmT0(const ScenePtr& scene, const Sample& sample,
+        const RNG& rng, std::vector<PathVertex>& pathVertices,
+        ImageTile* tile) const {
+        const vector<Light*>& lights = scene->getLights();
+        if (lights.size() == 0) {
+            return;
+        }
+        const CameraPtr camera = scene->getCamera();
+        // get the light point
+        float pickLightPdf;
+        float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
+        int lightIndex = mPowerDistribution->sampleDiscrete(
+            pickSample, &pickLightPdf);
+        const Light* light = lights[lightIndex];
+        LightSample ls(sample, mLightSampleIndexes[0], 0);
+        Vector3 nLight;
+        float pdfLightArea;
+        Vector3 pLight = light->samplePosition(scene, ls, &nLight,
+            &pdfLightArea);
+
+        pathVertices[0] = PathVertex(
+            Color(1.0f / (pdfLightArea * pickLightPdf)),
+            pLight, nLight, light);
+        float pdfLightDirection;
+        BSDFSample bs(sample, mBSDFSampleIndexes[0], 0);
+        Vector3 dir = light->sampleDirection(
+            nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
+        Color throughput = pathVertices[0].throughput *
+            absdot(nLight, dir) / pdfLightDirection;
+        Ray ray(pLight, dir, 1e-5f);
+        int lightVertex = 1;
+        for (; lightVertex <= mMaxPathLength; ++lightVertex) {
+            float epsilon;
+            Intersection isect;
+            if (!scene->intersect(ray, &epsilon, &isect)) {
+                break;
+            }
+            const Fragment& frag = isect.fragment;
+            pathVertices[lightVertex] = PathVertex(throughput, frag,
+                isect.getMaterial().get());
+            // last light vertex hit the camera lens, evaluate result and done
+            if (isect.isCameraLens()) {
+                const Vector3& pCamera = frag.getPosition();
+                const Vector3& pS_1 =
+                    pathVertices[lightVertex - 1].fragment.getPosition();
+                Vector3 filmPixel = camera->worldToScreen(pS_1, pCamera);
+                if (filmPixel != Camera::sInvalidPixel) {
+                    Color L = light->evalL(pLight, nLight,
+                        pathVertices[1].fragment.getPosition());
+                    float We = camera->evalWe(pCamera, pS_1);
+                    tile->addSample(filmPixel.x, filmPixel.y,
+                        L * We * pathVertices[lightVertex].throughput);
+                }
+                break;
+            }
+            // continue random walk the light vertex path until it hits lens
+            BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
+            Vector3 wo = -normalize(ray.d);
+            Vector3 wi;
+            float pdfW;
+            Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
+                &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
+            ray = Ray(frag.getPosition(), wi, epsilon);
+        }
+    }
+
+    void LightTracer::splatFilmS1(const ScenePtr& scene, const Sample& sample,
+        const RNG& rng, std::vector<PathVertex>& pathVertices,
+        ImageTile* tile) const {
+        const vector<Light*>& lights = scene->getLights();
+        if (lights.size() == 0) {
+            return;
+        }
+         // get the light point
+        float pickLightPdf;
+        float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
+        int lightIndex = mPowerDistribution->sampleDiscrete(
+            pickSample, &pickLightPdf);
+        const Light* light = lights[lightIndex];
+        LightSample ls(sample, mLightSampleIndexes[0], 0);
+        Vector3 nLight;
+        float pdfLightArea;
+        Vector3 pLight = light->samplePosition(scene, ls, &nLight,
+            &pdfLightArea);
+        PathVertex lVertex(Color(1.0f / (pdfLightArea * pickLightPdf)),
+            pLight, nLight, light);
+
+        // get the camera point
+        const CameraPtr camera = scene->getCamera();
+        Vector3 nCamera;
+        float pdfCamera;
+        Vector3 pCamera = camera->samplePosition(sample, &nCamera, &pdfCamera);
+
+        pathVertices[0] = PathVertex(Color(1.0f / pdfCamera),
+            pCamera, nCamera, camera.get());
+
+        float pdfEyeDirection;
+        float We;
+        Vector3 dir = camera->sampleDirection(
+            sample, pCamera, &We, &pdfEyeDirection);
+        Color throughput = pathVertices[0].throughput *
+            absdot(nCamera, dir) / pdfEyeDirection;
+        Ray ray(pCamera, dir, 1e-5f);
+        int eyeVertex = 1;
+        for (; eyeVertex < mMaxPathLength; ++eyeVertex) {
+            float epsilon;
+            Intersection isect;
+            if (!scene->intersect(ray, &epsilon, &isect)) {
+                break;
+            }
+            const Fragment& frag = isect.fragment;
+            pathVertices[eyeVertex] = PathVertex(throughput, frag,
+                isect.getMaterial().get());
+            BSDFSample bs(sample, mBSDFSampleIndexes[eyeVertex], 0);
+            Vector3 wo = -normalize(ray.d);
+            Vector3 wi;
+            float pdfW;
+            Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
+                &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
+            ray = Ray(frag.getPosition(), wi, epsilon);
+        }
+
+        for (int t = 1; t <= eyeVertex; ++t) {
+            const PathVertex& pv = pathVertices[t  - 1];
+            const Vector3& pvPos = pv.fragment.getPosition();
+            // occlude test
+            Vector3 pv2Light(pLight - pvPos);
+            Ray occludeRay(pvPos, normalize(pv2Light),
+                1e-5f, length(pv2Light) - 1e-5f);
+            if (scene->intersect(occludeRay)) {
+                continue;
+            }
+            Color fsE;
+            Vector3 filmPixel;
+            Vector3 wi = normalize(pLight - pvPos);
+            if (t > 1) {
+                Vector3 wo =
+                    normalize(pathVertices[t - 2].fragment.getPosition() - pvPos);
+                Color f = pv.material->bsdf(pv.fragment, wo, wi);
+                fsE = f * We;
+                filmPixel.x = sample.imageX;
+                filmPixel.y = sample.imageY;
+            } else {
+                filmPixel = camera->worldToScreen(pLight, pvPos);
+                fsE = Color(camera->evalWe(pCamera, pLight));
+            }
+            Color fsL = light->evalL(pLight, nLight, pvPos);
+            float G = absdot(pv.fragment.getNormal(), wi) * absdot(nLight, wi) /
+                squaredLength(pLight - pvPos);
+            Color pathContribution = fsL * fsE * G *
+                pv.throughput * lVertex.throughput;
             tile->addSample(filmPixel.x, filmPixel.y, pathContribution);
         }
     }
@@ -217,8 +377,8 @@ namespace Goblin {
         mLightSampleIndexes[0] = LightSampleIndex(sampleQuota, 1);
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
-        mBSDFSampleIndexes = new BSDFSampleIndex[mMaxPathLength];
-        for(int i = 0; i < mMaxPathLength; ++i) {
+        mBSDFSampleIndexes = new BSDFSampleIndex[mMaxPathLength + 1];
+        for(int i = 0; i < mMaxPathLength + 1; ++i) {
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
         }
 
