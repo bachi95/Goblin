@@ -67,6 +67,9 @@ namespace Goblin {
             Area = 3,
             IBL = 4
         };
+
+        Light();
+
         virtual ~Light() {};
 
         // this one is only usable for IBL for now...
@@ -87,6 +90,17 @@ namespace Goblin {
         virtual Vector3 sampleDirection(const Vector3& pSurface,
             float u1, float u2, float* pdfW) const = 0;
 
+        // get the pdf (measured in area) this particular point
+        // on light is sampled
+        virtual float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const = 0;
+
+        // get the conditional pdf (measured in solid andgle)
+        // this light emit particle in direction wo (under the
+        // condition that it is already sampled in point p with normal n)
+        virtual float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const = 0;
+
         // given a point on light and a point in world, evaluate
         // the radiance contribution from
         virtual Color evalL(const Vector3& pLight, const Vector3& nLight,
@@ -102,12 +116,16 @@ namespace Goblin {
 
         virtual uint32_t getSamplesNum() const;
 
+        size_t getId() const { return mLightId; }
+
         const ParamSet& getParams() const;
 
     protected:
         void setOrientation(const Vector3& dir);
 
     protected:
+        static size_t nextLightId;
+        size_t mLightId;
         ParamSet mParams;
         Transform mToWorld;
     };
@@ -147,6 +165,12 @@ namespace Goblin {
         Vector3 sampleDirection(const Vector3& pSurface,
             float u1, float u2, float* pdfW) const;
 
+        float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
+
         Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const;
 
@@ -170,6 +194,12 @@ namespace Goblin {
 
         Vector3 sampleDirection(const Vector3& pSurface,
             float u1, float u2, float* pdfW) const;
+
+        float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const;
@@ -208,6 +238,12 @@ namespace Goblin {
 
         Vector3 sampleDirection(const Vector3& pSurface,
             float u1, float u2, float* pdfW) const;
+
+        float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const;
@@ -268,6 +304,12 @@ namespace Goblin {
         Vector3 sampleDirection(const Vector3& surfaceNormal,
             float u1, float u2, float* pdfW) const;
 
+        float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
+
         Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const;
 
@@ -320,6 +362,12 @@ namespace Goblin {
 
         Vector3 sampleDirection(const Vector3& pSurface,
             float u1, float u2, float* pdfW) const;
+
+        float pdfPosition(const ScenePtr& scene,
+            const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color evalL(const Vector3& pLight, const Vector3& nLight,
             const Vector3& pSurface) const;

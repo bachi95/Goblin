@@ -209,6 +209,26 @@ namespace Goblin{
         return sampleDir;
     }
 
+    float PerspectiveCamera::pdfPosition(const Vector3& p) const {
+        return mLensRadius > 0.0f ?
+            1.0f / mLensRadius * mLensRadius * PI : 0.0f;
+    }
+
+    float PerspectiveCamera::pdfDirection(const Vector3& p,
+        const Vector3& wo) const {
+        // this method doesn't check whether p is projected to film plane
+        // based on the assumption that caller already cull out the
+        // position that is out of camera frustum
+
+        // pdfW = pdfA / G = 1 / filmArea * r * r / cosTheta
+        // wehre cosTheta = dot(wo, n) and r = focalDistance / cosTheta
+        // pdfW = focalDistance^2 / (filmArea * cosTheata^3)
+        float cosTheta = dot(getLook(),wo);
+        float pdfW = mFocalDistance * mFocalDistance /
+            (mFilmArea * cosTheta * cosTheta * cosTheta);
+        return pdfW;
+    }
+
     float PerspectiveCamera::evalWe(const Vector3& pCamera,
         const Vector3& pWorld) const {
         if (worldToScreen(pWorld, pCamera) == Camera::sInvalidPixel) {
@@ -230,6 +250,10 @@ namespace Goblin{
             1.0f / (mFilmArea * lensArea * G) :
             1.0f / (mFilmArea * G);
         return We;
+    }
+
+    bool PerspectiveCamera::isDelta() const {
+        return (mLensRadius == 0.0f);
     }
 
     Vector3 PerspectiveCamera::worldToScreen(const Vector3&pWorld,
@@ -329,12 +353,25 @@ namespace Goblin{
         return mOrientation * Vector3::UnitZ;
     }
 
+    float OrthographicCamera::pdfPosition(const Vector3& p) const {
+        return 1.0f / mFilmArea;
+    }
+
+    float OrthographicCamera::pdfDirection(const Vector3& p,
+        const Vector3& wo) const {
+        return 0.0f;
+    }
+
     float OrthographicCamera::evalWe(const Vector3& pCamera,
         const Vector3& pWorld) const {
         // OrthographicCamera is not even intersectable, this method
         // should never get called anyway since there won't be particle
         // lands on this type of camera
         return 0.0f;
+    }
+
+    bool OrthographicCamera::isDelta() const {
+        return true;
     }
 
     Camera* PerspectiveCameraCreator::create(const ParamSet& params, 

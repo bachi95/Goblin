@@ -14,12 +14,20 @@ namespace Goblin {
             Color::Black : areaLight->L(ps, ns, outDirection);
     }
 
+    const Light* Intersection::getLight() const {
+        return primitive == NULL ? NULL : primitive->getAreaLight();
+    }
+
     const MaterialPtr& Intersection::getMaterial() const {
         return primitive->getMaterial();
     }
 
     bool Intersection::isCameraLens() const {
         return primitive->isCameraLens();
+    }
+
+    bool Intersection::isLight() const {
+        return primitive != NULL && primitive->getAreaLight() != NULL;
     }
 
     void Intersection::computeUVDifferential(const RayDifferential& ray) {

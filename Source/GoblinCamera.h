@@ -36,8 +36,20 @@ namespace Goblin {
             const Vector3& pCamera, float *We,
             float* pdfW = NULL) const = 0;
 
+        // get the pdf (measured in area) this particular point
+        // on camera lens is sampled
+        virtual float pdfPosition(const Vector3& p) const = 0;
+
+        // get the conditional pdf (measured in solid andgle)
+        // this camera emit importance in direction wo (under the
+        // condition that it is already sampled in point p)
+        virtual float pdfDirection(const Vector3& p,
+            const Vector3& wo) const = 0;
+
         virtual float evalWe(const Vector3& pCamera,
             const Vector3& pWorld) const = 0;
+
+        virtual bool isDelta() const = 0;
 
         bool isUpdated() const;
         void update();
@@ -179,8 +191,14 @@ namespace Goblin {
         Vector3 sampleDirection(const Sample& sample,
             const Vector3& pCamera, float* We, float* pdfW = NULL) const;
 
+        float pdfPosition(const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& wo) const;
+
         float evalWe(const Vector3& pCamera,
             const Vector3& pWorld) const;
+
+        bool isDelta() const;
 
         Vector3 worldToScreen(const Vector3& pWorld,
             const Vector3& pLens) const;
@@ -205,8 +223,14 @@ namespace Goblin {
         Vector3 sampleDirection(const Sample& sample,
             const Vector3& pCamera, float* We, float* pdfW = NULL) const;
 
+        float pdfPosition(const Vector3& p) const;
+
+        float pdfDirection(const Vector3& p, const Vector3& wo) const;
+
         float evalWe(const Vector3& pCamera,
             const Vector3& pWorld) const;
+
+        bool isDelta() const;
 
     private:
         float mFilmWidth;

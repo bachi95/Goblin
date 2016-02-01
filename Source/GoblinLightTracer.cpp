@@ -40,11 +40,11 @@ namespace Goblin {
         uint64_t totalSampleCount = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
-                //mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
-                //    mPathVertices, mTile);
-
-                mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
+                mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
                     mPathVertices, mTile);
+
+                //mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
+                //    mPathVertices, mTile);
 
                 //mLightTracer->splatFilmS1(mScene, samples[s], *mRNG,
                 //    mPathVertices, mTile);
@@ -115,8 +115,7 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            pathVertices[lightVertex] = PathVertex(throughput, frag,
-                isect.getMaterial().get());
+            pathVertices[lightVertex] = PathVertex(throughput, isect);
             BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
@@ -147,7 +146,8 @@ namespace Goblin {
             if (s > 1) {
                 Vector3 wi =
                     normalize(pathVertices[s - 2].fragment.getPosition() - pvPos);
-                Color f = pv.material->bsdf(pv.fragment, wo, wi);
+                Color f = pv.material->bsdf(pv.fragment, wo, wi,
+                    BSDFAll, BSDFImportance);
                 fsL = f * light->evalL(pLight, nLight,
                     pathVertices[1].fragment.getPosition());
             } else {
@@ -201,8 +201,7 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            pathVertices[lightVertex] = PathVertex(throughput, frag,
-                isect.getMaterial().get());
+            pathVertices[lightVertex] = PathVertex(throughput, isect);
             // last light vertex hit the camera lens, evaluate result and done
             if (isect.isCameraLens()) {
                 const Vector3& pCamera = frag.getPosition();
@@ -275,14 +274,13 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            pathVertices[eyeVertex] = PathVertex(throughput, frag,
-                isect.getMaterial().get());
+            pathVertices[eyeVertex] = PathVertex(throughput, isect);
             BSDFSample bs(sample, mBSDFSampleIndexes[eyeVertex], 0);
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
             float pdfW;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
-                &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+                &wi, &pdfW);
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }

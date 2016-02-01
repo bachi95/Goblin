@@ -50,11 +50,16 @@ namespace Goblin {
 
         Color Le(const Vector3& outDirection);
 
+        const Light* getLight() const;
+
         const MaterialPtr& getMaterial() const;
 
         bool isCameraLens() const;
 
+        bool isLight() const;
+
         void computeUVDifferential(const RayDifferential& ray);
+
         Fragment fragment;
 
         const Primitive* primitive;

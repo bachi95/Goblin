@@ -1,5 +1,6 @@
 #include "GoblinContextLoader.h"
 #include "GoblinBBox.h"
+#include "GoblinBDPT.h"
 #include "GoblinBVH.h"
 #include "GoblinDisk.h"
 #include "GoblinLightTracer.h"
@@ -147,6 +148,8 @@ namespace Goblin {
             new PathTracerCreator);
         mRendererFactory->registerCreator("light_tracing",
             new LightTracerCreator);
+        mRendererFactory->registerCreator("bdpt",
+            new BDPTCreator);
         mRendererFactory->setDefault("path_tracing");
         // volume
         mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
@@ -284,7 +287,8 @@ namespace Goblin {
         // film size tiles when splitting up the works (since photon may
         // splat on any location on the film instead of just one particular
         // square zone
-        *requireLightMap = (method == "light_tracing");
+        *requireLightMap = (method == "light_tracing") ||
+            (method == "bdpt");
         return RendererPtr(mRendererFactory->create(method, setting));
     }
 

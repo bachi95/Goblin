@@ -60,6 +60,10 @@ namespace Goblin {
         uSingleScatter = sample.u1D[index.singleScatterIndex][n];
     }
 
+    size_t Light::nextLightId = 0;
+
+    Light::Light(): mLightId(nextLightId++) {}
+
     void Light::setOrientation(const Vector3& dir) {
         Vector3 xAxis, yAxis;
         const Vector3& zAxis = dir;
@@ -106,6 +110,16 @@ namespace Goblin {
         float u1, float u2, float* pdfW) const {
         *pdfW = uniformSpherePdf();
         return uniformSampleSphere(u1, u2);
+    }
+
+    float PointLight::pdfPosition(const ScenePtr& scene,
+        const Vector3& p) const {
+        return 0.0f;
+    }
+
+    float PointLight::pdfDirection(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        return uniformSpherePdf();
     }
 
     Color PointLight::evalL(const Vector3& pLight, const Vector3& nLight,
@@ -168,6 +182,19 @@ namespace Goblin {
         return getDirection();
     }
 
+    float DirectionalLight::pdfPosition(const ScenePtr& scene,
+        const Vector3& p) const {
+        Vector3 worldCenter;
+        float worldRadius;
+        scene->getBoundingSphere(&worldCenter, &worldRadius);
+        return 1.0f / (PI * worldRadius * worldRadius);
+    }
+
+    float DirectionalLight::pdfDirection(const Vector3& p,
+        const Vector3& n, const Vector3& wo) const {
+        return 0.0f;
+    }
+
     Color DirectionalLight::evalL(const Vector3& pLight, const Vector3& nLight,
         const Vector3& pSurface) const {
         // TODO assert (pLight - pSurface) is parallel to direction?
@@ -221,6 +248,16 @@ namespace Goblin {
         Vector3 dLocal = uniformSampleCone(u1, u2, mCosThetaMax);
         *pdfW = uniformConePdf(mCosThetaMax);
         return mToWorld.onVector(dLocal);
+    }
+
+    float SpotLight::pdfPosition(const ScenePtr& scene,
+        const Vector3& p) const {
+        return 0.0f;
+    }
+
+    float SpotLight::pdfDirection(const Vector3& p,
+        const Vector3& n, const Vector3& wo) const {
+        return uniformConePdf(mCosThetaMax);
     }
 
     Color SpotLight::evalL(const Vector3& pLight, const Vector3& nLight,
@@ -378,6 +415,20 @@ namespace Goblin {
         return surfaceToWorld * localDir;
     }
 
+    float AreaLight::pdfPosition(const ScenePtr& scene,
+        const Vector3& p) const {
+        Vector3 worldScale = mToWorld.getScale();
+        float worldArea = mGeometrySet->area() *
+            sqrt(worldScale.squaredLength() / 3.0f);
+        return 1.0f / worldArea;
+    }
+
+    float AreaLight::pdfDirection(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        float cosTheta = dot(wo, n);
+        return cosTheta > 0.0f ? cosTheta * INV_PI : 0.0f;
+    }
+
     Color AreaLight::evalL(const Vector3& pLight, const Vector3& nLight,
         const Vector3& pSurface) const {
         // only front face of geometry emit radiance
@@ -517,25 +568,38 @@ namespace Goblin {
         Vector3 sphereSample =
             uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
         *surfaceNormal = Vector3::Zero;
-        *pdfArea = 4.0f * PI * worldRadius *worldRadius;
+        *pdfArea = 1.0f / (4.0f * PI * worldRadius *worldRadius);
         return worldCenter + worldRadius * sphereSample;
     }
 
     Vector3 ImageBasedLight::sampleDirection(const Vector3& surfaceNormal,
         float u1, float u2, float* pdfW) const {
-        // TODO this is definitely buggy...revisit this later
-        float pdfST;
-        Vector2 st = mDistribution->sampleContinuous(u1, u2, &pdfST);
-        float theta = st[1] * PI;
-        float phi = st[0] * TWO_PI;
-        float cosTheta = cos(theta);
-        float sinTheta = sin(theta);
-        float cosPhi = cos(phi);
-        float sinPhi = sin(phi);
-        Vector3 w = mToWorld.onVector(
-            Vector3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta));
-        *pdfW = pdfST / (TWO_PI * PI * sinTheta);
-        return -1.0f * w;
+        // TODO don't really think this is actually correct, revisit later
+        Vector3 localDir = cosineSampleHemisphere(u1, u2);
+        float cosTheta = localDir.z;
+        Vector3 right, up;
+        coordinateAxises(surfaceNormal, &right, &up);
+        Matrix3 surfaceToWorld(
+            right.x, up.x, surfaceNormal.x,
+            right.y, up.y, surfaceNormal.y,
+            right.z, up.z, surfaceNormal.z);
+        *pdfW = cosTheta * INV_PI;
+        return surfaceToWorld * localDir;
+    }
+
+    float ImageBasedLight::pdfPosition(const ScenePtr& scene,
+        const Vector3& p) const {
+        Vector3 worldCenter;
+        float worldRadius;
+        scene->getBoundingSphere(&worldCenter, &worldRadius);
+        return 1.0f / (4.0f * PI * worldRadius *worldRadius);
+    }
+
+    float ImageBasedLight::pdfDirection(const Vector3& p, const Vector3&n,
+        const Vector3& wo) const {
+        // TODO don't really think this is actually correct, revisit later
+        float cosTheta = dot(n, wo);
+        return cosTheta > 0.0f ? cosTheta * INV_PI : 0.0f;
     }
 
     Color ImageBasedLight::evalL(const Vector3& pLight, const Vector3& nLight,

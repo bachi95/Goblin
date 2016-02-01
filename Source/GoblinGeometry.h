@@ -21,13 +21,13 @@ namespace Goblin {
         Fragment(const Vector3& p, const Vector3& n, const Vector2& uv,
             const Vector3& dpdu, const Vector3& dpdv);
 
-        Vector3 getPosition() const;
-        Vector3 getNormal() const;
-        Vector2 getUV() const;
-        Vector3 getDPDU() const;
-        Vector3 getDPDV() const;
-        Vector3 getDPDX() const;
-        Vector3 getDPDY() const;
+        const Vector3& getPosition() const;
+        const Vector3& getNormal() const;
+        const Vector2& getUV() const;
+        const Vector3& getDPDU() const;
+        const Vector3& getDPDV() const;
+        const Vector3& getDPDX() const;
+        const Vector3& getDPDY() const;
         float getDUDX() const;
         float getDVDX() const;
         float getDUDY() const;
@@ -64,13 +64,13 @@ namespace Goblin {
         mDPDX(Vector3::Zero), mDPDY(Vector3::Zero),
         mDUDX(0.0f), mDVDX(0.0f), mDUDY(0.0f), mDVDY(0.0f),
         mIsUpdated(false) {}
-    inline Vector3 Fragment::getPosition() const { return mPosition; }
-    inline Vector3 Fragment::getNormal() const { return mNormal; }
-    inline Vector2 Fragment::getUV() const { return mUV; }
-    inline Vector3 Fragment::getDPDU() const { return mDPDU; }
-    inline Vector3 Fragment::getDPDV() const { return mDPDV; }
-    inline Vector3 Fragment::getDPDX() const { return mDPDX; }
-    inline Vector3 Fragment::getDPDY() const { return mDPDY; }
+    inline const Vector3& Fragment::getPosition() const { return mPosition; }
+    inline const Vector3& Fragment::getNormal() const { return mNormal; }
+    inline const Vector2& Fragment::getUV() const { return mUV; }
+    inline const Vector3& Fragment::getDPDU() const { return mDPDU; }
+    inline const Vector3& Fragment::getDPDV() const { return mDPDV; }
+    inline const Vector3& Fragment::getDPDX() const { return mDPDX; }
+    inline const Vector3& Fragment::getDPDY() const { return mDPDY; }
     inline float Fragment::getDUDX() const { return mDUDX; }
     inline float Fragment::getDVDX() const { return mDVDX; }
     inline float Fragment::getDUDY() const { return mDUDY; }
