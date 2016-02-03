@@ -10,32 +10,33 @@
 namespace Goblin {
     class PathVertex{
     public:
-        PathVertex(): throughput(0.0f), isCameraLens(false),
+        PathVertex(): throughput(0.0f),
             light(NULL), material(NULL), pdfForward(0.0f), pdfBackward(0.0f),
-            isSpecular(false), G(0.0f) {}
+            isCameraLens(false), isSpecular(false), G(0.0f) {}
 
         PathVertex(const Color& t, const Vector3& p, const Vector3& n,
             const Light* l, float pForward = 0.0f, float pBackward = 0.0f):
-            throughput(t), isCameraLens(false),
+            throughput(t),
             fragment(p, n, Vector2::Zero, Vector3::Zero, Vector3::Zero),
-            light(l), material(NULL), pdfForward(pForward),
-            pdfBackward(pBackward), isSpecular(false), G(0.0f) {}
+            light(l), material(NULL),
+            pdfForward(pForward), pdfBackward(pBackward),
+            isCameraLens(false), isSpecular(false), G(0.0f) {}
 
         PathVertex(const Color& t, const Vector3& p, const Vector3& n,
             const Camera* c, float pForward = 0.0f,
             float pBackward = 0.0f):
-            throughput(t), isCameraLens(true),
+            throughput(t),
             fragment(p, n, Vector2::Zero, Vector3::Zero, Vector3::Zero),
-            light(NULL), material(NULL), pdfForward(pForward),
-            pdfBackward(pBackward), isSpecular(false), G(0.0f) {}
+            light(NULL), material(NULL),
+            pdfForward(pForward), pdfBackward(pBackward),
+            isCameraLens(true), isSpecular(false), G(0.0f) {}
 
         PathVertex(const Color& t, const Intersection& isect,
             float pForward = 0.0f, float pBackward = 0.0f, bool spec = false):
-            throughput(t), fragment(isect.fragment),
-            isCameraLens(isect.isCameraLens()),
-            light(isect.getLight()),
-            material(isect.getMaterial().get()), pdfForward(pForward),
-            pdfBackward(pBackward), isSpecular(spec), G(0.0f) {}
+            throughput(t), fragment(isect.fragment), light(isect.getLight()),
+            material(isect.getMaterial().get()),
+            pdfForward(pForward), pdfBackward(pBackward),
+            isCameraLens(isect.isCameraLens()), isSpecular(spec), G(0.0f) {}
 
         const Vector3& getPosition() const {
             return fragment.getPosition();
@@ -55,11 +56,11 @@ namespace Goblin {
 
         Color throughput;
         Fragment fragment;
-        bool isCameraLens;
         const Light* light;
         const Material* material;
         float pdfForward;
         float pdfBackward;
+        bool isCameraLens;
         bool isSpecular;
         float G;
     };

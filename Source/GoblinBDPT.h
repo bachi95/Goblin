@@ -11,7 +11,8 @@ namespace Goblin {
     class BDPT : public Renderer {
     public:
         BDPT(int samplePerPixel, int threadNum,
-            int maxPathLength = 5, int debugS = -1, int debugT = -1);
+            int maxPathLength = 5, int debugS = -1, int debugT = -1,
+            bool debugNoMIS = false);
 
         ~BDPT();
 
@@ -64,6 +65,7 @@ namespace Goblin {
         std::vector<float> mPickLightPdf;
         int mDebugS;
         int mDebugT;
+        bool mDebugNoMIS;
     };
 
     class BDPTCreator : public

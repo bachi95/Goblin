@@ -58,11 +58,11 @@ namespace Goblin {
     }
 
     BDPT::BDPT(int samplePerPixel, int threadNum,
-        int maxPathLength, int debugS, int debugT):
+        int maxPathLength, int debugS, int debugT, bool debugNoMIS):
         Renderer(samplePerPixel, threadNum),
         mTotalSamplesNum(0), mMaxPathLength(maxPathLength),
         mLightPathSampleIndexes(NULL), mEyePathSampleIndexes(NULL),
-        mDebugS(debugS), mDebugT(debugT)
+        mDebugS(debugS), mDebugT(debugT), mDebugNoMIS(debugNoMIS)
         {}
 
     BDPT::~BDPT() {
@@ -115,7 +115,7 @@ namespace Goblin {
                     continue;
                 }
                 // can not form a path with 0 or 1 vertex
-                if ((s == 0 && t < 2) ||(t == 0 && s <2) || (s + t) < 2) {
+                if ((s == 0 && t < 2) ||(t == 0 && s < 2) || (s + t) < 2) {
                     continue;
                 }
                 if ((t == 0 && !lightPath[s - 1].isCameraLens) ||
@@ -148,7 +148,9 @@ namespace Goblin {
                 if (unweightedContribution == Color::Black) {
                     continue;
                 }
-                float weight = evalMIS(scene, camera, lightPath, s, eyePath, t,
+                float weight = mDebugNoMIS ?
+                    1.0f :
+                    evalMIS(scene, camera, lightPath, s, eyePath, t,
                     Gconnect, misNodes);
                 tile->addSample(filmPixel.x, filmPixel.y,
                     weight * unweightedContribution);
@@ -181,7 +183,7 @@ namespace Goblin {
         Color throughput = lightPath[0].throughput / pdfForward;
         Ray ray(pLight, dir, 1e-5f);
         int lightVertexCount = 1;
-        for (; lightVertexCount <= mMaxPathLength; ++lightVertexCount) {
+        while (lightVertexCount <= mMaxPathLength) {
             float epsilon;
             Intersection isect;
             if (!scene->intersect(ray, &epsilon, &isect)) {
@@ -201,15 +203,22 @@ namespace Goblin {
             BSDFType sampledType;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW, BSDFAll, &sampledType, BSDFImportance);
-            bool isSpecular = (sampledType == BSDFSpecular);
+            bool isSpecular = (sampledType & BSDFSpecular) == BSDFSpecular;
             pdfForward = pdfW / absdot(wi, frag.getNormal());
-            pdfBackward = isSpecular ? pdfForward :
-                isect.getMaterial()->pdf(frag, wi, wo);
+            if (isSpecular) {
+                pdfBackward = pdfForward;
+            } else {
+                pdfBackward = isect.getMaterial()->pdf(frag, wi, wo) /
+                    absdot(wo, frag.getNormal());
+            }
             lightPath[lightVertexCount] = PathVertex(throughput, isect,
                 pdfForward, pdfBackward, isSpecular);
             lightPath[lightVertexCount].G = evalG(lightPath[lightVertexCount],
                 lightPath[lightVertexCount - 1]);
-
+            lightVertexCount += 1;
+            if (f == Color::Black || pdfW == 0.0f) {
+                break;
+            }
             throughput *= f / pdfForward;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
@@ -234,7 +243,7 @@ namespace Goblin {
         Color throughput = eyePath[0].throughput * We / pdfForward;
         Ray ray(pCamera, dir, 1e-5f);
         int eyeVertexCount = 1;
-        for (; eyeVertexCount <= mMaxPathLength; ++eyeVertexCount) {
+        while (eyeVertexCount <= mMaxPathLength) {
             float epsilon;
             Intersection isect;
             if (!scene->intersect(ray, &epsilon, &isect)) {
@@ -248,15 +257,22 @@ namespace Goblin {
             BSDFType sampledType;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW, BSDFAll, &sampledType, BSDFRadiance);
-            bool isSpecular = (sampledType == BSDFSpecular);
+            bool isSpecular = (sampledType & BSDFSpecular) == BSDFSpecular;
             pdfForward = pdfW / absdot(wi, frag.getNormal());
-            pdfBackward = isSpecular ? pdfForward :
-                isect.getMaterial()->pdf(frag, wi, wo);
+            if (isSpecular) {
+                pdfBackward = pdfForward;
+            } else {
+                pdfBackward = isect.getMaterial()->pdf(frag, wi, wo) /
+                    absdot(wo, frag.getNormal());
+            }
             eyePath[eyeVertexCount] = PathVertex(throughput, isect,
                 pdfForward, pdfBackward, isSpecular);
             eyePath[eyeVertexCount].G = evalG(eyePath[eyeVertexCount],
                 eyePath[eyeVertexCount - 1]);
-
+            eyeVertexCount += 1;
+            if (f == Color::Black || pdfW == 0.0f) {
+                break;
+            }
             throughput *= f / pdfForward;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
@@ -456,6 +472,10 @@ namespace Goblin {
         for (int i = s; i <= k; ++i) {
             if (i == 0) {
                 pK *= misNodes[0].pTowardLight / misNodes[1].pTowardLight;
+                // exception handling for specular case
+                if (misNodes[1].isSpecular) {
+                    continue;
+                }
             } else if (i == k) {
                 // there is no way that light path can hit a delta camera
                 if (camera->isDelta()) {
@@ -475,6 +495,10 @@ namespace Goblin {
         for (int i = s; i > 0; --i) {
             if (i == (k + 1)) {
                 pK *= misNodes[k].pTowardEye / misNodes[k - 1].pTowardEye;
+                // exception handling for specular case
+                if (misNodes[k - 1].isSpecular) {
+                    continue;
+                }
             } else if (i == 1) {
                 // thre is no way that eye path can hit a delta light
                 if (lightPath[0].light->isDelta()) {
@@ -500,22 +524,22 @@ namespace Goblin {
         querySampleQuota(scene, &sampleQuota);
 
         vector<ImageTile*>& tiles = film->getTiles();
-        vector<Task*> lightTraceTasks;
+        vector<Task*> bdptTasks;
         RenderProgress progress((int)tiles.size());
-        for(size_t i = 0; i < tiles.size(); ++i) {
-            lightTraceTasks.push_back(new BDPTTask(tiles[i], this,
+        for (size_t i = 0; i < tiles.size(); ++i) {
+            bdptTasks.push_back(new BDPTTask(tiles[i], this,
                 camera, scene, sampleQuota, mSamplePerPixel,
                 mMaxPathLength, &progress));
         }
 
         ThreadPool threadPool(mThreadNum);
-        threadPool.enqueue(lightTraceTasks);
+        threadPool.enqueue(bdptTasks);
         threadPool.waitForAll();
         //clean up
-        for(size_t i = 0; i < lightTraceTasks.size(); ++i) {
-            delete lightTraceTasks[i];
+        for (size_t i = 0; i < bdptTasks.size(); ++i) {
+            delete bdptTasks[i];
         }
-        lightTraceTasks.clear();
+        bdptTasks.clear();
 
         uint64_t totalSampleCount = 0;
         for (size_t i = 0; i < tiles.size(); ++i) {
@@ -594,7 +618,8 @@ namespace Goblin {
         int maxPathLength = params.getInt("max_path_length", 5);
         int debugS = params.getInt("debug_s", -1);
         int debugT = params.getInt("debug_t", -1);
+        bool debugNoMIS = params.getBool("debug_no_mis", false);
         return new BDPT(samplePerPixel, threadNum, maxPathLength,
-            debugS, debugT);
+            debugS, debugT, debugNoMIS);
     }
 }

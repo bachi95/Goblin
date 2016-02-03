@@ -40,11 +40,11 @@ namespace Goblin {
         uint64_t totalSampleCount = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
-                mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
-                    mPathVertices, mTile);
-
-                //mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
+                //mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
                 //    mPathVertices, mTile);
+
+                mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
+                    mPathVertices, mTile);
 
                 //mLightTracer->splatFilmS1(mScene, samples[s], *mRNG,
                 //    mPathVertices, mTile);
@@ -122,6 +122,9 @@ namespace Goblin {
             float pdfW;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            if (f == Color::Black || pdfW == 0.0f) {
+                break;
+            }
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
@@ -224,6 +227,9 @@ namespace Goblin {
             float pdfW;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            if (f == Color::Black || pdfW == 0.0f) {
+                break;
+            }
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
@@ -281,6 +287,9 @@ namespace Goblin {
             float pdfW;
             Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
                 &wi, &pdfW);
+            if (f == Color::Black || pdfW == 0.0f) {
+                break;
+            }
             throughput *= f * absdot(wi, frag.getNormal()) / pdfW;
             ray = Ray(frag.getPosition(), wi, epsilon);
         }
