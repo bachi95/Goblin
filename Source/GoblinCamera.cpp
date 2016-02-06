@@ -243,7 +243,7 @@ namespace Goblin{
             pFocus.y - pLensLocal.y,
             pFocus.z - pLensLocal.z);
         float lensToFilmDistance2 = lensToFilm.squaredLength();
-        float cosTheta = absdot(getLook(), normalize(lensToFilm));
+        float cosTheta = normalize(lensToFilm).z;
         float G = cosTheta * cosTheta / lensToFilmDistance2;
         float lensArea = mLensRadius * mLensRadius * PI; 
         float We = mLensRadius > 0.0f ?

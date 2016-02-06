@@ -84,7 +84,6 @@ namespace Goblin {
         Vector3 pCamera = camera->samplePosition(sample, &nCamera, &pdfCamera);
         PathVertex cVertex(Color(1.0f / pdfCamera), pCamera,
             nCamera, camera.get());
-
         // get the light point
         float pickLightPdf;
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
@@ -106,7 +105,7 @@ namespace Goblin {
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
         Color throughput = pathVertices[0].throughput *
             absdot(nLight, dir) / pdfLightDirection;
-        Ray ray(pLight, dir, 1e-5f);
+        Ray ray(pLight, dir, 1e-3f);
         int lightVertex = 1;
         for (; lightVertex < mMaxPathLength; ++lightVertex) {
             float epsilon;
@@ -139,8 +138,10 @@ namespace Goblin {
             }
             // occlude test
             Vector3 pv2Cam(pCamera - pvPos);
+            float occludeDistance = length(pv2Cam);
+            float epsilon = 1e-3f * occludeDistance;
             Ray occludeRay(pvPos, normalize(pv2Cam),
-                1e-5f, length(pv2Cam) - 1e-5f);
+                epsilon, occludeDistance - epsilon);
             if (scene->intersect(occludeRay)) {
                 continue;
             }
@@ -195,7 +196,7 @@ namespace Goblin {
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
         Color throughput = pathVertices[0].throughput *
             absdot(nLight, dir) / pdfLightDirection;
-        Ray ray(pLight, dir, 1e-5f);
+        Ray ray(pLight, dir, 1e-3f);
         int lightVertex = 1;
         for (; lightVertex <= mMaxPathLength; ++lightVertex) {
             float epsilon;
@@ -271,7 +272,7 @@ namespace Goblin {
             sample, pCamera, &We, &pdfEyeDirection);
         Color throughput = pathVertices[0].throughput *
             absdot(nCamera, dir) / pdfEyeDirection;
-        Ray ray(pCamera, dir, 1e-5f);
+        Ray ray(pCamera, dir, 1e-3f);
         int eyeVertex = 1;
         for (; eyeVertex < mMaxPathLength; ++eyeVertex) {
             float epsilon;
@@ -299,8 +300,10 @@ namespace Goblin {
             const Vector3& pvPos = pv.fragment.getPosition();
             // occlude test
             Vector3 pv2Light(pLight - pvPos);
+            float occludeDistance = length(pv2Light);
+            float epsilon = 1e-3f * occludeDistance;
             Ray occludeRay(pvPos, normalize(pv2Light),
-                1e-5f, length(pv2Light) - 1e-5f);
+                epsilon, occludeDistance - epsilon);
             if (scene->intersect(occludeRay)) {
                 continue;
             }

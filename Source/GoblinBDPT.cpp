@@ -179,9 +179,9 @@ namespace Goblin {
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
         float pdfForward = pdfLightDirection / absdot(nLight, dir);
         lightPath[0] = PathVertex(Color(1.0f / pdfBackward),
-            pLight, nLight, light, pdfBackward, pdfForward);
+            pLight, nLight, light, pdfForward, pdfBackward);
         Color throughput = lightPath[0].throughput / pdfForward;
-        Ray ray(pLight, dir, 1e-5f);
+        Ray ray(pLight, dir, 1e-3f);
         int lightVertexCount = 1;
         while (lightVertexCount <= mMaxPathLength) {
             float epsilon;
@@ -241,7 +241,7 @@ namespace Goblin {
         eyePath[0] = PathVertex(Color(1.0f / pdfBackward),
             pCamera, nCamera, camera.get(), pdfForward, pdfBackward);
         Color throughput = eyePath[0].throughput * We / pdfForward;
-        Ray ray(pCamera, dir, 1e-5f);
+        Ray ray(pCamera, dir, 1e-3f);
         int eyeVertexCount = 1;
         while (eyeVertexCount <= mMaxPathLength) {
             float epsilon;
@@ -339,8 +339,10 @@ namespace Goblin {
                 return Color::Black;
             }
             // occlude test
+            float occludeDistance = length(connectVector);
+            float epsilon = 1e-3f * occludeDistance;
             Ray occludeRay(sEndV.getPosition(), connectDir,
-                1e-5f, length(connectVector) - 1e-5f);
+                epsilon, occludeDistance - epsilon);
             if (scene->intersect(occludeRay)) {
                 return Color::Black;
             }
@@ -514,6 +516,7 @@ namespace Goblin {
             }
             misWeightSum += pK * pK;
         }
+
         return 1.0f / misWeightSum;
     }
 
