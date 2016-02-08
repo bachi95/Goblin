@@ -38,7 +38,7 @@ namespace Goblin {
         WorldDebugData debugData;
         int sampleNum = 0;
         uint64_t totalSampleCount = 0;
-        while((sampleNum = sampler.requestSamples(samples)) > 0) {
+        while ((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
                 //mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
                 //    mPathVertices, mTile);
@@ -107,7 +107,7 @@ namespace Goblin {
             absdot(nLight, dir) / pdfLightDirection;
         Ray ray(pLight, dir, 1e-3f);
         int lightVertex = 1;
-        for (; lightVertex < mMaxPathLength; ++lightVertex) {
+        while (lightVertex < mMaxPathLength) {
             float epsilon;
             Intersection isect;
             if (!scene->intersect(ray, &epsilon, &isect)) {
@@ -116,6 +116,7 @@ namespace Goblin {
             const Fragment& frag = isect.fragment;
             pathVertices[lightVertex] = PathVertex(throughput, isect);
             BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
+            lightVertex += 1;
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
             float pdfW;
@@ -198,7 +199,7 @@ namespace Goblin {
             absdot(nLight, dir) / pdfLightDirection;
         Ray ray(pLight, dir, 1e-3f);
         int lightVertex = 1;
-        for (; lightVertex <= mMaxPathLength; ++lightVertex) {
+        while (lightVertex <= mMaxPathLength) {
             float epsilon;
             Intersection isect;
             if (!scene->intersect(ray, &epsilon, &isect)) {
@@ -223,6 +224,7 @@ namespace Goblin {
             }
             // continue random walk the light vertex path until it hits lens
             BSDFSample bs(sample, mBSDFSampleIndexes[lightVertex], 0);
+            lightVertex += 1;
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
             float pdfW;
@@ -274,7 +276,7 @@ namespace Goblin {
             absdot(nCamera, dir) / pdfEyeDirection;
         Ray ray(pCamera, dir, 1e-3f);
         int eyeVertex = 1;
-        for (; eyeVertex < mMaxPathLength; ++eyeVertex) {
+        while (eyeVertex < mMaxPathLength) {
             float epsilon;
             Intersection isect;
             if (!scene->intersect(ray, &epsilon, &isect)) {
@@ -283,6 +285,7 @@ namespace Goblin {
             const Fragment& frag = isect.fragment;
             pathVertices[eyeVertex] = PathVertex(throughput, isect);
             BSDFSample bs(sample, mBSDFSampleIndexes[eyeVertex], 0);
+            eyeVertex += 1;
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
             float pdfW;

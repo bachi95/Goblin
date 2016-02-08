@@ -143,7 +143,7 @@ namespace Goblin{
             ray->dxDir = mOrientation * normalize(pDxFocus - viewOrigin);
             ray->dyDir = mOrientation * normalize(pDyFocus - viewOrigin);
         }
-        ray->mint = 0.0f;
+        ray->mint = 1e-3f;
         ray->maxt = INFINITY;
         ray->depth = 0;
         ray->hasDifferential = true;

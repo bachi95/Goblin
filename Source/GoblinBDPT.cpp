@@ -45,7 +45,7 @@ namespace Goblin {
         WorldDebugData debugData;
         int sampleNum = 0;
         uint64_t totalSampleCount = 0;
-        while((sampleNum = sampler.requestSamples(samples)) > 0) {
+        while ((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
                 mBDPT->evalContribution(mScene, samples[s], *mRNG,
                     mLightPath, mEyePath, mMISNodes, mTile);
