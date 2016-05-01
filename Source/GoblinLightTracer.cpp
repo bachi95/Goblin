@@ -101,11 +101,13 @@ namespace Goblin {
             pLight, nLight, light);
         float pdfLightDirection;
         BSDFSample bs(sample, mBSDFSampleIndexes[0], 0);
-        Vector3 dir = light->sampleDirection(
+        Vector3 dirLight = light->sampleDirection(
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
-        Color throughput = pathVertices[0].throughput *
-            absdot(nLight, dir) / pdfLightDirection;
-        Ray ray(pLight, dir, 1e-3f);
+        Color throughput = light->isDelta() ?
+            pathVertices[0].throughput / pdfLightDirection :
+            pathVertices[0].throughput * absdot(nLight, dirLight) /
+            pdfLightDirection;
+        Ray ray(pLight, dirLight, 1e-3f);
         int lightVertex = 1;
         while (lightVertex < mMaxPathLength) {
             float epsilon;
@@ -148,19 +150,23 @@ namespace Goblin {
             }
             Color fsL;
             Vector3 wo = normalize(pCamera - pvPos);
+            float G;
             if (s > 1) {
                 Vector3 wi =
                     normalize(pathVertices[s - 2].fragment.getPosition() - pvPos);
                 Color f = pv.material->bsdf(pv.fragment, wo, wi,
                     BSDFAll, BSDFImportance);
-                fsL = f * light->evalL(pLight, nLight,
-                    pathVertices[1].fragment.getPosition());
+                fsL = f * light->eval(pLight, nLight, dirLight);
+                G = absdot(pv.fragment.getNormal(), wo) * absdot(nCamera, wo) /
+                    squaredLength(pvPos - pCamera);
             } else {
-                fsL = pv.light->evalL(pLight, nLight, pCamera);
+                fsL = light->eval(pLight, nLight, normalize(pCamera - pLight));
+                G = absdot(nCamera, wo) / squaredLength(pvPos - pCamera);
+                if (!light->isDelta()) {
+                    G *= absdot(pv.fragment.getNormal(), wo);
+                }
             }
             float fsE = camera->evalWe(pCamera, pvPos);
-            float G = absdot(pv.fragment.getNormal(), wo) * absdot(nCamera, wo) /
-                squaredLength(pvPos - pCamera);
             
             Color pathContribution = fsL * fsE * G *
                 pv.throughput * cVertex.throughput;
@@ -193,11 +199,11 @@ namespace Goblin {
             pLight, nLight, light);
         float pdfLightDirection;
         BSDFSample bs(sample, mBSDFSampleIndexes[0], 0);
-        Vector3 dir = light->sampleDirection(
+        Vector3 dirLight = light->sampleDirection(
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
         Color throughput = pathVertices[0].throughput *
-            absdot(nLight, dir) / pdfLightDirection;
-        Ray ray(pLight, dir, 1e-3f);
+            absdot(nLight, dirLight) / pdfLightDirection;
+        Ray ray(pLight, dirLight, 1e-3f);
         int lightVertex = 1;
         while (lightVertex <= mMaxPathLength) {
             float epsilon;
@@ -214,8 +220,7 @@ namespace Goblin {
                     pathVertices[lightVertex - 1].fragment.getPosition();
                 Vector3 filmPixel = camera->worldToScreen(pS_1, pCamera);
                 if (filmPixel != Camera::sInvalidPixel) {
-                    Color L = light->evalL(pLight, nLight,
-                        pathVertices[1].fragment.getPosition());
+                    Color L = light->eval(pLight, nLight, dirLight);
                     float We = camera->evalWe(pCamera, pS_1);
                     tile->addSample(filmPixel.x, filmPixel.y,
                         L * We * pathVertices[lightVertex].throughput);
@@ -324,9 +329,12 @@ namespace Goblin {
                 filmPixel = camera->worldToScreen(pLight, pvPos);
                 fsE = Color(camera->evalWe(pCamera, pLight));
             }
-            Color fsL = light->evalL(pLight, nLight, pvPos);
-            float G = absdot(pv.fragment.getNormal(), wi) * absdot(nLight, wi) /
+            Color fsL = light->eval(pLight, nLight, normalize(pvPos - pLight));
+            float G = absdot(pv.fragment.getNormal(), wi) /
                 squaredLength(pLight - pvPos);
+            if (!light->isDelta()) {
+                G *= absdot(nLight, wi);
+            }
             Color pathContribution = fsL * fsE * G *
                 pv.throughput * lVertex.throughput;
             tile->addSample(filmPixel.x, filmPixel.y, pathContribution);

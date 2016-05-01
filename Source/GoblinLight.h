@@ -101,10 +101,11 @@ namespace Goblin {
         virtual float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const = 0;
 
-        // given a point on light and a point in world, evaluate
-        // the radiance contribution from
-        virtual Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const = 0;
+        // evaluate the flux differential with regards to spatial component
+        // and directional component (in area light case, this is the radiance
+        // emitted on specified light surface point/direction)
+        virtual Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const = 0;
 
         // get the pdf (measured in solid angle) this light get sampled
         // from point p with direction wi
@@ -171,8 +172,8 @@ namespace Goblin {
         float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const;
+        Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color power(const ScenePtr& scene) const;
     private:
@@ -201,8 +202,8 @@ namespace Goblin {
         float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const;
+        Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color power(const ScenePtr& scene) const;
 
@@ -245,8 +246,8 @@ namespace Goblin {
         float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const;
+        Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         Color power(const ScenePtr& scene) const;
     private:
@@ -310,8 +311,8 @@ namespace Goblin {
         float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const;
+        Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         float pdf(const Vector3& p, const Vector3& wi) const;
 
@@ -369,8 +370,8 @@ namespace Goblin {
         float pdfDirection(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color evalL(const Vector3& pLight, const Vector3& nLight,
-            const Vector3& pSurface) const;
+        Color eval(const Vector3& p, const Vector3& n,
+            const Vector3& wo) const;
 
         float pdf(const Vector3& p, const Vector3& wi) const;
 

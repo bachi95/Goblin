@@ -122,12 +122,10 @@ namespace Goblin {
         return uniformSpherePdf();
     }
 
-    Color PointLight::evalL(const Vector3& pLight, const Vector3& nLight,
-        const Vector3& pSurface) const {
-        // TODO assert pLight == mToWorld.getPosition()?
-        float squaredDistance =
-            squaredLength(mToWorld.getPosition() - pSurface);
-        return mIntensity / squaredDistance;
+    Color PointLight::eval(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        // TODO assert p == mToWorld.getPosition()?
+        return mIntensity;
     }
 
     Color PointLight::power(const ScenePtr& scene) const {
@@ -195,10 +193,11 @@ namespace Goblin {
         return 0.0f;
     }
 
-    Color DirectionalLight::evalL(const Vector3& pLight, const Vector3& nLight,
-        const Vector3& pSurface) const {
-        // TODO assert (pLight - pSurface) is parallel to direction?
-        return mRadiance;
+    Color DirectionalLight::eval(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        float cosTheta = dot(wo, getDirection());
+        bool isParallel = fabs(cosTheta - 1.0f) < 1e-5f;
+        return isParallel ? mRadiance : Color::Black;
     }
 
     Color DirectionalLight::power(const ScenePtr& scene) const {
@@ -260,11 +259,10 @@ namespace Goblin {
         return uniformConePdf(mCosThetaMax);
     }
 
-    Color SpotLight::evalL(const Vector3& pLight, const Vector3& nLight,
-        const Vector3& pSurface) const {
-        // TODO assert pLight == mToWorld.getPosition() ?
-        Vector3 dir = pSurface - mToWorld.getPosition();
-        return falloff(normalize(dir)) * mIntensity / squaredLength(dir);
+    Color SpotLight::eval(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        // TODO assert p == mToWorld.getPosition() ?
+        return falloff(wo) * mIntensity;
     }
 
     Color SpotLight::power(const ScenePtr& scene) const {
@@ -429,10 +427,10 @@ namespace Goblin {
         return cosTheta > 0.0f ? cosTheta * INV_PI : 0.0f;
     }
 
-    Color AreaLight::evalL(const Vector3& pLight, const Vector3& nLight,
-        const Vector3& pSurface) const {
+    Color AreaLight::eval(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
         // only front face of geometry emit radiance
-        return dot(nLight, pSurface - pLight) > 0.0f ? mLe : Color::Black;
+        return dot(n, wo) > 0.0f ? mLe : Color::Black;
     }
 
     Color AreaLight::power(const ScenePtr& scene) const {
@@ -602,9 +600,9 @@ namespace Goblin {
         return cosTheta > 0.0f ? cosTheta * INV_PI : 0.0f;
     }
 
-    Color ImageBasedLight::evalL(const Vector3& pLight, const Vector3& nLight,
-        const Vector3& pSurface) const {
-        const Vector3& w = mToWorld.invertVector(pLight - pSurface);
+    Color ImageBasedLight::eval(const Vector3& p, const Vector3& n,
+        const Vector3& wo) const {
+        const Vector3& w = mToWorld.invertVector(-wo);
         float theta = sphericalTheta(w);
         float phi = sphericalPhi(w);
         float s = phi * INV_TWOPI;

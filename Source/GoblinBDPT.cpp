@@ -175,13 +175,18 @@ namespace Goblin {
         float pdfBackward = pdfLightArea * pickLightPdf;
         float pdfLightDirection;
         BSDFSample bs(sample, mLightPathSampleIndexes[0], 0);
-        Vector3 dir = light->sampleDirection(
+        Vector3 dirLight = light->sampleDirection(
             nLight, bs.uDirection[0], bs.uDirection[1], &pdfLightDirection);
-        float pdfForward = pdfLightDirection / absdot(nLight, dir);
+        float pdfForward = light->isDelta() ?
+            pdfLightDirection : pdfLightDirection / absdot(nLight, dirLight);
+        bool isSpecularLight = light->isDelta() &&
+            light->pdfDirection(pLight, nLight, dirLight) != pdfLightDirection;
         lightPath[0] = PathVertex(Color(1.0f / pdfBackward),
             pLight, nLight, light, pdfForward, pdfBackward);
-        Color throughput = lightPath[0].throughput / pdfForward;
-        Ray ray(pLight, dir, 1e-3f);
+        lightPath[0].isSpecular = isSpecularLight;
+        Color throughput = lightPath[0].throughput *
+            light->eval(pLight, nLight, dirLight) / pdfForward;
+        Ray ray(pLight, dirLight, 1e-3f);
         int lightVertexCount = 1;
         while (lightVertexCount <= mMaxPathLength) {
             float epsilon;
@@ -190,12 +195,6 @@ namespace Goblin {
                 break;
             }
             const Fragment& frag = isect.fragment;
-            // for some light types (delta light like point/spot light),
-            // we can't evaluate radiance before we know the intersection of
-            // light particle shoot out from light
-            if (lightVertexCount == 1) {
-                throughput *= light->evalL(pLight, nLight, frag.getPosition());
-            }
             BSDFSample bs(sample, mLightPathSampleIndexes[lightVertexCount], 0);
             Vector3 wo = -normalize(ray.d);
             Vector3 wi;
@@ -210,6 +209,10 @@ namespace Goblin {
             } else {
                 pdfBackward = isect.getMaterial()->pdf(frag, wi, wo) /
                     absdot(wo, frag.getNormal());
+            }
+            // no way that you can intersect a delta light
+            if (lightVertexCount == 1 && light->isDelta()) {
+                pdfBackward = 0.0f;
             }
             lightPath[lightVertexCount] = PathVertex(throughput, isect,
                 pdfForward, pdfBackward, isSpecular);
@@ -265,6 +268,10 @@ namespace Goblin {
                 pdfBackward = isect.getMaterial()->pdf(frag, wi, wo) /
                     absdot(wo, frag.getNormal());
             }
+            // no way that you can intersect a delta camera
+            if (eyeVertexCount == 1 && camera->isDelta()) {
+                pdfBackward = 0.0f;
+            }
             eyePath[eyeVertexCount] = PathVertex(throughput, isect,
                 pdfForward, pdfBackward, isSpecular);
             eyePath[eyeVertexCount].G = evalG(eyePath[eyeVertexCount],
@@ -292,10 +299,11 @@ namespace Goblin {
         Color cst;
         // eval connection factor (light path end point to eye path end point)
         if (s == 0) {
-            cst = eyePath[t - 1].getLight()->evalL(
+            cst = eyePath[t - 1].getLight()->eval(
                 eyePath[t - 1].getPosition(),
                 eyePath[t - 1].getNormal(),
-                eyePath[t - 2].getPosition());
+                normalize(eyePath[t - 2].getPosition() -
+                eyePath[t - 1].getPosition()));
         } else if (t == 0) {
             cst = Color(camera->evalWe(lightPath[s - 1].getPosition(),
                 lightPath[s - 2].getPosition()));
@@ -306,8 +314,8 @@ namespace Goblin {
             Vector3 connectDir = normalize(connectVector);
             Color fsL;
             if (s == 1) {
-                fsL = sEndV.light->evalL(sEndV.getPosition(),
-                    sEndV.getNormal(), tEndV.getPosition());
+                fsL = sEndV.light->eval(sEndV.getPosition(),
+                    sEndV.getNormal(), connectDir);
             } else {
                 const Vector3 wi = connectDir;
                 const Vector3 wo = normalize(lightPath[s - 2].getPosition() -
@@ -409,7 +417,8 @@ namespace Goblin {
             const Vector3 dSToT = normalize(pTEnd - pSEnd);
             if (s == 1) {
                 float pdfW = sEnd.light->pdfDirection(pSEnd, nSEnd, dSToT);
-                pdfSEndForward = pdfW / dot(nSEnd, dSToT);
+                pdfSEndForward = sEnd.light->isDelta() ?
+                    pdfW : pdfW / dot(nSEnd, dSToT);
                 pdfSEndBackward = sEnd.pdfBackward;
             } else {
                 const Vector3 dSEndToSPrev = normalize(

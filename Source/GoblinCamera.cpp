@@ -281,6 +281,12 @@ namespace Goblin{
         pNDC /= pNDC.w;
         float screenX = (pNDC.x + 1.0f) * 0.5f * mFilm->getXResolution();
         float screenY = (1.0f - pNDC.y) * 0.5f * mFilm->getYResolution();
+        int xStart, xEnd, yStart, yEnd;
+        mFilm->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
+        if (screenX < xStart || screenX > xEnd ||
+            screenY < yStart || screenY > yEnd) {
+            return sInvalidPixel;
+        }
         return Vector3(screenX, screenY, pView.z);
     }
 
