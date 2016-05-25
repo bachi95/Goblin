@@ -60,12 +60,12 @@ namespace Goblin {
     }
 
 
-    Sampler::Sampler(int xStart, int xEnd, int yStart, int yEnd,
+    Sampler::Sampler(const SampleRange& sampleRange,
         int samplePerPixel, const SampleQuota& sampleQuota,
         RNG* rng):
-        mXStart(xStart), mXEnd(xEnd), 
-        mYStart(yStart), mYEnd(yEnd),
-        mCurrentX(xStart), mCurrentY(yStart),
+        mXStart(sampleRange.xStart), mXEnd(sampleRange.xEnd), 
+        mYStart(sampleRange.yStart), mYEnd(sampleRange.yEnd),
+        mCurrentX(sampleRange.xStart), mCurrentY(sampleRange.yStart),
         mSampleBuffer(NULL), mJitter(true),
         mSampleQuota(sampleQuota), mRNG(rng) {
         int root;

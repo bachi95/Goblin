@@ -7,14 +7,14 @@ namespace Goblin {
 
     class BDPTTask : public RenderTask {
     public:
-        BDPTTask(ImageTile* tile, BDPT* mLightTracer,
-            const CameraPtr& camera, const ScenePtr& scene,
+        BDPTTask(BDPT* bdpt, const CameraPtr& camera, const ScenePtr& scene,
+            const SampleRange& sampleRange,
             const SampleQuota& sampleQuota, int samplePerPixel,
             int maxPathLength, RenderProgress* renderProgress);
 
         ~BDPTTask();
 
-        void run();
+        void run(TLSPtr& tls);
     private:
         const BDPT* mBDPT;
         std::vector<PathVertex> mLightPath;
@@ -22,37 +22,37 @@ namespace Goblin {
         std::vector<BDPTMISNode> mMISNodes;
     };
 
-    BDPTTask::BDPTTask(ImageTile* tile, BDPT* lightTracer,
-        const CameraPtr& camera, const ScenePtr& scene,
+    BDPTTask::BDPTTask(BDPT* bdpt, const CameraPtr& camera,
+        const ScenePtr& scene, const SampleRange& sampleRange,
         const SampleQuota& sampleQuota, int samplePerPixel,
         int maxPathLength, RenderProgress* renderProgress):
-        RenderTask(tile, lightTracer, camera, scene, sampleQuota,
+        RenderTask(bdpt, camera, scene, sampleRange, sampleQuota,
         samplePerPixel, renderProgress),
-        mBDPT(lightTracer),
+        mBDPT(bdpt),
         mLightPath(maxPathLength + 1),
         mEyePath(maxPathLength + 1),
         mMISNodes(maxPathLength + 1) {}
 
     BDPTTask::~BDPTTask() {}
 
-    void BDPTTask::run() {
-        int xStart, xEnd, yStart, yEnd;
-        mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        Sampler sampler(xStart, xEnd, yStart, yEnd,
-            mSamplePerPixel, mSampleQuota, mRNG);
+    void BDPTTask::run(TLSPtr& tls) {
+        RenderingTLS* renderingTLS =
+            static_cast<RenderingTLS*>(tls.get());
+        ImageTile* tile = renderingTLS->getTile();
+
+        Sampler sampler(mSampleRange, mSamplePerPixel, mSampleQuota, mRNG);
         int batchAmount = sampler.maxSamplesPerRequest();
         Sample* samples = sampler.allocateSampleBuffer(batchAmount);
-        WorldDebugData debugData;
         int sampleNum = 0;
         uint64_t totalSampleCount = 0;
         while ((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
                 mBDPT->evalContribution(mScene, samples[s], *mRNG,
-                    mLightPath, mEyePath, mMISNodes, mTile);
+                    mLightPath, mEyePath, mMISNodes, tile);
             }
             totalSampleCount += sampleNum;
         }
-        mTile->setTotalSampleCount(totalSampleCount);
+        renderingTLS->addSampleCount(totalSampleCount);
         delete [] samples;
         mRenderProgress->update();
     }
@@ -78,7 +78,7 @@ namespace Goblin {
 
     Color BDPT::Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         // bidirection path tracing doesn't use this camera based method
         return Color::Black;
     }
@@ -535,16 +535,18 @@ namespace Goblin {
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
 
-        vector<ImageTile*>& tiles = film->getTiles();
+        vector<SampleRange> sampleRanges;
+        getSampleRanges(film, sampleRanges);
         vector<Task*> bdptTasks;
-        RenderProgress progress((int)tiles.size());
-        for (size_t i = 0; i < tiles.size(); ++i) {
-            bdptTasks.push_back(new BDPTTask(tiles[i], this,
-                camera, scene, sampleQuota, mSamplePerPixel,
+        RenderProgress progress(sampleRanges.size());
+        for (size_t i = 0; i < sampleRanges.size(); ++i) {
+            bdptTasks.push_back(new BDPTTask(this,
+                camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
                 mMaxPathLength, &progress));
         }
 
-        ThreadPool threadPool(mThreadNum);
+        RenderingTLSManager tlsManager(film);
+        ThreadPool threadPool(mThreadNum, &tlsManager);
         threadPool.enqueue(bdptTasks);
         threadPool.waitForAll();
         //clean up
@@ -552,13 +554,11 @@ namespace Goblin {
             delete bdptTasks[i];
         }
         bdptTasks.clear();
-
-        uint64_t totalSampleCount = 0;
-        for (size_t i = 0; i < tiles.size(); ++i) {
-            totalSampleCount += tiles[i]->getTotalSampleCount();
-        }
-        film->mergeTiles();
-        film->scaleImage(film->getFilmArea() / totalSampleCount);
+        ImageRect filmRect;
+        film->getImageRect(filmRect);
+        float filmArea = (float)(filmRect.xCount * filmRect.yCount);
+        film->scaleImage(filmArea / tlsManager.getTotalSampleCount());
+        drawDebugData(tlsManager.getDebugData(), camera);
         film->writeImage(false);
     }
 

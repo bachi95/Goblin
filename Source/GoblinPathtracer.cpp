@@ -49,7 +49,7 @@ namespace Goblin {
 
     Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         const vector<Light*>& lights = scene->getLights();
         if(lights.size() == 0) {
             return Color(0.0f);
@@ -67,7 +67,7 @@ namespace Goblin {
         Li += intersection.Le(-ray.d);
         // subsurface scattering 
         Li += Lsubsurface(scene, intersection, -ray.d, sample, 
-            &mBSSRDFSampleIndex, debugData);
+            &mBSSRDFSampleIndex, tls);
 
         RayDifferential currentRay = ray;
         vector<Ray> debugRays;
@@ -178,10 +178,6 @@ namespace Goblin {
             }
             firstBounce = false;
             //debugRays.push_back(currentRay);
-        }
-
-        if(debugData != NULL) {
-            // feed in the interested debug ray/point for debug purpose
         }
 
         return Li;        

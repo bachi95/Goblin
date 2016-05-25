@@ -1,21 +1,22 @@
 #ifndef GOBLIN_THREAD_POOL_H
 #define GOBLIN_THREAD_POOL_H
 
-#include <boost/thread.hpp>
-
+#include "GoblinThreadLocalStorage.h"
 #include "GoblinUtils.h"
+#include <boost/thread.hpp>
 
 namespace Goblin {
 
     class Task {
     public:
-        virtual void run() = 0;
+        virtual void run(TLSPtr& tls) = 0;
         virtual ~Task() {};
     };
 
     class ThreadPool {
     public:
-        ThreadPool(unsigned int coreNum = 0);
+        ThreadPool(unsigned int coreNum = 0,
+            TLSManager* tlsManager = NULL);
         void enqueue(const vector<Task*>& tasks);
         void waitForAll();
         void cleanup();
@@ -34,6 +35,7 @@ namespace Goblin {
         boost::condition_variable mStartCondition;
         boost::mutex mStartMutex;
         bool mStartWork;
+        TLSManager* mTLSManager;
     };
 }
 

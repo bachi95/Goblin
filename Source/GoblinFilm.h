@@ -2,6 +2,7 @@
 #define GOBLIN_FILM_H
 
 #include "GoblinColor.h"
+#include "GoblinDebugData.h"
 #include "GoblinFactory.h"
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
@@ -10,6 +11,7 @@ namespace Goblin {
 
     const int FILTER_TABLE_WIDTH = 16;
     class Sample;
+    struct SampleRange;
     class Filter;
 
     class Pixel {
@@ -20,36 +22,6 @@ namespace Goblin {
         float pad[3];
     };
 
-    typedef pair<Vector2, Vector2> DebugLine;
-
-    class DebugInfo {
-    public:
-        DebugInfo() {}
-        void addLine(const DebugLine& l, const Color& c);
-        void addPoint(const Vector2& p, const Color& c);
-        const vector<pair<DebugLine, Color> >& getLines() const;
-        const vector<pair<Vector2, Color> >& getPoints() const;
-    private:
-        vector<pair<DebugLine, Color> > mLines;
-        vector<pair<Vector2, Color> > mPoints;
-    };
-
-    inline void DebugInfo::addLine(const DebugLine& l, const Color& c) { 
-        mLines.push_back(pair<DebugLine, Color>(l, c)); 
-    }
-
-    inline void DebugInfo::addPoint(const Vector2& p, const Color& c) { 
-        mPoints.push_back(pair<Vector2, Color>(p, c)); 
-    }
-
-    inline const vector<pair<DebugLine, Color> >& DebugInfo::getLines() const {
-        return mLines;
-    }
-
-    inline const vector<pair<Vector2, Color> >& DebugInfo::getPoints() const {
-        return mPoints;
-    }
-
     struct ImageRect {
         ImageRect() {}
         ImageRect(int x, int y, int w, int h): 
@@ -57,110 +29,93 @@ namespace Goblin {
         int xStart, yStart, xCount, yCount;
     };
 
+    class FilterTable {
+    public:
+        FilterTable(const Filter* filter);
+
+        float evaluate(float x, float y) const;
+
+        const Vector2& getFilterWidth() const {
+            return mFilterWidth;
+        }
+
+    private:
+        float mTable[FILTER_TABLE_WIDTH * FILTER_TABLE_WIDTH];
+        Vector2 mFilterWidth;
+    };
+
     class ImageTile {
     public:
-        ImageTile(int tileWidth, int rowId, int rowNum, int colId, int colNum, 
-            const ImageRect& imageRect, const Filter* filter, 
-            const float* filterTable, bool requireLightMap);
+        ImageTile(const ImageRect& tileRect, const FilterTable& cachedFilter);
+
         ~ImageTile();
 
-        void getImageRange(int* xStart, int *xEnd,
-            int* yStart, int* yEnd) const;
-
-        void getSampleRange(int* xStart, int* xEnd,
+        void getTileRange(int* xStart, int *xEnd,
             int* yStart, int* yEnd) const;
 
         const Pixel* getTileBuffer() const;
 
-        const DebugInfo& getDebugInfo() const;
-
         void addSample(float imageX, float imageY, const Color& L);
 
-        void addDebugLine(const DebugLine& l, const Color& c);
-
-        void addDebugPoint(const Vector2& p, const Color& c);
-
-        void setInvPixelArea(float invPixelArea);
-
-        void setTotalSampleCount(uint64_t totalSampleCount);
-
-        uint64_t getTotalSampleCount() const;
     private:
-        int mTileWidth;
-        int mRowId, mRowNum;
-        int mColId, mColNum;
         ImageRect mTileRect;
-        ImageRect mImageRect;
         Pixel* mPixels;
-        const Filter* mFilter;
-        const float* mFilterTable;
-        // TODO the current ImageTile is kinda abused to serve almost
-        // like a thread local state that it contains lots of image unrelated
-        // data. Should move them (DebugInfo, totalSampleCount) out of here
-        // to a ThreadLocalState object in the future
-        DebugInfo mDebugInfo;
-        float mInvPixelArea;
-        uint64_t mTotalSampleCount;
+        const FilterTable& mCachedFilter;
     };
 
     inline const Pixel* ImageTile::getTileBuffer() const {
         return mPixels;
     }
 
-    inline const DebugInfo& ImageTile::getDebugInfo() const {
-        return mDebugInfo;
-    }
-
-    inline void ImageTile::addDebugLine(const DebugLine& l, const Color& c) {
-        mDebugInfo.addLine(l, c);
-    }
-
-    inline void ImageTile::addDebugPoint(const Vector2& p, const Color& c) {
-        mDebugInfo.addPoint(p, c);
-    }
-
-    inline void ImageTile::setInvPixelArea(float invPixelArea) {
-        mInvPixelArea = invPixelArea;
-    }
-
     class Film {
     public:
         Film(int xRes, int yRes, const float crop[4],
             Filter* filter, const std::string& filename,
-            bool requireLightMap, bool toneMapping = false,
+            bool toneMapping = false,
             float bloomRadius = 0.0f, float bloomWeight = 0.0f);
+
         ~Film();
 
         int getXResolution() const;
+
         int getYResolution() const;
+
         float getInvXResolution() const;
+
         float getInvYResolution() const;
-        void getSampleRange(int* xStart, int* xEnd,
-            int* yStart, int* yEnd) const;
-        vector<ImageTile*>& getTiles();
-        void addSample(float imageX, float imageY, const Color& L);
-        void setFilmArea(float filmArea);
-        float getFilmArea() const;
-        void mergeTiles();
+
+        void getImageRect(ImageRect& imageRect) const;
+
+        void getSampleRange(SampleRange& sampleRange) const;
+
+        const FilterTable& getFilterTable() const {
+            return mCachedFilter;
+        }
+
         void scaleImage(float s);
+
         void writeImage(bool normalize = true);
+
+        void mergeTile(const ImageTile& tile);
+
+        void addDebugLine(const DebugLine& l, const Color& c);
+
+        void addDebugPoint(const Vector2& p, const Color& c);
 
     private:
         int mXRes, mYRes;
         int mXStart, mYStart, mXCount, mYCount;
         float mInvXRes, mInvYRes;
-        float mFilterTable[FILTER_TABLE_WIDTH * FILTER_TABLE_WIDTH];
         float mCrop[4];
         Filter* mFilter;
+        FilterTable mCachedFilter;
         Pixel* mPixels;
-        vector<ImageTile*> mTiles;
         std::string mFilename;
-        int mTileWidth;
         bool mToneMapping;
         float mBloomRadius;
         float mBloomWeight;
-        float mFilmArea;
-        float mInvPixelArea;
+        vector<pair<DebugLine, Color> > mDebugLines;
+        vector<pair<Vector2, Color> > mDebugPoints;
     };
 
     inline int Film::getXResolution() const { return mXRes; }
@@ -170,10 +125,6 @@ namespace Goblin {
     inline float Film::getInvXResolution() const { return mInvXRes; }
     
     inline float Film::getInvYResolution() const { return mInvYRes; }
-
-    inline float Film::getFilmArea() const { return mFilmArea; }
-
-    inline vector<ImageTile*>& Film::getTiles() { return mTiles; }
 
     class ImageFilmCreator : public Creator<Film, const ParamSet&, Filter*> {
     public:

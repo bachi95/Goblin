@@ -64,9 +64,18 @@ namespace Goblin {
         }
     }
 
+    struct SampleRange {
+        SampleRange(): xStart(0), xEnd(0), yStart(0), yEnd(0) {}
+
+        int xStart;
+        int xEnd;
+        int yStart;
+        int yEnd;
+    };
+
     class Sampler {
     public:
-        Sampler(int xStart, int xEnd, int yStart, int yEnd, 
+        Sampler(const SampleRange& sampleRange, 
             int samplePerPixel, const SampleQuota& sampleQuota,
             RNG* rng);
         ~Sampler();

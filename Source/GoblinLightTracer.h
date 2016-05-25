@@ -17,7 +17,7 @@ namespace Goblin {
 
         Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
-            WorldDebugData* debugData = NULL) const;
+            RenderingTLS* tls = NULL) const;
 
         void render(const ScenePtr& scene);
         

@@ -13,7 +13,7 @@ namespace Goblin{
         float zn, float zf, Film* film):
         mPosition(position), mOrientation(orientation),
         mZNear(zn), mZFar(zf), mFilm(film), mFilmArea(0.0f),
-        mPixelArea(0.0f), mIsUpdated(false) {
+        mIsUpdated(false) {
         float xRes = static_cast<float>(film->getXResolution());
         float yRes = static_cast<float>(film->getYResolution());
         mAspectRatio = xRes / yRes; 
@@ -91,9 +91,6 @@ namespace Goblin{
         float filmWorldHeight = 2.0f * mFocalDistance * tan(0.5f * mFOV);
         float filmWorldWidth = filmWorldHeight * mAspectRatio;
         mFilmArea = filmWorldHeight * filmWorldWidth;
-        mPixelArea = mFilmArea *
-            mFilm->getInvXResolution() * mFilm->getInvYResolution();
-        mFilm->setFilmArea(mFilmArea);
         update();
     }
 
@@ -281,10 +278,10 @@ namespace Goblin{
         pNDC /= pNDC.w;
         float screenX = (pNDC.x + 1.0f) * 0.5f * mFilm->getXResolution();
         float screenY = (1.0f - pNDC.y) * 0.5f * mFilm->getYResolution();
-        int xStart, xEnd, yStart, yEnd;
-        mFilm->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        if (screenX < xStart || screenX > xEnd ||
-            screenY < yStart || screenY > yEnd) {
+        SampleRange range;
+        mFilm->getSampleRange(range);
+        if (screenX < range.xStart || screenX > range.xEnd ||
+            screenY < range.yStart || screenY > range.yEnd) {
             return sInvalidPixel;
         }
         return Vector3(screenX, screenY, pView.z);
@@ -297,9 +294,6 @@ namespace Goblin{
         mFilmWidth(filmWidth) {
         mFilmHeight = mFilmWidth / mAspectRatio;
         mFilmArea = mFilmWidth * mFilmHeight;
-        mPixelArea = mFilmArea *
-            mFilm->getInvXResolution() * mFilm->getInvYResolution();
-        mFilm->setFilmArea(mFilmArea);
         mProj = matrixOrthoLHD3D(mFilmWidth, mFilmHeight, mZNear, mZFar);
         update();
     }

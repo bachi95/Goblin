@@ -17,36 +17,6 @@ namespace Goblin {
     struct BSDFSampleIndex;
     struct LightSampleIndex;
 
-    class WorldDebugData {
-    public:
-        WorldDebugData() {}
-        void addRay(const Ray& ray, Color c = Color::White);
-        void addPoint(const Vector3& point, Color c = Color::White);
-        const vector<pair<Ray, Color> >& getRays() const;
-        const vector<pair<Vector3, Color> >& getPoints() const;
-    private:
-        vector<pair<Ray, Color> > mRays;
-        vector<pair<Vector3, Color> > mPoints;
-    };
-
-    inline void WorldDebugData::addRay(const Ray& line, Color c) { 
-        mRays.push_back(pair<Ray, Color>(line, c)); 
-    }
-
-    inline void WorldDebugData::addPoint(const Vector3& point, Color c) { 
-        mPoints.push_back(pair<Vector3, Color>(point, c)); 
-    }
-
-    inline const vector<pair<Ray, Color> >& WorldDebugData::getRays() const {
-        return mRays;
-    }
-
-    inline const vector<pair<Vector3, Color> >& WorldDebugData::getPoints() 
-        const {
-        return mPoints;
-    }
-
-
     class RenderProgress {
     public:
         RenderProgress(int taskNum);
@@ -59,17 +29,18 @@ namespace Goblin {
 
     class RenderTask : public Task {
     public:
-        RenderTask(ImageTile* tile, Renderer* mRenderer,
-            const CameraPtr& camera, const ScenePtr& scene,
+        RenderTask(Renderer* mRenderer, const CameraPtr& camera,
+            const ScenePtr& scene, const SampleRange& sampleRange,
             const SampleQuota& sampleQuota, int samplePerPixel, 
             RenderProgress* renderProgress);
         ~RenderTask();
-        void run();
+        void run(TLSPtr& tls);
+
     protected:
-        ImageTile* mTile;
         Renderer* mRenderer;
         const CameraPtr& mCamera;
         const ScenePtr& mScene;
+        const SampleRange& mSampleRange;
         const SampleQuota& mSampleQuota;
         int mSamplePerPixel;
         RenderProgress* mRenderProgress;
@@ -83,13 +54,13 @@ namespace Goblin {
         virtual void render(const ScenePtr& scene);
         virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
-            WorldDebugData* debugData = NULL) const = 0;
+            RenderingTLS* tls = NULL) const = 0;
         // volume in scatter and emission contribution
         Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
         Color Lsubsurface(const ScenePtr& scene,
             const Intersection& intersection, const Vector3& wo,
             const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
-            WorldDebugData* debugData = NULL) const;
+            RenderingTLS* tls = NULL) const;
         Color transmittance(const ScenePtr& scene, const Ray& ray) const;
 
     protected:
@@ -131,6 +102,12 @@ namespace Goblin {
             float epsilon, const Intersection& intersection,
             const Sample& sample, const RNG& rng) const;
 
+        void getSampleRanges(const Film* film,
+            vector<SampleRange>& sampleRanges) const;
+
+        void drawDebugData(const DebugData& debugData,
+            const CameraPtr& camera) const;
+
     private:
         virtual void querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota) = 0;
@@ -138,12 +115,12 @@ namespace Goblin {
         Color LbssrdfSingle(const ScenePtr& scene, const Fragment& fragment, 
             const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
             const BSSRDFSampleIndex* bssrdfSampleIndex,
-            WorldDebugData* debugData = NULL) const;
+            RenderingTLS* tls = NULL) const;
 
         Color LbssrdfDiffusion(const ScenePtr& scene, const Fragment& fragment, 
             const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
             const BSSRDFSampleIndex* bssrdfSampleIndex,
-            WorldDebugData* debugData = NULL ) const;
+            RenderingTLS* tls = NULL ) const;
 
 
     protected:

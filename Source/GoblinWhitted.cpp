@@ -14,7 +14,7 @@ namespace Goblin {
     Color WhittedRenderer::Li(const ScenePtr& scene, 
         const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
@@ -24,7 +24,7 @@ namespace Goblin {
             Li += intersection.Le(-ray.d);
             // subsurface scattering 
             Li += Lsubsurface(scene, intersection, -ray.d, sample, 
-                &mBSSRDFSampleIndex, debugData);
+                &mBSSRDFSampleIndex, tls);
             // direct light contribution, for specular part we let
             // specularReflect/specularRefract to deal with it
             Li += multiSampleLd(scene, ray, epsilon, intersection, sample, rng,

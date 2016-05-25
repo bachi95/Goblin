@@ -2,9 +2,10 @@
 
 namespace Goblin {
 
-    ThreadPool::ThreadPool(unsigned int coreNum):
-        mTasksNum(0), mStartWork(false) {
-        mCoreNum = coreNum == 0 ? 
+    ThreadPool::ThreadPool(unsigned int coreNum,
+        TLSManager* tlsManager):
+        mTasksNum(0), mStartWork(false), mTLSManager(tlsManager) {
+        mCoreNum = coreNum == 0 ?
             boost::thread::hardware_concurrency() : 
             min(boost::thread::hardware_concurrency(), coreNum);
     }
@@ -21,13 +22,16 @@ namespace Goblin {
     }
 
     void ThreadPool::taskEntry() {
+        static TLSPtr tlsPtr;
         {
             boost::unique_lock<boost::mutex> lk(mStartMutex);
             while(!mStartWork) {
                 mStartCondition.wait(lk);
             }
         }
-
+        if (mTLSManager) {
+            mTLSManager->initialize(tlsPtr);
+        }
         while(true) {
             Task* task = NULL;
             {
@@ -40,7 +44,7 @@ namespace Goblin {
             }
 
             if(task) {
-                task->run();
+                task->run(tlsPtr);
             }
 
             {
@@ -50,15 +54,20 @@ namespace Goblin {
                     break;
                 }
             }
-
+        }
+        if (mTLSManager) {
+            mTLSManager->finalize(tlsPtr);
         }
     }
 
     void ThreadPool::enqueue(const vector<Task*>& tasks) {
         if(mCoreNum == 1) {
+            TLSPtr tlsPtr;
+            mTLSManager->initialize(tlsPtr);
             for(size_t i = 0; i < tasks.size(); ++i) {
-                tasks[i]->run();
+                tasks[i]->run(tlsPtr);
             }
+            mTLSManager->finalize(tlsPtr);
             return;
         }
 

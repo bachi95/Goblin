@@ -12,7 +12,7 @@ namespace Goblin {
         ~WhittedRenderer();
         Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
-            WorldDebugData* debugData) const;
+            RenderingTLS* tls) const;
     private:
         void querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota);

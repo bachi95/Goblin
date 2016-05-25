@@ -89,7 +89,6 @@ namespace Goblin {
         float mAspectRatio;
         Film* mFilm;
         float mFilmArea;
-        float mPixelArea;
 
         Matrix4 mWorld;
         Matrix4 mView;

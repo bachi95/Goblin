@@ -8,13 +8,12 @@
 
 namespace Goblin {
 
-    RenderTask::RenderTask(ImageTile* tile, Renderer* renderer,
-        const CameraPtr& camera, const ScenePtr& scene,
+    RenderTask::RenderTask(Renderer* renderer, const CameraPtr& camera,
+        const ScenePtr& scene, const SampleRange& sampleRange,
         const SampleQuota& sampleQuota, int samplePerPixel,
         RenderProgress* renderProgress): 
-        mTile(tile), mRenderer(renderer),
-        mCamera(camera), mScene(scene),
-        mSampleQuota(sampleQuota), 
+        mRenderer(renderer), mCamera(camera), mScene(scene),
+        mSampleRange(sampleRange), mSampleQuota(sampleQuota), 
         mSamplePerPixel(samplePerPixel),
         mRenderProgress(renderProgress) {
         mRNG = new RNG();
@@ -27,48 +26,28 @@ namespace Goblin {
         }
     }
 
-    void RenderTask::run() {
-        int xStart, xEnd, yStart, yEnd;
-        mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        Sampler sampler(xStart, xEnd, yStart, yEnd, 
-            mSamplePerPixel, mSampleQuota, mRNG);
+    void RenderTask::run(TLSPtr& tls) {
+        RenderingTLS* renderingTLS =
+            static_cast<RenderingTLS*>(tls.get());
+        ImageTile* tile = renderingTLS->getTile();
+
+        Sampler sampler(mSampleRange, mSamplePerPixel, mSampleQuota, mRNG);
         int batchAmount = sampler.maxSamplesPerRequest();
         Sample* samples = sampler.allocateSampleBuffer(batchAmount);
-        WorldDebugData debugData;
         int sampleNum = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
             for(int s = 0; s < sampleNum; ++s) {
                 RayDifferential ray;
                 float w = mCamera->generateRay(samples[s], &ray);
                 Color L = mRenderer->Li(mScene, ray, samples[s], 
-                    *mRNG, &debugData);
+                    *mRNG, renderingTLS);
                 Color tr = mRenderer->transmittance(mScene, ray);
                 Color Lv = mRenderer->Lv(mScene, ray, *mRNG);
-                mTile->addSample(samples[s].imageX, samples[s].imageY,
+                tile->addSample(samples[s].imageX, samples[s].imageY,
                     w * (tr * L + Lv));
             }
         }
         delete [] samples;
-        // if there is any debug data, transform it to screen space
-        // and inject to image tile
-        const vector<pair<Ray, Color> >& debugRays = debugData.getRays();
-        for(size_t i = 0; i < debugRays.size(); ++i) {
-            const Ray& r = debugRays[i].first;
-            Vector3 sWorld = r.o;
-            Vector3 eWorld = r(r.maxt);
-            Vector3 sScreen = mCamera->worldToScreen(sWorld);
-            Vector3 eScreen = mCamera->worldToScreen(eWorld);
-            DebugLine line(Vector2(sScreen.x, sScreen.y),
-                Vector2(eScreen.x, eScreen.y));
-            mTile->addDebugLine(line, debugRays[i].second);
-        }
-        const vector<pair<Vector3, Color> >& debugPoints = 
-            debugData.getPoints();
-        for(size_t i = 0; i < debugPoints.size(); ++i) {
-            Vector3 pScreen = mCamera->worldToScreen(debugPoints[i].first);
-            mTile->addDebugPoint(Vector2(pScreen.x, pScreen.y), 
-                debugPoints[i].second);
-        }
         mRenderProgress->update();
     }
 
@@ -128,15 +107,18 @@ namespace Goblin {
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
 
-        vector<ImageTile*>& tiles = film->getTiles();
+        vector<SampleRange> sampleRanges;
+        getSampleRanges(film, sampleRanges);
         vector<Task*> renderTasks;
-        RenderProgress progress((int)tiles.size());
-        for(size_t i = 0; i < tiles.size(); ++i) {
-            renderTasks.push_back(new RenderTask(tiles[i], this, 
-                camera, scene, sampleQuota, mSamplePerPixel, &progress));
+        RenderProgress progress(sampleRanges.size());
+        for(size_t i = 0; i < sampleRanges.size(); ++i) {
+            renderTasks.push_back(new RenderTask(this, 
+                camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
+                &progress));
         }
         
-        ThreadPool threadPool(mThreadNum);
+        RenderingTLSManager tlsManager(film);
+        ThreadPool threadPool(mThreadNum, &tlsManager);
         threadPool.enqueue(renderTasks);
         threadPool.waitForAll();
         //clean up
@@ -144,7 +126,7 @@ namespace Goblin {
             delete renderTasks[i];
         }
         renderTasks.clear();
-        film->mergeTiles();
+        drawDebugData(tlsManager.getDebugData(), camera);
         film->writeImage();
     }
 
@@ -152,7 +134,7 @@ namespace Goblin {
         const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
         const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         const Vector3& pwo = fragment.getPosition();
         const Vector3& no = fragment.getNormal();
         float coso = absdot(wo, fragment.getNormal());
@@ -229,7 +211,7 @@ namespace Goblin {
         const Fragment& fragment, const BSSRDF* bssrdf, const Vector3& wo,
         const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         const Vector3& pwo = fragment.getPosition();
         float coso = absdot(wo, fragment.getNormal());
         float eta = bssrdf->getEta();
@@ -297,7 +279,7 @@ namespace Goblin {
     Color Renderer::Lsubsurface(const ScenePtr& scene,
         const Intersection& intersection, const Vector3& wo,
         const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         const MaterialPtr& material = 
             intersection.primitive->getMaterial();
         const BSSRDF* bssrdf = material->getBSSRDF();
@@ -307,10 +289,10 @@ namespace Goblin {
         }
         const Fragment& fragment = intersection.fragment;
         Color Lsinglescatter = LbssrdfSingle(scene, fragment, bssrdf, 
-            wo, sample, bssrdfSampleIndex, debugData);
+            wo, sample, bssrdfSampleIndex, tls);
         // multiple scattering part with diffusion approximation
         Color Lmultiscatter = LbssrdfDiffusion(scene, fragment, bssrdf, 
-            wo, sample, bssrdfSampleIndex, debugData);
+            wo, sample, bssrdfSampleIndex, tls);
         return Lsinglescatter + Lmultiscatter;
     }
 
@@ -581,5 +563,47 @@ namespace Goblin {
             L += f * Lr * absdot(wi, n) / pdf;
         }
         return L;
+    }
+
+    void Renderer::getSampleRanges(const Film* film,
+        vector<SampleRange>& sampleRanges) const {
+        SampleRange fullRange;
+        film->getSampleRange(fullRange);
+        int step = 8;
+        for (int y = fullRange.yStart; y < fullRange.yEnd; y += step) {
+            for (int x = fullRange.xStart; x < fullRange.xEnd; x += step) {
+                SampleRange subSampleRange;
+                subSampleRange.xStart = x;
+                subSampleRange.xEnd = min(x + step, fullRange.xEnd);
+                subSampleRange.yStart = y;
+                subSampleRange.yEnd = min(y + step, fullRange.yEnd);
+                sampleRanges.push_back(subSampleRange);
+            }
+        }
+    }
+
+    void Renderer::drawDebugData(const DebugData& debugData,
+        const CameraPtr& camera) const {
+        Film* film = camera->getFilm();
+        // if there is any debug data, transform it to screen space
+        // and inject to image tile
+        const vector<pair<Ray, Color> >& debugRays = debugData.getRays();
+        for(size_t i = 0; i < debugRays.size(); ++i) {
+            const Ray& r = debugRays[i].first;
+            Vector3 sWorld = r.o;
+            Vector3 eWorld = r(r.maxt);
+            Vector3 sScreen = camera->worldToScreen(sWorld);
+            Vector3 eScreen = camera->worldToScreen(eWorld);
+            film->addDebugLine(
+                DebugLine(Vector2(sScreen.x, sScreen.y),
+                Vector2(eScreen.x, eScreen.y)), debugRays[i].second);
+        }
+        const vector<pair<Vector3, Color> >& debugPoints = 
+            debugData.getPoints();
+        for(size_t i = 0; i < debugPoints.size(); ++i) {
+            Vector3 pScreen = camera->worldToScreen(debugPoints[i].first);
+            film->addDebugPoint(Vector2(pScreen.x, pScreen.y), 
+                debugPoints[i].second);
+        }        
     }
 }

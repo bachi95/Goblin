@@ -7,51 +7,52 @@ namespace Goblin {
 
     class LightTraceTask : public RenderTask {
     public:
-        LightTraceTask(ImageTile* tile, LightTracer* mLightTracer,
-            const CameraPtr& camera, const ScenePtr& scene,
+        LightTraceTask(LightTracer* mLightTracer, const CameraPtr& camera,
+            const ScenePtr& scene, const SampleRange& sampleRange,
             const SampleQuota& sampleQuota, int samplePerPixel,
             int maxPathLength, RenderProgress* renderProgress);
         ~LightTraceTask();
-        void run();
+        void run(TLSPtr& tls);
     private:
         const LightTracer* mLightTracer;
         std::vector<PathVertex> mPathVertices;
     };
 
-    LightTraceTask::LightTraceTask(ImageTile* tile, LightTracer* lightTracer,
+    LightTraceTask::LightTraceTask(LightTracer* lightTracer,
         const CameraPtr& camera, const ScenePtr& scene,
+        const SampleRange& sampleRange,
         const SampleQuota& sampleQuota, int samplePerPixel,
         int maxPathLength, RenderProgress* renderProgress):
-        RenderTask(tile, lightTracer, camera, scene, sampleQuota,
+        RenderTask(lightTracer, camera, scene, sampleRange, sampleQuota,
         samplePerPixel, renderProgress),
         mLightTracer(lightTracer), mPathVertices(maxPathLength + 1) {}
 
     LightTraceTask::~LightTraceTask() {}
 
-    void LightTraceTask::run() {
-        int xStart, xEnd, yStart, yEnd;
-        mTile->getSampleRange(&xStart, &xEnd, &yStart, &yEnd);
-        Sampler sampler(xStart, xEnd, yStart, yEnd,
-            mSamplePerPixel, mSampleQuota, mRNG);
+    void LightTraceTask::run(TLSPtr& tls) {
+        RenderingTLS* renderingTLS =
+            static_cast<RenderingTLS*>(tls.get());
+        ImageTile* tile = renderingTLS->getTile();
+
+        Sampler sampler(mSampleRange, mSamplePerPixel, mSampleQuota, mRNG);
         int batchAmount = sampler.maxSamplesPerRequest();
         Sample* samples = sampler.allocateSampleBuffer(batchAmount);
-        WorldDebugData debugData;
         int sampleNum = 0;
         uint64_t totalSampleCount = 0;
         while ((sampleNum = sampler.requestSamples(samples)) > 0) {
             for (int s = 0; s <sampleNum; ++s) {
                 //mLightTracer->splatFilmT0(mScene, samples[s], *mRNG,
-                //    mPathVertices, mTile);
+                //    mPathVertices, tile);
 
                 mLightTracer->splatFilmT1(mScene, samples[s], *mRNG,
-                    mPathVertices, mTile);
+                    mPathVertices, tile);
 
                 //mLightTracer->splatFilmS1(mScene, samples[s], *mRNG,
-                //    mPathVertices, mTile);
+                //    mPathVertices, tile);
             }
             totalSampleCount += sampleNum;
         }
-        mTile->setTotalSampleCount(totalSampleCount);
+        renderingTLS->addSampleCount(totalSampleCount);
         delete [] samples;
         mRenderProgress->update();
     }
@@ -65,7 +66,7 @@ namespace Goblin {
 
     Color LightTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         // light tracing method doesn't use this camera based method actually
         return Color::Black;
     }
@@ -347,16 +348,18 @@ namespace Goblin {
         SampleQuota sampleQuota;
         querySampleQuota(scene, &sampleQuota);
 
-        vector<ImageTile*>& tiles = film->getTiles();
+        vector<SampleRange> sampleRanges;
+        getSampleRanges(film, sampleRanges);
         vector<Task*> lightTraceTasks;
-        RenderProgress progress((int)tiles.size());
-        for(size_t i = 0; i < tiles.size(); ++i) {
-            lightTraceTasks.push_back(new LightTraceTask(tiles[i], this,
-                camera, scene, sampleQuota, mSamplePerPixel,
+        RenderProgress progress((int)sampleRanges.size());
+        for(size_t i = 0; i < sampleRanges.size(); ++i) {
+            lightTraceTasks.push_back(new LightTraceTask(this,
+                camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
                 mMaxPathLength, &progress));
         }
 
-        ThreadPool threadPool(mThreadNum);
+        RenderingTLSManager tlsManager(film);
+        ThreadPool threadPool(mThreadNum, &tlsManager);
         threadPool.enqueue(lightTraceTasks);
         threadPool.waitForAll();
         //clean up
@@ -365,12 +368,11 @@ namespace Goblin {
         }
         lightTraceTasks.clear();
 
-        uint64_t totalSampleCount = 0;
-        for (size_t i = 0; i < tiles.size(); ++i) {
-            totalSampleCount += tiles[i]->getTotalSampleCount();
-        }
-        film->mergeTiles();
-        film->scaleImage(film->getFilmArea() / totalSampleCount);
+        ImageRect filmRect;
+        film->getImageRect(filmRect);
+        float filmArea = (float)(filmRect.xCount * filmRect.yCount);
+        film->scaleImage(filmArea / tlsManager.getTotalSampleCount());
+        drawDebugData(tlsManager.getDebugData(), camera);
         film->writeImage(false);
     }
 

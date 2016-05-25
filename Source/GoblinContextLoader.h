@@ -22,13 +22,11 @@ namespace Goblin {
         ContextLoader();
         RenderContext* load(const std::string& filename);
     private:
-        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel,
-            bool* requireLightMap);
+        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel);
 
         Filter* parseFilter(const PropertyTree& pt);
 
-        Film* parseFilm(const PropertyTree& pt, Filter* filter,
-            bool requireLightMap);
+        Film* parseFilm(const PropertyTree& pt, Filter* filter);
 
         CameraPtr parseCamera(const PropertyTree& pt, Film* film,
             SceneCache* sceneCache);

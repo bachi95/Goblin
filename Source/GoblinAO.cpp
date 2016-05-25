@@ -13,7 +13,7 @@ namespace Goblin {
     Color AORenderer::Li(const ScenePtr& scene, 
         const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        WorldDebugData* debugData) const {
+        RenderingTLS* tls) const {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;

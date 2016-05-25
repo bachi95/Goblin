@@ -12,7 +12,7 @@ namespace Goblin {
         ~PathTracer();
         Color Li(const ScenePtr& scene, const RayDifferential& ray,
             const Sample& sample, const RNG& rng,
-            WorldDebugData* debugData) const;
+            RenderingTLS* tls) const;
     private:
         // evaluate index-matched material attenuation along the ray
         Color evalAttenuation(const ScenePtr& scene, const Ray& ray,
