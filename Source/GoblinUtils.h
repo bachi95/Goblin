@@ -201,6 +201,9 @@ namespace Goblin {
     };
 
     class NullType {};
+
+    // get first N prime numbers sequence
+    void getPrimes(size_t N, vector<uint32_t>& primes);
 }
 
 #endif // GOBLIN_UTILS_H

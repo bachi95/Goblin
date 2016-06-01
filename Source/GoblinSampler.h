@@ -24,6 +24,10 @@ namespace Goblin {
         SampleIndex requestOneDQuota(uint32_t samplesNum);
         SampleIndex requestTwoDQuota(uint32_t samplesNum);
         size_t size() const;
+        // how many "float" needs for Sample based on this SampleQuota
+        // (includes the 4 extra dimensions for pixel(2) and lens(2)
+        size_t getDimension() const { return size() + 4; }
+
         vector<uint32_t> n1D;
         vector<uint32_t> n2D;
     };
@@ -87,7 +91,6 @@ namespace Goblin {
     private:
         void stratifiedUniform1D(float* buffer, uint32_t n1D);
         void stratifiedUniform2D(float* buffer, uint32_t n2D);
-        void shuffle(float* buffer, uint32_t num, uint32_t dim);
 
         void debugOutput(Sample* samples);
     private:
@@ -142,6 +145,15 @@ namespace Goblin {
         vector<CDF1D*> mConditionalDist;
     };
 
+    template<typename T>
+    void shuffle(T* buffer, uint32_t num, uint32_t dim, RNG* rng) {
+        for(uint32_t n = 0; n < num; ++n) {
+            size_t toShuffle = rng->randomUInt() % num;
+            for(uint32_t d = 0; d < dim; ++d) {
+                swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
+            }
+        }
+    }
 
     /*
      * u1, u2 are 2 [0, 1) sample value in uniform distribution
@@ -222,6 +234,56 @@ namespace Goblin {
         float B = nB * pdfB;
         return A * A / (A * A + B * B);
     }
+
+    inline float radicalInverse(uint64_t N, uint32_t base) {
+        float invBase = 1.0f / base;
+        float invBi = invBase;
+        float result = 0.0f;
+        while (N > 0) {
+            uint64_t di = N % base;
+            result += di * invBi;
+            N /= base;
+            invBi *= invBase;
+        }
+        return result;
+    }
+
+    inline float permutedRadicalInverse(uint64_t N, uint32_t base,
+        const uint32_t* const permutedTable) {
+        float invBase = 1.0f / base;
+        float invBi = invBase;
+        float result = 0.0f;
+        while (N > 0) {
+            uint64_t di = permutedTable[N % base];
+            result += di * invBi;
+            N /= base;
+            invBi *= invBase;
+        }
+        // if 0 got permuted to somewhere else than permutedTable[0],
+        // we need to take the infinite series of 0 trailing after last di
+        // into account. the infinite series will be:
+        // permutedTable[0] * invBi * (1 + 1/base + 1/base^2 + 1/base^3...) =
+        // permutedTable[0] * invBi * (1 / (1 - 1/base)) =
+        // permutedTable[0] * invBi * base / (base - 1)
+        result += permutedTable[0] * invBi * base / (base - 1.0f);
+        return result;
+    }
+
+    class PermutedHalton {
+    public:
+        PermutedHalton(size_t dimension, RNG* rng);
+
+        // fill out a Sample based on the sequence id n
+        // if the sample dimension is higher than this PermutedHalton,
+        // use the feed in RNG to fill up rest of the dimension
+        void sample(Sample* s, int pixelX, int pixelY,
+            uint64_t n, RNG* rng) const;
+
+    private:
+        vector<uint32_t> mPermutedTable;
+        vector<uint32_t> mPrimes;
+        vector<size_t> mTableIndexes;
+    };
 }
 
 #endif //GOBLIN_SAMPLER_H

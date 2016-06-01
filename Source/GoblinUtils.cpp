@@ -218,5 +218,32 @@ namespace Goblin {
         }
     }
 
+    void getPrimes(size_t N, vector<uint32_t>& primes) {
+        primes.clear();
+        if (N > 0) {
+            primes.reserve(N);
+            uint32_t currentPrime = 2;
+            primes.push_back(currentPrime);
+            uint32_t currentNum = currentPrime + 1;
+            while(primes.size() < N) {
+                bool isPrime = true;
+                for (size_t i = 0; i < primes.size(); ++i) {
+                    uint64_t p = primes[i];
+                    if (p * p > currentNum) {
+                        break;
+                    }
+                    if (currentNum % p == 0) {
+                        isPrime = false;
+                        break;
+                    }
+                }
+                if (isPrime) {
+                    primes.push_back(currentNum);
+                }
+                currentNum++;
+            }
+        }
+    }
+
 }
 

@@ -133,18 +133,18 @@ namespace Goblin {
             currentOffset += 2 * mSampleQuota.n2D[i] * mSamplesPerPixel;
         }
         // shuffle the above stratified result
-        shuffle(lensBuffer, mSamplesPerPixel, 2);
+        shuffle(lensBuffer, mSamplesPerPixel, 2, mRNG);
 
         float* shuffleBuffer = quotaBuffer;
         for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
             for(uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
-                shuffle(shuffleBuffer, mSamplesPerPixel, 1);
+                shuffle(shuffleBuffer, mSamplesPerPixel, 1, mRNG);
                 shuffleBuffer += mSamplesPerPixel;
             }
         }
         for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
             for(uint32_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
-                shuffle(shuffleBuffer, mSamplesPerPixel, 2);
+                shuffle(shuffleBuffer, mSamplesPerPixel, 2, mRNG);
                 shuffleBuffer += 2 * mSamplesPerPixel;
             }
         }
@@ -180,10 +180,10 @@ namespace Goblin {
         // won't have correlation
         for(int i = 0; i < mSamplesPerPixel; ++i) {
             for(size_t j = 0; j < mSampleQuota.n1D.size(); ++j) {
-                shuffle(samples[i].u1D[j], mSampleQuota.n1D[j], 1);
+                shuffle(samples[i].u1D[j], mSampleQuota.n1D[j], 1, mRNG);
             }
             for(size_t j = 0; j < mSampleQuota.n2D.size(); ++j) {
-                shuffle(samples[i].u2D[j], mSampleQuota.n2D[j], 2);
+                shuffle(samples[i].u2D[j], mSampleQuota.n2D[j], 2, mRNG);
             }
         }
 
@@ -305,16 +305,6 @@ namespace Goblin {
             }
         }
     }
-
-    void Sampler::shuffle(float* buffer, uint32_t num, uint32_t dim) {
-        for(uint32_t n = 0; n < num; ++n) {
-            size_t toShuffle = mRNG->randomUInt() % num;
-            for(uint32_t d = 0; d < dim; ++d) {
-                swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
-            }
-        }
-    }
-
 
     CDF1D::CDF1D(const vector<float>& f1D): mFunction(f1D) {
         init();
@@ -668,4 +658,64 @@ namespace Goblin {
             (1.0f - exp(-falloff * Rmax * Rmax));
     }
     
+    PermutedHalton::PermutedHalton(size_t dimension, RNG* rng) {
+        getPrimes(dimension, mPrimes);
+        mTableIndexes.resize(dimension);
+        size_t tableSize = 0;
+        for (size_t i = 0; i < mPrimes.size(); ++i) {
+            tableSize += mPrimes[i];
+        }
+        mPermutedTable.resize(tableSize);
+        size_t offset = 0;
+        for (size_t i = 0; i < mPrimes.size(); ++i) {
+            mTableIndexes[i] = offset;
+            uint32_t p = mPrimes[i];
+            for (uint32_t j = 0; j < p; ++j) {
+                mPermutedTable[offset + j] = j;
+            }
+            shuffle(&mPermutedTable[offset], p, 1, rng);
+            offset += p;
+        }
+    }
+
+    void PermutedHalton::sample(Sample* s, int pixelX, int pixelY,
+        uint64_t n, RNG*rng) const {
+        size_t dimension = mPrimes.size();
+        s->imageX = dimension < 1 ? pixelX + rng->randomFloat() :
+            pixelX + permutedRadicalInverse(n, mPrimes[0],
+            &mPermutedTable[mTableIndexes[0]]);
+        s->imageY = dimension < 2 ? pixelY + rng->randomFloat() :
+            pixelY + permutedRadicalInverse(n, mPrimes[1],
+            &mPermutedTable[mTableIndexes[1]]);
+        s->lensU1 = dimension < 3 ? rng->randomFloat() :
+            permutedRadicalInverse(n, mPrimes[2],
+            &mPermutedTable[mTableIndexes[2]]);
+        s->lensU2 = dimension < 4 ? rng->randomFloat() :
+            permutedRadicalInverse(n, mPrimes[3],
+            &mPermutedTable[mTableIndexes[3]]);
+        size_t currentDimIndex = 4;
+        for (size_t i = 0; i < s->n1D.size(); ++i) {
+            for (size_t j = 0; j < s->n1D[i]; ++j) {
+                s->u1D[i][j] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+            }
+        }
+        for (size_t i = 0; i <s->n2D.size(); ++i) {
+            for (size_t j = 0; j < s->n2D[i]; ++j) {
+                s->u2D[i][2 *j] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+                s->u2D[i][2 *j + 1] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+            }
+        }
+    }
 }
