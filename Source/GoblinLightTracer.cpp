@@ -7,7 +7,7 @@ namespace Goblin {
 
     class LightTraceTask : public RenderTask {
     public:
-        LightTraceTask(LightTracer* mLightTracer, const CameraPtr& camera,
+        LightTraceTask(LightTracer* lightTracer, const CameraPtr& camera,
             const ScenePtr& scene, const SampleRange& sampleRange,
             const SampleQuota& sampleQuota, int samplePerPixel,
             int maxPathLength, RenderProgress* renderProgress);
@@ -30,8 +30,7 @@ namespace Goblin {
     LightTraceTask::~LightTraceTask() {}
 
     void LightTraceTask::run(TLSPtr& tls) {
-        RenderingTLS* renderingTLS =
-            static_cast<RenderingTLS*>(tls.get());
+        RenderingTLS* renderingTLS = static_cast<RenderingTLS*>(tls.get());
         ImageTile* tile = renderingTLS->getTile();
 
         Sampler sampler(mSampleRange, mSamplePerPixel, mSampleQuota, mRNG);

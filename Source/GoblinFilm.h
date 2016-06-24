@@ -26,6 +26,18 @@ namespace Goblin {
         ImageRect() {}
         ImageRect(int x, int y, int w, int h): 
             xStart(x), yStart(y), xCount(w), yCount(h) {}
+
+        int pixelNum() const { return xCount * yCount; }
+
+        int pixelToOffset(int x, int y) const {
+            return  (y - yStart) * xCount + (x - xStart);
+        }
+
+        void offsetToPixel(int offset, int* x, int* y) const {
+            *x = offset % xCount + xStart;
+            *y = offset / xCount + yStart;
+        }
+
         int xStart, yStart, xCount, yCount;
     };
 

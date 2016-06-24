@@ -11,6 +11,7 @@
 #include "GoblinPropertyTree.h"
 #include "GoblinRenderer.h"
 #include "GoblinSphere.h"
+#include "GoblinSPPM.h"
 #include "GoblinWhitted.h"
 #include "GoblinUtils.h"
 
@@ -150,6 +151,8 @@ namespace Goblin {
             new LightTracerCreator);
         mRendererFactory->registerCreator("bdpt",
             new BDPTCreator);
+        mRendererFactory->registerCreator("sppm",
+            new SPPMCreator);
         mRendererFactory->setDefault("path_tracing");
         // volume
         mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);

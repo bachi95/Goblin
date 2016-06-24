@@ -69,6 +69,10 @@ namespace Goblin {
     const float INV_PI = 0.31830988618379067154f;
     const float INV_TWOPI = 0.15915494309189533577f;
 
+    inline bool isEqual(float a, float b, const float epsilon = 1e-7f) {
+        return fabs(a - b) <= epsilon;
+    }
+
     inline bool isNaN(float f) {
 	    // isnan support only in C99/C++11
 	    return f != f;

@@ -71,6 +71,9 @@ namespace Goblin {
     struct SampleRange {
         SampleRange(): xStart(0), xEnd(0), yStart(0), yEnd(0) {}
 
+        SampleRange(int xs, int xe, int ys, int ye):
+            xStart(xs), xEnd(xe), yStart(ys), yEnd(ye) {}
+
         int xStart;
         int xEnd;
         int yStart;
@@ -245,7 +248,7 @@ namespace Goblin {
             N /= base;
             invBi *= invBase;
         }
-        return result;
+        return clamp(result, 0.0f, 1.0f);
     }
 
     inline float permutedRadicalInverse(uint64_t N, uint32_t base,
@@ -266,7 +269,7 @@ namespace Goblin {
         // permutedTable[0] * invBi * (1 / (1 - 1/base)) =
         // permutedTable[0] * invBi * base / (base - 1)
         result += permutedTable[0] * invBi * base / (base - 1.0f);
-        return result;
+        return clamp(result, 0.0f, 1.0f);
     }
 
     class PermutedHalton {
@@ -278,6 +281,10 @@ namespace Goblin {
         // use the feed in RNG to fill up rest of the dimension
         void sample(Sample* s, int pixelX, int pixelY,
             uint64_t n, RNG* rng) const;
+
+        // same as above method but not fill in image/lens pixel related sample
+        // can be used for sample that is not emitted from camera
+        void sample(Sample* s, uint64_t n, RNG* rng) const;
 
     private:
         vector<uint32_t> mPermutedTable;

@@ -332,7 +332,6 @@ namespace Goblin {
     }
 
     int CDF1D::sampleDiscrete(float u , float* pdf) {
-        assert(u >= 0.0f && u <= 1.0f);
         vector<float>::iterator lowBound;
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
         int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
@@ -343,7 +342,6 @@ namespace Goblin {
     }
 
     float CDF1D::sampleContinuous(float u, float* pdf, int* index) {
-        assert(u >= 0.0f && u <= 1.0f);
         vector<float>::iterator lowBound;
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
         int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
@@ -694,6 +692,35 @@ namespace Goblin {
             permutedRadicalInverse(n, mPrimes[3],
             &mPermutedTable[mTableIndexes[3]]);
         size_t currentDimIndex = 4;
+        for (size_t i = 0; i < s->n1D.size(); ++i) {
+            for (size_t j = 0; j < s->n1D[i]; ++j) {
+                s->u1D[i][j] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+            }
+        }
+        for (size_t i = 0; i <s->n2D.size(); ++i) {
+            for (size_t j = 0; j < s->n2D[i]; ++j) {
+                s->u2D[i][2 *j] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+                s->u2D[i][2 *j + 1] = currentDimIndex >= dimension ?
+                    rng->randomFloat() :
+                    permutedRadicalInverse(n, mPrimes[currentDimIndex],
+                    &mPermutedTable[mTableIndexes[currentDimIndex]]);
+                currentDimIndex++;
+            }
+        }
+    }
+
+    void PermutedHalton::sample(Sample* s, uint64_t n, RNG*rng) const {
+        s->imageX = s->imageY = s->lensU1 = s->lensU2 = 0.0f;
+        size_t dimension = mPrimes.size();
+        size_t currentDimIndex = 0;
         for (size_t i = 0; i < s->n1D.size(); ++i) {
             for (size_t j = 0; j < s->n1D[i]; ++j) {
                 s->u1D[i][j] = currentDimIndex >= dimension ?
