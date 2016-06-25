@@ -56,7 +56,8 @@ namespace Goblin {
 
     class SPPM : public Renderer {
     public:
-        SPPM(int samplePerPixel, int threadNum, int maxPathLength = 5);
+        SPPM(int samplePerPixel, int threadNum, int maxPathLength,
+            float mInitialRadius);
 
         ~SPPM();
 
@@ -76,6 +77,7 @@ namespace Goblin {
 
     private:
         int mMaxPathLength;
+        float mInitialRadius;
         vector<PixelData> mPixelData;
         SpatialHashGrids* mHashGrids;
     };

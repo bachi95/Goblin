@@ -215,7 +215,6 @@ namespace Goblin {
         bool toneMapping = params.getBool("tone_mapping");
         float bloomRadius = params.getFloat("bloom_radius");
         float bloomWeight = params.getFloat("bloom_weight");
-        bool requireLightMap = params.getBool("require_light_map");
         return new Film(xRes, yRes, crop, filter, filePath, 
             toneMapping, bloomRadius, bloomWeight);
     }

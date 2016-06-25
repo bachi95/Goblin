@@ -219,8 +219,9 @@ namespace Goblin {
     };
 
     SpatialHashGrids::SpatialHashGrids(const ImageRect& filmRect):
-        mGrids(filmRect.pixelNum()), mHashSize(filmRect.pixelNum()),
-        mXRes(filmRect.xCount), mYRes(filmRect.yCount), mInvGridLength(1.0f) {}
+        mGrids(filmRect.pixelNum()),
+        mXRes(filmRect.xCount), mYRes(filmRect.yCount),
+        mHashSize(filmRect.pixelNum()), mInvGridLength(1.0f) {}
 
     void SpatialHashGrids::rebuild(vector<PixelData>& pixelData) {
         for (size_t i = 0; i < mGrids.size(); ++i) {
@@ -303,9 +304,16 @@ namespace Goblin {
     }
 
 
-    SPPM::SPPM(int samplePerPixel, int threadNum, int maxPathLength):
+    SPPM::SPPM(int samplePerPixel, int threadNum, int maxPathLength,
+        float initialRadius):
         Renderer(samplePerPixel, threadNum),
-        mMaxPathLength(maxPathLength), mHashGrids(NULL) {}
+        mMaxPathLength(maxPathLength), mHashGrids(NULL),
+        mInitialRadius(initialRadius) {
+        if (mInitialRadius <= 0.0f &&
+            !isEqual(mInitialRadius, PixelData::sInvalidRadius)) {
+            mInitialRadius = PixelData::sInvalidRadius;
+        }
+    }
 
     SPPM::~SPPM() { delete mHashGrids; mHashGrids = NULL; }
 
@@ -318,7 +326,6 @@ namespace Goblin {
 
     void SPPM::rayTracePass(const ScenePtr& scene, const Sample& sample,
         int pixelX, int pixelY) {
-        const vector<Light*>& lights = scene->getLights();
         // rayTracePass only needs to find pixel landing point and
         // calculate direct lighting. We'll let photon pass to handle GI
         const CameraPtr camera = scene->getCamera();
@@ -483,6 +490,7 @@ namespace Goblin {
         mPixelData.resize(filmRect.pixelNum());
         for (size_t i = 0; i < mPixelData.size(); ++i) {
             mPixelData[i].pixelIndex = i;
+            mPixelData[i].Ri = mInitialRadius;
         }
         if (mHashGrids) {
             delete mHashGrids;
@@ -508,8 +516,6 @@ namespace Goblin {
         for (size_t i = 0; i < photonChaches.size(); ++i) {
             photonChaches[i].resize(filmRect.pixelNum());
         }
-
-        size_t hashSize = filmRect.pixelNum();
         uint64_t emittedPhotons = 0;
         int iterationCount = mSamplePerPixel;
         for (int i = 0; i < iterationCount; ++i) {
@@ -638,6 +644,10 @@ namespace Goblin {
         int threadNum = params.getInt("thread_num",
             boost::thread::hardware_concurrency());
         int maxPathLength = params.getInt("max_path_length", 5);
-        return new SPPM(samplePerPixel, threadNum, maxPathLength);
+        float initialRadius = params.getFloat("initial_radius",
+            PixelData::sInvalidRadius);
+        cout << "initial radius " << initialRadius << endl;
+        return new SPPM(samplePerPixel, threadNum, maxPathLength,
+            initialRadius);
     }
 }
