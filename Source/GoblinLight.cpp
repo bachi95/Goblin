@@ -654,7 +654,12 @@ namespace Goblin {
         const SceneCache& sceneCache) const {
         Color intensity = params.getColor("intensity");
         Vector3 position = params.getVector3("position");
-        Vector3 direction= params.getVector3("direction");
+        Vector3 direction;
+        if (params.hasVector3("target")) {
+            direction = normalize(params.getVector3("target") - position);
+        } else {
+            direction= params.getVector3("direction");
+        }
         float cosThetaMax = cos(radians(params.getFloat("theta_max")));
         float cosFalloffStart = cos(radians(params.getFloat("falloff_start")));
         return new SpotLight(intensity, position, direction, 

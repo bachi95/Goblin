@@ -225,7 +225,7 @@ namespace Goblin {
 
     void SpatialHashGrids::rebuild(vector<PixelData>& pixelData) {
         for (size_t i = 0; i < mGrids.size(); ++i) {
-            mGrids[i].clear();
+            mGrids[i].swap(vector<PixelData*>());
         }
         BBox gridsBBox;
         float maxRadius = PixelData::sInvalidRadius;
@@ -646,7 +646,6 @@ namespace Goblin {
         int maxPathLength = params.getInt("max_path_length", 5);
         float initialRadius = params.getFloat("initial_radius",
             PixelData::sInvalidRadius);
-        cout << "initial radius " << initialRadius << endl;
         return new SPPM(samplePerPixel, threadNum, maxPathLength,
             initialRadius);
     }

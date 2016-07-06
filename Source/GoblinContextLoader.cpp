@@ -17,6 +17,8 @@
 
 
 namespace Goblin {
+    static const size_t sDelimiterWidth = 75;
+
     static Vector2 parseVector2(const PropertyTree& pt, const char* key,
         const Vector2& fallback = Vector2::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
@@ -59,7 +61,6 @@ namespace Goblin {
 
     static void parseParamSet(const PropertyTree& pt, ParamSet* params) {
         const PtreeList& nodes = pt.getChildren(); 
-        cout << "---------------------------------" << endl;
         for(PtreeList::const_iterator it = nodes.begin(); 
             it != nodes.end(); it++) {
             std::string type(it->first);
@@ -103,7 +104,6 @@ namespace Goblin {
                 }
             }
         }
-        cout << "---------------------------------" << endl;
     }
 
     ContextLoader::ContextLoader():
@@ -218,27 +218,32 @@ namespace Goblin {
 
     Filter* ContextLoader::parseFilter(const PropertyTree& pt) {
         cout << "filter" << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         PropertyTree filterPt;
         pt.getChild("filter", &filterPt);
         ParamSet filterParams;
         parseParamSet(filterPt, &filterParams);
         string type = filterParams.getString("type");
+        cout << string(sDelimiterWidth, '-') << endl;
         return mFilterFactory->create(type, filterParams);
     }
 
     Film* ContextLoader::parseFilm(const PropertyTree& pt, Filter* filter) {
         cout << "film" << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         PropertyTree filmPt;
         pt.getChild("film", &filmPt);
         ParamSet filmParams;
         parseParamSet(filmPt, &filmParams);
         string type = filmParams.getString("type");
+        cout << string(sDelimiterWidth, '-') << endl;
         return mFilmFactory->create(type, filmParams, filter);
     }
 
     CameraPtr ContextLoader::parseCamera(const PropertyTree& pt, Film* film,
         SceneCache* sceneCache) {
         cout << "camera" << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         PropertyTree cameraPt;
         pt.getChild("camera", &cameraPt);
         ParamSet cameraParams;
@@ -272,6 +277,7 @@ namespace Goblin {
                 cameraParams, *sceneCache));
             sceneCache->addInstance(instance);
         }
+        cout << string(sDelimiterWidth, '-') << endl;
         return CameraPtr(mCameraFactory->create(type, cameraParams, film));
     }
 
@@ -279,10 +285,12 @@ namespace Goblin {
         int* samplePerPixel) {
         PropertyTree settingPt;
         pt.getChild("render_setting", &settingPt);
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet setting;
         parseParamSet(settingPt, &setting);
         *samplePerPixel = setting.getInt("sample_per_pixel");
         string method = setting.getString("render_method", "path_tracing");
+        cout << string(sDelimiterWidth, '-') << endl;
         return RendererPtr(mRendererFactory->create(method, setting));
     }
 
@@ -291,17 +299,20 @@ namespace Goblin {
             return NULL;
         }
         cout << "volume" << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         PropertyTree volumePt;
         pt.getChild("volume", &volumePt);
         ParamSet volumeParams;
         parseParamSet(volumePt, &volumeParams);
         string type = volumeParams.getString("type");
+        cout << string(sDelimiterWidth, '-') << endl;
         return mVolumeFactory->create(type, volumeParams);
     }
 
     void ContextLoader::parseGeometry(const PropertyTree& pt, 
         SceneCache* sceneCache) {
         cout << "geometry" <<endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet geometryParams;
         parseParamSet(pt, &geometryParams);
         string type = geometryParams.getString("type");
@@ -314,14 +325,15 @@ namespace Goblin {
         BBox bbox = geometry->getObjectBound();
         cout << "BBox min: " << bbox.pMin << endl;
         cout << "BBox max: " << bbox.pMax << endl;
-        cout << "BBox center: " << 0.5f * (bbox.pMin + bbox.pMax) << endl;
-
+        cout << "BBox center: " << bbox.center() << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         sceneCache->addGeometry(name, geometry);
     }
 
     void ContextLoader::parseTexture(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "texture" <<endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet textureParams;
         parseParamSet(pt, &textureParams);
         string textureFormat = textureParams.getString("format", "color");
@@ -339,11 +351,13 @@ namespace Goblin {
             cerr << "unrecognize texture format" <<
                 textureFormat << endl;
         }
+        cout << string(sDelimiterWidth, '-') << endl;
     }
 
     void ContextLoader::parseMaterial(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "material" <<endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet materialParams;
         parseParamSet(pt, &materialParams);
         string type = materialParams.getString("type");
@@ -351,11 +365,13 @@ namespace Goblin {
         MaterialPtr material(mMaterialFactory->create(type, materialParams,
             *sceneCache));
         sceneCache->addMaterial(name, material);
+        cout << string(sDelimiterWidth, '-') << endl;
     }
 
     void ContextLoader::parsePrimitive(const PropertyTree& pt,
         SceneCache* sceneCache) {
         cout << "primitive" <<endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet primitiveParams;
         parseParamSet(pt, &primitiveParams);
         string type = primitiveParams.getString("type");
@@ -363,15 +379,20 @@ namespace Goblin {
         const Primitive* primitive = mPrimitiveFactory->create(type, 
             primitiveParams, *sceneCache);
         sceneCache->addPrimitive(name, primitive);
-
+        BBox bbox = primitive->getAABB();
+        cout << "BBox min: " << bbox.pMin << endl;
+        cout << "BBox max: " << bbox.pMax << endl;
+        cout << "BBox center: " << bbox.center() << endl;
         if(type == "instance") {
             sceneCache->addInstance(primitive);
         }
+        cout << string(sDelimiterWidth, '-') << endl;
     }
 
     void ContextLoader::parseLight(const PropertyTree& pt, SceneCache* sceneCache,
         int samplePerPixel) {
         cout << "light" << endl;
+        cout << string(sDelimiterWidth, '-') << endl;
         ParamSet lightParams;
         parseParamSet(pt, &lightParams);
         lightParams.setInt("sample_per_pixel", samplePerPixel);
@@ -405,6 +426,7 @@ namespace Goblin {
                 lightParams, *sceneCache));
             sceneCache->addInstance(instance);
         }
+        cout << string(sDelimiterWidth, '-') << endl;
     }
 
     RenderContext* ContextLoader::load(const string& filename) {
