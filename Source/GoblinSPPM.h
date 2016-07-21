@@ -77,9 +77,9 @@ namespace Goblin {
 
     private:
         int mMaxPathLength;
-        float mInitialRadius;
         vector<PixelData> mPixelData;
         SpatialHashGrids* mHashGrids;
+        float mInitialRadius;
     };
 
     class SPPMCreator : public

@@ -225,7 +225,7 @@ namespace Goblin {
 
     void SpatialHashGrids::rebuild(vector<PixelData>& pixelData) {
         for (size_t i = 0; i < mGrids.size(); ++i) {
-            mGrids[i].swap(vector<PixelData*>());
+            vector<PixelData*>().swap(mGrids[i]);
         }
         BBox gridsBBox;
         float maxRadius = PixelData::sInvalidRadius;

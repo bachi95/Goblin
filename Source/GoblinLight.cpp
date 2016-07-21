@@ -348,6 +348,14 @@ namespace Goblin {
         const Transform& toWorld, uint32_t samplesNum): mLe(Le), 
         mSamplesNum(samplesNum) {
         mToWorld = toWorld;
+        // only uniform scaling support right now
+        const Vector3& scale = mToWorld.getScale();
+        if (!isEqual(scale.x, scale.y) ||
+            !isEqual(scale.y, scale.z) ||
+            !isEqual(scale.z, scale.x)) {
+            cerr << "Area light only support uniform scaling. "
+                "Non uniform scaling result to undefined behavior. " <<endl;
+        }
         mGeometrySet = new GeometrySet(geometry);
     }
 
@@ -391,7 +399,9 @@ namespace Goblin {
         float* pdfArea) const {
         Vector3 worldScale = mToWorld.getScale();
         float worldArea = mGeometrySet->area() *
-            sqrt(worldScale.squaredLength() / 3.0f);
+           (worldScale.x * worldScale.y +
+            worldScale.y * worldScale.z +
+            worldScale.z * worldScale.x) / 3.0f;
         *pdfArea = 1.0f / worldArea;
         Vector3 nLocal;
         Vector3 pLocal = mGeometrySet->sample(ls, &nLocal);
@@ -416,8 +426,9 @@ namespace Goblin {
     float AreaLight::pdfPosition(const ScenePtr& scene,
         const Vector3& p) const {
         Vector3 worldScale = mToWorld.getScale();
+        // based on the assumption that we are using uniform scaling
         float worldArea = mGeometrySet->area() *
-            sqrt(worldScale.squaredLength() / 3.0f);
+           (worldScale.x * worldScale.y);
         return 1.0f / worldArea;
     }
 
@@ -434,12 +445,13 @@ namespace Goblin {
     }
 
     Color AreaLight::power(const ScenePtr& scene) const {
+        Vector3 worldScale = mToWorld.getScale();
+        // based on the assumption that we are using uniform scaling
+        float worldArea = mGeometrySet->area() *
+           (worldScale.x * worldScale.y);
         // if any random angle output mLe on the area light surface,
         // we can think of the input radience with perpendular angle
         // per unit area mLe * PI (similar to how we get lambert bsdf)
-        Vector3 worldScale = mToWorld.getScale();
-        float worldArea = mGeometrySet->area() *
-            worldScale.x * worldScale.y * worldScale.z;
         return mLe * PI * worldArea;
     }
 
