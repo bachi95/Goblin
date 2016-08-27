@@ -128,7 +128,7 @@ namespace Goblin {
         return mIntensity;
     }
 
-    Color PointLight::power(const ScenePtr& scene) const {
+    Color PointLight::power(const Scene& scene) const {
         return 4.0f * PI * mIntensity;
     }
 
@@ -200,10 +200,10 @@ namespace Goblin {
         return isParallel ? mRadiance : Color::Black;
     }
 
-    Color DirectionalLight::power(const ScenePtr& scene) const {
+    Color DirectionalLight::power(const Scene& scene) const {
         Vector3 center;
         float radius;
-        scene->getBoundingSphere(&center, &radius);
+        scene.getBoundingSphere(&center, &radius);
         // well...... we can't make it infinitely big, so use bounding
         // sphere for a rough approximation 
         return radius * radius * PI * mRadiance;
@@ -265,7 +265,7 @@ namespace Goblin {
         return falloff(wo) * mIntensity;
     }
 
-    Color SpotLight::power(const ScenePtr& scene) const {
+    Color SpotLight::power(const Scene& scene) const {
         /* 
          * integrate the solid angle =
          * integrate sinTheta over 0->thetaMax over 0->2PI =
@@ -444,7 +444,7 @@ namespace Goblin {
         return dot(n, wo) > 0.0f ? mLe : Color::Black;
     }
 
-    Color AreaLight::power(const ScenePtr& scene) const {
+    Color AreaLight::power(const Scene& scene) const {
         Vector3 worldScale = mToWorld.getScale();
         // based on the assumption that we are using uniform scaling
         float worldArea = mGeometrySet->area() *
@@ -623,10 +623,10 @@ namespace Goblin {
         return mRadiance->lookup(level, s, t);
     }
 
-    Color ImageBasedLight::power(const ScenePtr& scene) const {
+    Color ImageBasedLight::power(const Scene& scene) const {
         Vector3 center;
         float radius;
-        scene->getBoundingSphere(&center, &radius);
+        scene.getBoundingSphere(&center, &radius);
         // raough power estimation, assume radiance in world sphere
         // diffuse distribution
         return mAverageRadiance * PI * (4.0f * PI * radius * radius);

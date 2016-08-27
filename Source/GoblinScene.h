@@ -12,6 +12,7 @@
 #include <vector>
 
 namespace Goblin {
+    class CDF1D;
     class Ray;
     class VolumeRegion;
 
@@ -19,22 +20,34 @@ namespace Goblin {
     public:
         Scene(const PrimitivePtr& root, const CameraPtr& camera,
             const vector<Light*>& lights, VolumeRegion* volumeRegion);
+
         ~Scene();
-        const CameraPtr getCamera() const; 
+
+        const CameraPtr getCamera() const;
+
         const vector<Light*>& getLights() const;
+
         const VolumeRegion* getVolumeRegion() const;
+
         void collectRenderList(RenderList& rList);
+
         bool intersect(const Ray& ray, IntersectFilter f = NULL) const;
+
         bool intersect(const Ray& ray, float* epsilon, 
             Intersection* intersection, IntersectFilter f = NULL) const;
 
         Color evalEnvironmentLight(const Ray& ray) const;
+
         void getBoundingSphere(Vector3* center, float* radius) const;
+
+        const Light* sampleLight(float u, float* pdf) const;
+
     private:
         PrimitivePtr mAggregate;
         CameraPtr mCamera;
         vector<Light*> mLights;
         VolumeRegion* mVolumeRegion;
+        CDF1D* mPowerDistribution;
     };
 
     using boost::filesystem::path;

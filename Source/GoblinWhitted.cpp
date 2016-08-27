@@ -58,10 +58,6 @@ namespace Goblin {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
-        if(mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
-        }
         const vector<Light*>& lights = scene->getLights();
         mLightSampleIndexes = new LightSampleIndex[lights.size()];
         mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
@@ -73,11 +69,6 @@ namespace Goblin {
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
         mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, mBssrdfSampleNum);
-        vector<float> lightPowers;
-        for(size_t i = 0; i < lights.size(); ++i) {
-            lightPowers.push_back(lights[i]->power(scene).luminance());
-        }
-        mPowerDistribution = new CDF1D(lightPowers);
     }
 
     Renderer* WhittedRendererCreator::create(const ParamSet& params) const {

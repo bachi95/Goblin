@@ -79,12 +79,8 @@ namespace Goblin {
             BSDFSample bs(sample, mBSDFSampleIndexes[bounces], 0);
             float pickSample = 
                 sample.u1D[mPickLightSampleIndexes[bounces].offset][0];
-
             float pickLightPdf;
-            int lightIndex = mPowerDistribution->sampleDiscrete(pickSample, 
-                &pickLightPdf);
-            const Light* light = lights[lightIndex];
-
+            const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
             // direct lighting
             Color Ld(0.0f);
             const MaterialPtr& material = 
@@ -193,10 +189,6 @@ namespace Goblin {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
-        }
         if(mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
@@ -214,12 +206,6 @@ namespace Goblin {
 
         mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, 
             mBssrdfSampleNum);
-        const vector<Light*>& lights = scene->getLights();
-        vector<float> lightPowers;
-        for(size_t i = 0; i < lights.size(); ++i) {
-            lightPowers.push_back(lights[i]->power(scene).luminance());
-        }
-        mPowerDistribution = new CDF1D(lightPowers);
     }
 
     Renderer* PathTracerCreator::create(const ParamSet& params) const {

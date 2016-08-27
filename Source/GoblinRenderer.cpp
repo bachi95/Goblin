@@ -78,7 +78,6 @@ namespace Goblin {
     Renderer::Renderer(int samplePerPixel, int threadNum):
         mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
         mPickLightSampleIndexes(NULL),
-        mPowerDistribution(NULL), 
         mSamplePerPixel(samplePerPixel),
         mThreadNum(threadNum) {}
 
@@ -94,10 +93,6 @@ namespace Goblin {
         if(mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
-        }
-        if(mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
         }
     }
 
@@ -135,6 +130,9 @@ namespace Goblin {
         const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
         RenderingTLS* tls) const {
+        if (scene->getLights().size() == 0) {
+            return Color::Black;
+        }
         const Vector3& pwo = fragment.getPosition();
         const Vector3& no = fragment.getNormal();
         float coso = absdot(wo, fragment.getNormal());
@@ -144,7 +142,6 @@ namespace Goblin {
         Color sigmaT = bssrdf->getAttenuation(fragment);
         float falloff = sigmaT.luminance();
         Vector3 woRefract = Goblin::specularRefract(wo, no, 1.0f, eta);
-        const vector<Light*>& lights = scene->getLights();
         Color Lsinglescatter(0.0f);
         // single scattering part
         for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
@@ -155,9 +152,8 @@ namespace Goblin {
             float samplePdf = exponentialPdf(d, falloff);
             // sample a light from pSample
             float pickLightPdf;
-            int lightIndex = mPowerDistribution->sampleDiscrete(
-                bssrdfSample.uPickLight, &pickLightPdf);
-            const Light* light = lights[lightIndex];
+            const Light* light = scene->sampleLight(bssrdfSample.uPickLight,
+                &pickLightPdf);
             Vector3 wi;
             float epsilon, lightPdf;
             Ray shadowRay;
@@ -212,12 +208,14 @@ namespace Goblin {
         const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
         RenderingTLS* tls) const {
+        if (scene->getLights().size() == 0) {
+            return Color::Black;
+        }
         const Vector3& pwo = fragment.getPosition();
         float coso = absdot(wo, fragment.getNormal());
         float eta = bssrdf->getEta();
         float Ft = 1.0f - Material::fresnelDieletric(coso, 1.0f, eta);
         float sigmaTr = bssrdf->getSigmaTr(fragment).luminance();
-        const vector<Light*>& lights = scene->getLights();
         // figure out the sample probe radius, we ignore the integration
         // of area with pdf too small compare to center, yes...this introduces
         // bias...but can limit the probe ray as short as possible
@@ -245,9 +243,8 @@ namespace Goblin {
                         squaredLength(pProbe - pwo));
                     // calculate the irradiance on the sample point
                     float pickLightPdf;
-                    int lightIndex = mPowerDistribution->sampleDiscrete(
+                    const Light* light = scene->sampleLight(
                         bssrdfSample.uPickLight, &pickLightPdf);
-                    const Light* light = lights[lightIndex];
                     Vector3 wi;
                     float lightPdf;
                     Ray shadowRay;
@@ -320,11 +317,9 @@ namespace Goblin {
             Color scatter = volume->getScatter(pCurrent);
             float pickLightSample = rng.randomFloat();
             float pickLightPdf;
-            int lightIndex = mPowerDistribution->sampleDiscrete(
-                pickLightSample, &pickLightPdf);
-            const vector<Light*>& lights = scene->getLights();
-            if(lights.size() > 0) {
-                const Light* light = lights[lightIndex];
+            const Light* light = scene->sampleLight(pickLightSample,
+                &pickLightPdf);
+            if(light != NULL && pickLightPdf != 0.0f) {
                 Ray shadowRay;
                 Vector3 wi;
                 float lightPdf;
@@ -371,15 +366,11 @@ namespace Goblin {
         const BSDFSample& bsdfSample,
         float pickLightSample,
         BSDFType type) const {
-
-        const vector<Light*>& lights = scene->getLights();
-        if(lights.size() == 0) {
+        float pdf;
+        const Light* light = scene->sampleLight(pickLightSample, &pdf);
+        if (light == NULL || pdf == 0.0f) {
             return Color::Black;
         }
-        float pdf;
-        int lightIndex = 
-            mPowerDistribution->sampleDiscrete(pickLightSample, &pdf);
-        const Light* light = lights[lightIndex];
         Color Ld = estimateLd(scene, -ray.d, epsilon, intersection,
             light, lightSample, bsdfSample, type) / pdf;
         return Ld;
@@ -481,14 +472,11 @@ namespace Goblin {
     Color Renderer::singleSampleIrradiance(const ScenePtr& scene,
         float epsilon, const Intersection& intersection,
         const LightSample& lightSample, float pickLightSample) const {
-        const vector<Light*>& lights = scene->getLights();
-        if(lights.size() == 0) {
+        float pdf;
+        const Light* light = scene->sampleLight(pickLightSample, &pdf);
+        if (light == NULL || pdf == 0.0f) {
             return Color::Black;
         }
-        float pdf;
-        int lightIndex = 
-            mPowerDistribution->sampleDiscrete(pickLightSample, &pdf);
-        const Light* light = lights[lightIndex];
         Color irradiance = estimateIrradiance(scene, epsilon, intersection,
             light, lightSample) / pdf;
         return irradiance;

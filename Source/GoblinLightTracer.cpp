@@ -73,8 +73,7 @@ namespace Goblin {
     void LightTracer::splatFilmT1(const ScenePtr& scene, const Sample& sample,
         const RNG& rng, std::vector<PathVertex>& pathVertices,
         ImageTile* tile) const {
-        const vector<Light*>& lights = scene->getLights();
-        if (lights.size() == 0) {
+        if (scene->getLights().size() == 0) {
             return;
         }
         // get the camera point
@@ -87,9 +86,7 @@ namespace Goblin {
         // get the light point
         float pickLightPdf;
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
-        int lightIndex = mPowerDistribution->sampleDiscrete(
-            pickSample, &pickLightPdf);
-        const Light* light = lights[lightIndex];
+        const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
         LightSample ls(sample, mLightSampleIndexes[0], 0);
         Vector3 nLight;
         float pdfLightArea;
@@ -177,17 +174,14 @@ namespace Goblin {
     void LightTracer::splatFilmT0(const ScenePtr& scene, const Sample& sample,
         const RNG& rng, std::vector<PathVertex>& pathVertices,
         ImageTile* tile) const {
-        const vector<Light*>& lights = scene->getLights();
-        if (lights.size() == 0) {
+        if (scene->getLights().size() == 0) {
             return;
         }
         const CameraPtr camera = scene->getCamera();
         // get the light point
         float pickLightPdf;
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
-        int lightIndex = mPowerDistribution->sampleDiscrete(
-            pickSample, &pickLightPdf);
-        const Light* light = lights[lightIndex];
+        const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
         LightSample ls(sample, mLightSampleIndexes[0], 0);
         Vector3 nLight;
         float pdfLightArea;
@@ -246,16 +240,13 @@ namespace Goblin {
     void LightTracer::splatFilmS1(const ScenePtr& scene, const Sample& sample,
         const RNG& rng, std::vector<PathVertex>& pathVertices,
         ImageTile* tile) const {
-        const vector<Light*>& lights = scene->getLights();
-        if (lights.size() == 0) {
+        if (scene->getLights().size() == 0) {
             return;
         }
          // get the light point
         float pickLightPdf;
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
-        int lightIndex = mPowerDistribution->sampleDiscrete(
-            pickSample, &pickLightPdf);
-        const Light* light = lights[lightIndex];
+        const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
         LightSample ls(sample, mLightSampleIndexes[0], 0);
         Vector3 nLight;
         float pdfLightArea;
@@ -386,10 +377,6 @@ namespace Goblin {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
-        }
         if(mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
@@ -403,13 +390,6 @@ namespace Goblin {
         for(int i = 0; i < mMaxPathLength + 1; ++i) {
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
         }
-
-        const vector<Light*>& lights = scene->getLights();
-        vector<float> lightPowers;
-        for(size_t i = 0; i < lights.size(); ++i) {
-            lightPowers.push_back(lights[i]->power(scene).luminance());
-        }
-        mPowerDistribution = new CDF1D(lightPowers);
     }
 
     Renderer* LightTracerCreator::create(const ParamSet& params) const {

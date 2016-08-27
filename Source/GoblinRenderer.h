@@ -128,7 +128,6 @@ namespace Goblin {
         BSDFSampleIndex* mBSDFSampleIndexes;
         SampleIndex* mPickLightSampleIndexes;
         BSSRDFSampleIndex mBSSRDFSampleIndex;
-        CDF1D* mPowerDistribution;
         int mSamplePerPixel;
         int mThreadNum;
     };

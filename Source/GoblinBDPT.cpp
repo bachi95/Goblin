@@ -164,9 +164,7 @@ namespace Goblin {
         // get the light point
         float pickLightPdf;
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
-        int lightIndex = mPowerDistribution->sampleDiscrete(
-            pickSample, &pickLightPdf);
-        const Light* light = lights[lightIndex];
+        const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
         LightSample ls(sample, mLightSampleIndexes[0], 0);
         Vector3 nLight;
         float pdfLightArea;
@@ -577,10 +575,6 @@ namespace Goblin {
             delete [] mEyePathSampleIndexes;
             mEyePathSampleIndexes = NULL;
         }
-        if (mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
-        }
         if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
@@ -606,14 +600,13 @@ namespace Goblin {
         size_t maxLightId = 0;
         float totalPower = 0.0f;
         for (size_t i = 0; i < lights.size(); ++i) {
-            float power = lights[i]->power(scene).luminance();
+            float power = lights[i]->power(*scene).luminance();
             lightPowers.push_back(power);
             totalPower += power;
             if (lights[i]->getId() > maxLightId) {
                 maxLightId = lights[i]->getId();
             }
         }
-        mPowerDistribution = new CDF1D(lightPowers);
         // build a id -> pick light pdf table since we need to evaluate
         // the pdf to pick a specified light when we are doing the MIS
         // evaluation

@@ -390,13 +390,13 @@ namespace Goblin {
 
     void SPPM::photonTracePass(const ScenePtr& scene, const Sample&sample,
         vector<PhotonCache>& photonCache) {
-        const vector<Light*>& lights = scene->getLights();
         // pick up a light
         float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
         float pickLightPdf;
-        int lightIndex = mPowerDistribution->sampleDiscrete(pickSample,
-            &pickLightPdf);
-        const Light* light = lights[lightIndex];
+        const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
+        if (light == NULL ||pickLightPdf == 0.0f) {
+            return;
+        }
         // sample a photon from light (position, direction)
         // TODO cosolidate samplePosition/sampleDirection/eval into one
         // samplePhoton (something like that...) utility function
@@ -611,10 +611,6 @@ namespace Goblin {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPowerDistribution) {
-            delete mPowerDistribution;
-            mPowerDistribution = NULL;
-        }
         if(mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
@@ -630,13 +626,6 @@ namespace Goblin {
         for(int i = 0; i < mMaxPathLength + 1; ++i) {
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
         }
-
-        const vector<Light*>& lights = scene->getLights();
-        vector<float> lightPowers;
-        for(size_t i = 0; i < lights.size(); ++i) {
-            lightPowers.push_back(lights[i]->power(scene).luminance());
-        }
-        mPowerDistribution = new CDF1D(lightPowers);
     }
 
     Renderer* SPPMCreator::create(const ParamSet& params) const {

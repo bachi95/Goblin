@@ -113,7 +113,7 @@ namespace Goblin {
 
         virtual bool isDelta() const;
 
-        virtual Color power(const ScenePtr& scene) const = 0;
+        virtual Color power(const Scene& scene) const = 0;
 
         virtual uint32_t getSamplesNum() const;
 
@@ -175,7 +175,7 @@ namespace Goblin {
         Color eval(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color power(const ScenePtr& scene) const;
+        Color power(const Scene& scene) const;
     private:
         Color mIntensity;
     };
@@ -205,7 +205,7 @@ namespace Goblin {
         Color eval(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color power(const ScenePtr& scene) const;
+        Color power(const Scene& scene) const;
 
         Vector3 getDirection() const;
 
@@ -249,7 +249,7 @@ namespace Goblin {
         Color eval(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
-        Color power(const ScenePtr& scene) const;
+        Color power(const Scene& scene) const;
     private:
         float falloff(const Vector3& w) const;
     private:
@@ -324,7 +324,7 @@ namespace Goblin {
          */
         Color L(const Vector3& ps, const Vector3& ns, const Vector3& w) const;
 
-        Color power(const ScenePtr& scene) const;
+        Color power(const Scene& scene) const;
 
         uint32_t getSamplesNum() const;
     private:
@@ -377,7 +377,7 @@ namespace Goblin {
 
         bool isDelta() const;
 
-        Color power(const ScenePtr& scene) const;
+        Color power(const Scene& scene) const;
 
         uint32_t getSamplesNum() const;
     private:

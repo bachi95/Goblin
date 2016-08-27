@@ -1,8 +1,9 @@
 #include "GoblinColor.h"
 #include "GoblinModel.h"
+#include "GoblinParamSet.h"
+#include "GoblinSampler.h"
 #include "GoblinScene.h"
 #include "GoblinSphere.h"
-#include "GoblinParamSet.h"
 #include "GoblinVolume.h"
 
 namespace Goblin {
@@ -10,16 +11,27 @@ namespace Goblin {
     Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
         const vector<Light*>& lights, VolumeRegion* volumeRegion):
         mAggregate(root), mCamera(camera), mLights(lights), 
-        mVolumeRegion(volumeRegion) {}
+        mVolumeRegion(volumeRegion), mPowerDistribution(NULL) {
+        vector<float> lightPowers;
+        for(size_t i = 0; i < lights.size(); ++i) {
+            lightPowers.push_back(
+                lights[i]->power(*this).luminance());
+        }
+        mPowerDistribution = new CDF1D(lightPowers);
+    }
 
     Scene::~Scene() {        
-        for(size_t i = 0; i < mLights.size(); ++i) {
+        for (size_t i = 0; i < mLights.size(); ++i) {
             delete mLights[i];
             mLights[i] = NULL;
         }
-        if(mVolumeRegion) {
+        if (mVolumeRegion) {
             delete mVolumeRegion;
             mVolumeRegion = NULL;
+        }
+        if (mPowerDistribution) {
+            delete mPowerDistribution;
+            mPowerDistribution = NULL;
         }
         Geometry::clearGeometryCache();
         Primitive::clearAllocatedPrimitives();
@@ -68,6 +80,15 @@ namespace Goblin {
 
     void Scene::collectRenderList(RenderList& rList) {
         mAggregate->collectRenderList(rList);
+    }
+
+    const Light* Scene::sampleLight(float u, float* pdf) const {
+        if (mLights.size() == 0) {
+            *pdf = 0.0f;
+            return NULL;
+        }
+        int lightIndex = mPowerDistribution->sampleDiscrete(u, pdf);
+        return mLights[lightIndex];
     }
 
     SceneCache::SceneCache(const path& sceneRoot): 
