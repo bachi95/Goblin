@@ -78,6 +78,19 @@ namespace Goblin {
 	    return f != f;
     }
 
+    inline bool isInfinite(const Vector2& v) {
+        return v.x >= INFINITY || v.y >= INFINITY;
+    }
+
+    inline bool isInfinite(const Vector3& v) {
+        return v.x >= INFINITY || v.y >= INFINITY || v.z >= INFINITY;
+    }
+
+    inline bool isInfinite(const Vector4& v) {
+        return v.x >= INFINITY || v.y >= INFINITY || v.z >= INFINITY ||
+            v.w >= INFINITY;
+    }
+
     inline bool isPowerOf2(uint32_t n) {
         return (n & (n - 1)) == 0;
     }

@@ -464,9 +464,9 @@ namespace Goblin {
 
     ImageBasedLight::ImageBasedLight(const string& radianceMap, 
         const Color& filter, const Quaternion& orientation,
-        uint32_t samplesNum, int samplePerPixel): 
+        uint32_t samplesNum): 
         mRadiance(NULL), mDistribution(NULL),
-        mSamplesNum(samplesNum), mSamplePerPixel(samplePerPixel) {
+        mSamplesNum(samplesNum), mSampleMIPLevel(0) {
         // Make default orientation facing the center of
         // environment map since spherical coordinate is z-up
         mToWorld.rotateX(-0.5f * PI);
@@ -518,23 +518,13 @@ namespace Goblin {
         }
     }
 
-    Color ImageBasedLight::Le(const Ray& ray, float pdf, BSDFType type) const {
+    Color ImageBasedLight::Le(const Ray& ray) const {
         const Vector3& w = mToWorld.invertVector(ray.d);
         float theta = sphericalTheta(w);
         float phi = sphericalPhi(w);
         float s = phi * INV_TWOPI;
         float t = theta * INV_PI;
-
-        int level = 0;
-        if(!(type & BSDFSpecular)) {
-            int w = mRadiance->getWidth();
-            int h = mRadiance->getHeight();
-            float invWp = w * h / (TWO_PI * PI * sin(theta));
-            level = clamp(
-                floorInt(0.5f * log2(invWp / (pdf * mSamplePerPixel))), 
-                0, mRadiance->getLevelsNum() - 1);
-        }
-        return mRadiance->lookup(level, s, t);
+        return mRadiance->lookup(mSampleMIPLevel, s, t);
     }
 
     Color ImageBasedLight::sampleL(const Vector3& p, float epsilon,
@@ -561,13 +551,7 @@ namespace Goblin {
         shadowRay->d = *wi;
         shadowRay->mint = epsilon;
 
-        int level = 0;
-        int w = mRadiance->getWidth();
-        int h = mRadiance->getHeight();
-        level = clamp(
-            floorInt(0.5f * log2(w * h / (pdfST * mSamplePerPixel))), 
-            0, mRadiance->getLevelsNum() - 1);
-        return mRadiance->lookup(level, st[0], st[1]);
+        return mRadiance->lookup(mSampleMIPLevel, st[0], st[1]);
     }
 
     Vector3 ImageBasedLight::samplePosition(const ScenePtr& scene,
@@ -577,8 +561,10 @@ namespace Goblin {
         scene->getBoundingSphere(&worldCenter, &worldRadius);
         Vector3 sphereSample =
             uniformSampleSphere(ls.uGeometry[0], ls.uGeometry[1]);
-        *surfaceNormal = Vector3::Zero;
-        *pdfArea = 1.0f / (4.0f * PI * worldRadius *worldRadius);
+        *surfaceNormal = -sphereSample;
+        // intend to omit radius factor from pdfAdrea since the distance is
+        // supposed to be inifinite far away
+        *pdfArea = 1.0f / (4.0f * PI);
         return worldCenter + worldRadius * sphereSample;
     }
 
@@ -599,10 +585,9 @@ namespace Goblin {
 
     float ImageBasedLight::pdfPosition(const ScenePtr& scene,
         const Vector3& p) const {
-        Vector3 worldCenter;
-        float worldRadius;
-        scene->getBoundingSphere(&worldCenter, &worldRadius);
-        return 1.0f / (4.0f * PI * worldRadius *worldRadius);
+        // intend to omit radius factor from pdfAdrea since the distance is
+        // supposed to be inifinite far away
+        return 1.0f / (4.0f * PI);
     }
 
     float ImageBasedLight::pdfDirection(const Vector3& p, const Vector3&n,
@@ -619,8 +604,7 @@ namespace Goblin {
         float phi = sphericalPhi(w);
         float s = phi * INV_TWOPI;
         float t = theta * INV_PI;
-        int level = 0;
-        return mRadiance->lookup(level, s, t);
+        return mRadiance->lookup(mSampleMIPLevel, s, t);
     }
 
     Color ImageBasedLight::power(const Scene& scene) const {
@@ -700,9 +684,8 @@ namespace Goblin {
         string filePath = sceneCache.resolvePath(filename);
         Color filter = params.getColor("filter");
         Quaternion orientation = getQuaternion(params);
-        int samplePerPixel = params.getInt("sample_per_pixel");
         int sampleNum = params.getInt("sample_num", 1);
         return new ImageBasedLight(filePath, filter, orientation, 
-            sampleNum, samplePerPixel);
+            sampleNum);
     }
 }

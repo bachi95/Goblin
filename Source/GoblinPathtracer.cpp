@@ -157,8 +157,7 @@ namespace Goblin {
                 } else {
                     // the radiance contribution from IBL
                     Color tr = evalAttenuation(scene, r, BSDFSample(rng));
-                    Ld += f * tr * light->Le(r, bsdfPdf, sampledType) * 
-                        fWeight / bsdfPdf;
+                    Ld += f * tr * light->Le(r) * fWeight / bsdfPdf;
                 }
             }
             Li += throughput * Ld / pickLightPdf;

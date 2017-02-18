@@ -74,8 +74,7 @@ namespace Goblin {
 
         // this one is only usable for IBL for now...
         // when ray doesn't intersect scene
-        virtual Color Le(const Ray& ray, float pdf = INFINITY, 
-            BSDFType type = BSDFAll) const;
+        virtual Color Le(const Ray& ray) const { return Color::Black; }
 
         virtual Color sampleL(const Vector3& p, float epsilon, 
             const LightSample& lightSample, 
@@ -109,17 +108,25 @@ namespace Goblin {
 
         // get the pdf (measured in solid angle) this light get sampled
         // from point p with direction wi
-        virtual float pdf(const Vector3& p, const Vector3& wi) const;
+        virtual float pdf(const Vector3& p, const Vector3& wi) const {
+            return 0.0f;
+        }
 
-        virtual bool isDelta() const;
+        // whether the light source is in delta distribution
+        // (For example, traditional cg light like point/directional/spot)
+        virtual bool isDelta() const { return true; }
+
+        // whether the light source is in infinite distance
+        // (For example, IBL and directional light)
+        virtual bool isInfinite() const { return false; }
 
         virtual Color power(const Scene& scene) const = 0;
 
-        virtual uint32_t getSamplesNum() const;
+        virtual uint32_t getSamplesNum() const { return 1; }
 
         size_t getId() const { return mLightId; }
 
-        const ParamSet& getParams() const;
+        const ParamSet& getParams() const { return mParams; }
 
     protected:
         void setOrientation(const Vector3& dir);
@@ -131,25 +138,6 @@ namespace Goblin {
         Transform mToWorld;
     };
 
-    inline Color Light::Le(const Ray& ray, float pdf, BSDFType type) const {
-        return Color::Black;
-    }
-
-    inline bool Light::isDelta() const {
-        return true;
-    }
-
-    inline float Light::pdf(const Vector3& p, const Vector3& wi) const {
-        return 0.0f;
-    }
-
-    inline uint32_t Light::getSamplesNum() const {
-        return 1;
-    }
-
-    inline const ParamSet& Light::getParams() const {
-        return mParams;
-    }
 
     class PointLight : public Light {
     public:
@@ -205,23 +193,17 @@ namespace Goblin {
         Color eval(const Vector3& p, const Vector3& n,
             const Vector3& wo) const;
 
+        bool isInfinite() const { return true; }
+
         Color power(const Scene& scene) const;
 
-        Vector3 getDirection() const;
+        Vector3 getDirection() const { return mToWorld.onVector(Vector3::UnitZ); }
 
-        void setDirection(const Vector3& dir);
+        void setDirection(const Vector3& dir) { setOrientation(dir); }
 
     private:
         Color mRadiance;
     };
-
-    inline Vector3 DirectionalLight::getDirection() const {
-        return mToWorld.onVector(Vector3::UnitZ);
-    }
-
-    inline void DirectionalLight::setDirection(const Vector3& dir) {
-        setOrientation(dir);
-    }
 
 
     class SpotLight : public Light {
@@ -273,7 +255,7 @@ namespace Goblin {
 
         float pdf(const Vector3& p, const Vector3& wi) const;
 
-        float area() const;
+        float area() const { return mSumArea; }
 
     private:
         GeometryList mGeometries;
@@ -281,10 +263,6 @@ namespace Goblin {
         float mSumArea;
         CDF1D* mAreaDistribution;
     };
-
-    inline float GeometrySet::area() const {
-        return mSumArea;
-    }
 
 
     class AreaLight : public Light {
@@ -316,7 +294,7 @@ namespace Goblin {
 
         float pdf(const Vector3& p, const Vector3& wi) const;
 
-        bool isDelta() const;
+        bool isDelta() const { return false; }
         /*
          * ps: point on area light surface
          * ns: normal on area light surface
@@ -326,32 +304,23 @@ namespace Goblin {
 
         Color power(const Scene& scene) const;
 
-        uint32_t getSamplesNum() const;
+        uint32_t getSamplesNum() const { return mSamplesNum; }
     private:
         Color mLe;
         uint32_t mSamplesNum;
         GeometrySet* mGeometrySet;
     };
 
-    inline bool AreaLight::isDelta() const {
-        return false;
-    }
-
-    inline uint32_t AreaLight::getSamplesNum() const {
-        return mSamplesNum;
-    }
-
 
     class ImageBasedLight : public Light {
     public:
         ImageBasedLight(const string& radianceMap, const Color& filter,
             const Quaternion& orientation = Quaternion::Identity,
-            uint32_t samplesNum = 1, int samplePerPixel = 1);
+            uint32_t samplesNum = 1);
 
         ~ImageBasedLight();
 
-        Color Le(const Ray& ray, float pdf = INFINITY, 
-            BSDFType type = BSDFAll) const;
+        Color Le(const Ray& ray) const;
 
         Color sampleL(const Vector3& p, float epsilon,
             const LightSample& lightSample,
@@ -375,26 +344,20 @@ namespace Goblin {
 
         float pdf(const Vector3& p, const Vector3& wi) const;
 
-        bool isDelta() const;
+        bool isDelta() const { return false; }
+
+        bool isInfinite() const { return true; }
 
         Color power(const Scene& scene) const;
 
-        uint32_t getSamplesNum() const;
+        uint32_t getSamplesNum() const { return mSamplesNum; }
     private:
         MIPMap<Color>* mRadiance;
         CDF2D* mDistribution;
         Color mAverageRadiance;
         uint32_t mSamplesNum;
-        int mSamplePerPixel;
+        int mSampleMIPLevel;
     };
-
-    inline bool ImageBasedLight::isDelta() const {
-        return false;
-    }
-
-    inline uint32_t ImageBasedLight::getSamplesNum() const {
-        return mSamplesNum;
-    }
 
     class PointLightCreator : public 
         Creator<Light , const ParamSet&, const SceneCache&> {

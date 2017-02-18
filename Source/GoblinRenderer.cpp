@@ -462,8 +462,7 @@ namespace Goblin {
                 }
             } else {
                 // the radiance contribution from IBL
-                Ld += f * light->Le(r, bsdfPdf, sampledType) * 
-                    fWeight / bsdfPdf;
+                Ld += f * light->Le(r) * fWeight / bsdfPdf;
             }
         }
         return Ld;

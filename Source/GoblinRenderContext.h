@@ -16,6 +16,7 @@ namespace Goblin {
     };
 
     inline void RenderContext::render() {
+        mRenderer->preprocess(mScene);
         mRenderer->render(mScene);
     }
 }

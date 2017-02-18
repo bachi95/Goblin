@@ -281,14 +281,12 @@ namespace Goblin {
         return CameraPtr(mCameraFactory->create(type, cameraParams, film));
     }
 
-    RendererPtr ContextLoader::parseRenderer(const PropertyTree& pt, 
-        int* samplePerPixel) {
+    RendererPtr ContextLoader::parseRenderer(const PropertyTree& pt) {
         PropertyTree settingPt;
         pt.getChild("render_setting", &settingPt);
         cout << string(sDelimiterWidth, '-') << endl;
         ParamSet setting;
         parseParamSet(settingPt, &setting);
-        *samplePerPixel = setting.getInt("sample_per_pixel");
         string method = setting.getString("render_method", "path_tracing");
         cout << string(sDelimiterWidth, '-') << endl;
         return RendererPtr(mRendererFactory->create(method, setting));
@@ -389,13 +387,12 @@ namespace Goblin {
         cout << string(sDelimiterWidth, '-') << endl;
     }
 
-    void ContextLoader::parseLight(const PropertyTree& pt, SceneCache* sceneCache,
-        int samplePerPixel) {
+    void ContextLoader::parseLight(const PropertyTree& pt,
+        SceneCache* sceneCache) {
         cout << "light" << endl;
         cout << string(sDelimiterWidth, '-') << endl;
         ParamSet lightParams;
         parseParamSet(pt, &lightParams);
-        lightParams.setInt("sample_per_pixel", samplePerPixel);
         string type = lightParams.getString("type");
         string name = lightParams.getString("name");
         Light* light = mLightFactory->create(type, lightParams, *sceneCache);
@@ -438,8 +435,7 @@ namespace Goblin {
         }
         SceneCache sceneCache(canonical(scenePath.parent_path()));
 
-        int samplePerPixel;
-        RendererPtr renderer = parseRenderer(pt, &samplePerPixel);
+        RendererPtr renderer = parseRenderer(pt);
 
         Filter* filter = parseFilter(pt);
         Film* film = parseFilm(pt, filter);
@@ -471,7 +467,7 @@ namespace Goblin {
         PtreeList lightNodes;
         pt.getChildren("light", &lightNodes);
         for(size_t i = 0; i < lightNodes.size(); ++i) {
-            parseLight(lightNodes[i].second, &sceneCache, samplePerPixel);
+            parseLight(lightNodes[i].second, &sceneCache);
         }
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
             1, "equal_count"));

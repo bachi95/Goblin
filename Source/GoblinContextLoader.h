@@ -22,7 +22,7 @@ namespace Goblin {
         ContextLoader();
         RenderContext* load(const std::string& filename);
     private:
-        RendererPtr parseRenderer(const PropertyTree& pt, int* samplePerPixel);
+        RendererPtr parseRenderer(const PropertyTree& pt);
 
         Filter* parseFilter(const PropertyTree& pt);
 
@@ -41,8 +41,7 @@ namespace Goblin {
 
         void parsePrimitive(const PropertyTree& pt, SceneCache* sceneCache);
 
-        void parseLight(const PropertyTree& pt, SceneCache* sceneCache, 
-            int samplePerPixel);
+        void parseLight(const PropertyTree& pt, SceneCache* sceneCache);
 
     private:
         scoped_ptr<Factory<Filter, const ParamSet&> > mFilterFactory;

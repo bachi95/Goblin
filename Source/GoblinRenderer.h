@@ -51,16 +51,23 @@ namespace Goblin {
     public:
         Renderer(int samplePerPixel = 1, int threadNum = 1);
         virtual ~Renderer();
+
+        virtual void preprocess(ScenePtr& scene) {}
+
         virtual void render(const ScenePtr& scene);
+
         virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
             const Sample& sample, const RNG& rng,
             RenderingTLS* tls = NULL) const = 0;
+
         // volume in scatter and emission contribution
         Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
+
         Color Lsubsurface(const ScenePtr& scene,
             const Intersection& intersection, const Vector3& wo,
             const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
             RenderingTLS* tls = NULL) const;
+
         Color transmittance(const ScenePtr& scene, const Ray& ray) const;
 
     protected:
