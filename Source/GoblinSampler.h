@@ -169,49 +169,37 @@ namespace Goblin {
     Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax,
         const Vector3& x, const Vector3& y, const Vector3& z);
 
-    Vector3 uniformSampleSphere(float u1, float u2);
-
-    Vector3 uniformSampleHemisphere(float u1, float u2);
-
-    Vector3 cosineSampleHemisphere(float u1, float u2);
-
-    Vector2 uniformSampleDisk(float u1, float u2);
-
-    Vector2 gaussianSample2D(float u1, float u2, float falloff);
-
-    Vector2 gaussianSample2D(float u1, float u2, float falloff, float Rmax);
-
-    /*
-     * integrate c * exp(-falloff * x) from 0 to inf = 1 ->
-     * c = falloff -> pdf(x) = falloff * exp(-falloff * x)
-     * cdf(x) = 1 - exp(-falloff * x) -> u = 1 - exp(-falloff * x) ->
-     * x = -ln(1 - u) / falloff -> simplified to x = -ln(u) / falloff
-     * since u are [0, 1) uniform distribution
-     */ 
-    inline float exponentialSample(float u, float falloff) {
-        return -log(u) / falloff;
-    }
-
     inline float uniformConePdf(float cosThetaMax) {
         return 1.0f / (TWO_PI * (1.0f - cosThetaMax));
     }
+
+    Vector3 uniformSampleSphere(float u1, float u2);
 
     inline float uniformSpherePdf() {
         // 1 / 4pi
         return  0.5f * INV_TWOPI;
     }
+    Vector3 uniformSampleHemisphere(float u1, float u2);
 
     inline float uniformHemispherePdf() {
         return INV_TWOPI;
     }
 
+    Vector3 cosineSampleHemisphere(float u1, float u2);
+
     inline float cosineHemispherePdf(float cosTheta) {
         return  cosTheta * INV_PI;
     }
-    
+
+    Vector2 uniformSampleDisk(float u1, float u2);
+
+    Vector2 gaussianSample2D(float u1, float u2, float falloff);
+
     inline float gaussianSample2DPdf(float x, float y, float falloff) {
         return INV_PI * falloff * exp(-falloff * (x * x + y * y));
     }
+
+    Vector2 gaussianSample2D(float u1, float u2, float falloff, float Rmax);
 
     inline float gaussianSample2DPdf(float x, float y, float falloff, 
         float Rmax) {
@@ -227,8 +215,80 @@ namespace Goblin {
     float gaussianSample2DPdf(const Vector3& pCenter, 
         const Vector3& pSample, const Vector3& N, float falloff, float Rmax);
 
+    /*
+     * integrate c * exp(-falloff * x) from 0 to inf = 1 ->
+     * c = falloff -> pdf(x) = falloff * exp(-falloff * x)
+     * cdf(x) = 1 - exp(-falloff * x) -> u = 1 - exp(-falloff * x) ->
+     * x = -ln(1 - u) / falloff -> simplified to x = -ln(u) / falloff
+     * since u are [0, 1) uniform distribution
+     */
+    inline float exponentialSample(float u, float falloff) {
+        return -log(u) / falloff;
+    }
+
     inline float exponentialPdf(float x, float falloff) {
         return falloff * exp(-falloff * x);
+    }
+
+    /*
+     * similar to above exponentialSample but instead of drawing a sample
+     * range between 0 to infinite, this one draw a sample t between a and b
+     * that its pdf is propotional to exp(-sigma * (t - a))
+     * integrate c * exp(-sigma *(t - 1) from a to b = 1->
+     * c * exp(sigma * a) * (exp(-sigma * b) - exp(-sigma * a) / (-sigma) = 1
+     * c = -sigma / (exp(sigma * (a - b)) - 1)
+     * pdf(t) = -sigma * exp(sigma * a) * exp(-sigma * t) /
+     *          (exp(sigma * (a - b) - 1) =
+     *          sigma / (exp(sigma * (t - a)) + exp(sigma * (t - b)))
+     * cdf(t) = integrate pdf from a to t =
+     *          (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
+     * inverse method:
+     * u = (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
+     * u * (exp(sigma * (a - b)) - 1) + 1 = exp(sigma * (a - t))
+     * sigma * (a - t) = log(u * (exp(sigma * (a - b)) - 1) + 1)
+     * t = a - log(1 - u * (1 - exp(sigma * (a - b)))) / sigma
+     */
+    inline float exponentialSample(float u, float sigma, float a, float b) {
+        return a - log(1.0f - u * (1.0f - exp(sigma * (a - b)))) / sigma;
+    }
+
+    inline float exponentialPdf(float t, float sigma, float a , float b) {
+        return sigma / (exp(sigma * (t - a)) + exp(sigma * (t - b)));
+    }
+
+    /*
+     * see Kulla. C, Farjardo. M 2012
+     * "Importance Sampling Techniques for Path Tracing in Participating Media"
+     * for detail reference
+     * The basic idea is we try to sample a 1d t value alone the ray that
+     * the point distribution is proportional to its inverse square distance
+     * to light:
+     *                        *
+     *                       /|\
+     *                      / |  \
+     *                     /  |    \
+     *                    /   |D     \
+     *                   /    |        \
+     * -----------------|-----|---|-----|---------
+     *                  a         t     b
+     * pdf(t) = c / (D^2 + t^2)
+     * cdf(t) = integrate pdf from a to b =
+     *          (c / D) * (arctan(a / D) - arctan(b / D)) =
+     *          (c / D) * (thetaA - thetaB) = 1 ->
+     * c = D / (thetaA - thetaB) ->
+     * pdf(t) = D / ((thetaB - thetaA) * (D^2 + t^2))
+     * inverse method:
+     * cdf(t) = (1 / (thetaB - thetaA)) * (arctan(t / D) - thetaA) = u
+     * D * tan((thetaB - thetaA) * u + thetaA) = t ->
+     * t = D *tan((1 - u) * thetaA + u * thetaB)
+     */
+    inline float equiAngularSample(float u, float D,
+        float thetaA, float thetaB) {
+        return D * tan((1 - u) * thetaA + u * thetaB);
+    }
+
+    inline float equiAngularPdf(float t, float D, float thetaA, float thetaB) {
+        return D / ((thetaB - thetaA) * (D * D + t * t));
     }
 
     // determine weight for multi-importance sampling
