@@ -239,7 +239,7 @@ namespace Goblin {
      * c = -sigma / (exp(sigma * (a - b)) - 1)
      * pdf(t) = -sigma * exp(sigma * a) * exp(-sigma * t) /
      *          (exp(sigma * (a - b) - 1) =
-     *          sigma / (exp(sigma * (t - a)) + exp(sigma * (t - b)))
+     *          sigma / (exp(sigma * (t - a)) - exp(sigma * (t - b)))
      * cdf(t) = integrate pdf from a to t =
      *          (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
      * inverse method:
@@ -253,7 +253,7 @@ namespace Goblin {
     }
 
     inline float exponentialPdf(float t, float sigma, float a , float b) {
-        return sigma / (exp(sigma * (t - a)) + exp(sigma * (t - b)));
+        return sigma / (exp(sigma * (t - a)) - exp(sigma * (t - b)));
     }
 
     /*
