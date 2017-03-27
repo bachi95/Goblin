@@ -37,7 +37,7 @@ namespace Goblin {
         Color scatter = params.getColor("scatter");
         float g = params.getFloat("g", 0.0f);
         float stepSize = params.getFloat("step_size", 0.1f);
-
+        int sampleNum = params.getInt("sample_num", 5);
         Vector3 vMin = params.getVector3("box_min");
         Vector3 vMax = params.getVector3("box_max");
         BBox b(vMin, vMax);
@@ -49,7 +49,7 @@ namespace Goblin {
         Transform toWorld(position, orientation, Vector3(1.0f, 1.0f, 1.0f));
 
         return new VolumeRegion(absorption, emission, scatter, g, stepSize,
-            b, toWorld);
+            sampleNum, b, toWorld);
     }
 
 }

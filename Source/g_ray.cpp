@@ -12,14 +12,14 @@ int main(int argc, char** argv) {
     boost::scoped_ptr<RenderContext> renderContext(
         ContextLoader().load(argv[1]));
     if(renderContext) {
-        cout << "\nsuccessfully loaded scene, start rendering...\n"; 
+        cout << "\nsuccessfully loaded scene, start rendering...\n";
         time_t beforeRender;
         time(&beforeRender);
         renderContext->render();
         time_t afterRender;
         time(&afterRender);
         double seconds = difftime(afterRender, beforeRender);
-        cout << "render complete in " << seconds << " seconds!" << endl; 
+        cout << "render complete in " << seconds << " seconds!" << endl;
     }
     return 0;
 }

@@ -12,13 +12,15 @@ namespace Goblin {
     class VolumeRegion {
     public:
         VolumeRegion(Color absorption, Color emission, Color scatter,
-            float g, float stepSize, const BBox& b, const Transform& toWorld);
+            float g, float stepSize, int sampleNum, const BBox& b,
+            const Transform& toWorld);
 
         Color getAbsorption(const Vector3& p) const;
         Color getEmission(const Vector3& p) const;
         Color getScatter(const Vector3& p) const;
         Color getAttenuation(const Vector3& p) const;
         float getSampleStepSize() const;
+        int getLightSampleNum() const;
         bool intersect(const Ray& ray, float* tMin, float* tMax) const;
         Color opticalThickness(const Ray& ray) const;
         float phase(const Vector3& p, const Vector3& wi, 
@@ -31,16 +33,17 @@ namespace Goblin {
         // param for Henyey-Greenstein evaluation
         float mG;
         // sample step size for source term and optical thickness
-        float mStepSize; 
+        float mStepSize;
+        int mSampleNum;
         BBox mLocalRegion;
         Transform mToWorld;
     };
 
     inline VolumeRegion::VolumeRegion(Color absorption, Color emission, 
-        Color scatter, float g, float stepSize, 
+        Color scatter, float g, float stepSize, int sampleNum,
         const BBox& b, const Transform& toWorld): mAbsorption(absorption),
         mEmission(emission), mScatter(scatter), mG(g), mStepSize(stepSize),
-        mLocalRegion(b), mToWorld(toWorld) {}
+        mSampleNum(sampleNum), mLocalRegion(b), mToWorld(toWorld) {}
 
     inline Color VolumeRegion::getAbsorption(const Vector3& p) const {
         bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
@@ -64,6 +67,10 @@ namespace Goblin {
 
     inline float VolumeRegion::getSampleStepSize() const {
         return mStepSize;
+    }
+
+    inline int VolumeRegion::getLightSampleNum() const {
+        return mSampleNum;
     }
 
     inline float phaseHG(const Vector3& wi, const Vector3& wo, float g) {
