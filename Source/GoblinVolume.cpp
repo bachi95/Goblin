@@ -9,14 +9,6 @@ namespace Goblin {
         return mLocalRegion.intersect(mToWorld.invertRay(ray), tMin, tMax);
     }
 
-    Color VolumeRegion::opticalThickness(const Ray& ray) const {
-        float tMin, tMax;
-        if(!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
-            return Color(0.0f);
-        }
-        return length(ray(tMax) - ray(tMin)) * (mAbsorption + mScatter);
-    }
-
     float VolumeRegion::phase(const Vector3& p, const Vector3& wi, 
         const Vector3& wo) const {
         if(!mLocalRegion.contain(mToWorld.invertPoint(p))) {
@@ -30,8 +22,17 @@ namespace Goblin {
         return Color(exp(-tau.r), exp(-tau.g), exp(-tau.b));
     }
 
+    Color HomogeneousVolumeRegion::opticalThickness(const Ray& ray) const {
+        float tMin, tMax;
+        if(!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
+            return Color(0.0f);
+        }
+        return length(ray(tMax) - ray(tMin)) * (mAbsorption + mScatter);
+    }
 
-    VolumeRegion* VolumeCreator::create(const ParamSet& params) const {
+
+    VolumeRegion* HomogeneousVolumeCreator::create(
+        const ParamSet& params) const {
         Color absorption = params.getColor("absorption");
         Color emission = params.getColor("emission");
         Color scatter = params.getColor("scatter");
@@ -48,8 +49,8 @@ namespace Goblin {
         Quaternion orientation(v[0], v[1], v[2], v[3]);
         Transform toWorld(position, orientation, Vector3(1.0f, 1.0f, 1.0f));
 
-        return new VolumeRegion(absorption, emission, scatter, g, stepSize,
-            sampleNum, b, toWorld);
+        return new HomogeneousVolumeRegion(absorption, emission, scatter,
+            g, stepSize, sampleNum, b, toWorld);
     }
 
 }

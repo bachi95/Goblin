@@ -155,7 +155,8 @@ namespace Goblin {
             new SPPMCreator);
         mRendererFactory->setDefault("path_tracing");
         // volume
-        mVolumeFactory->registerCreator("homogeneous", new VolumeCreator);
+        mVolumeFactory->registerCreator("homogeneous",
+            new HomogeneousVolumeCreator);
         mVolumeFactory->setDefault("homogeneous");
         // geometry
         mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);

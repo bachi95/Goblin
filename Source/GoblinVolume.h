@@ -11,25 +11,50 @@ namespace Goblin {
 
     class VolumeRegion {
     public:
-        VolumeRegion(Color absorption, Color emission, Color scatter,
-            float g, float stepSize, int sampleNum, const BBox& b,
-            const Transform& toWorld);
+        VolumeRegion(float g, float stepSize, int sampleNum, const BBox& b,
+            const Transform& toWorld) :
+            mG(g), mStepSize(stepSize), mSampleNum(sampleNum),
+            mLocalRegion(b), mToWorld(toWorld) {}
 
-        Color getAbsorption(const Vector3& p) const;
-        Color getEmission(const Vector3& p) const;
-        Color getScatter(const Vector3& p) const;
-        Color getAttenuation(const Vector3& p) const;
-        float getSampleStepSize() const;
-        int getLightSampleNum() const;
+        virtual ~VolumeRegion() {}
+
+        // query absorbtion coefficient(sigmaA) at world space position p
+        virtual Color getAbsorption(const Vector3& p) const = 0;
+
+        // query emission coefficient(Lve) at world space position p
+        virtual Color getEmission(const Vector3& p) const = 0;
+
+        // query scatter coefficient(sigmaS) at world space position p
+        virtual Color getScatter(const Vector3& p) const = 0;
+
+        // query extinction coefficient(sigmaT) at world space position p
+        // sigmaT = sigmaA + sigmaS
+        virtual Color getAttenuation(const Vector3& p) const = 0;
+
+        // calculate opticalThickness alone input ray
+        // (the integration of extinction coefficient alone the ray)
+        virtual Color opticalThickness(const Ray& ray) const = 0;
+
+        // query ray marching step size (measured in world space)
+        float getSampleStepSize() const {
+            return mStepSize;
+        }
+
+        // query single scattering light integration sample count alone a ray
+        int getLightSampleNum() const {
+            return mSampleNum;
+        }
+
         bool intersect(const Ray& ray, float* tMin, float* tMax) const;
-        Color opticalThickness(const Ray& ray) const;
+
+        // evaluate phase function
         float phase(const Vector3& p, const Vector3& wi, 
             const Vector3& wo) const;
+
+        // calculate transmittance alone input ray
         Color transmittance(const Ray& ray) const;
-    private:
-        Color mAbsorption;
-        Color mEmission;
-        Color mScatter;
+
+    protected:
         // param for Henyey-Greenstein evaluation
         float mG;
         // sample step size for source term and optical thickness
@@ -39,40 +64,45 @@ namespace Goblin {
         Transform mToWorld;
     };
 
-    inline VolumeRegion::VolumeRegion(Color absorption, Color emission, 
-        Color scatter, float g, float stepSize, int sampleNum,
-        const BBox& b, const Transform& toWorld): mAbsorption(absorption),
-        mEmission(emission), mScatter(scatter), mG(g), mStepSize(stepSize),
-        mSampleNum(sampleNum), mLocalRegion(b), mToWorld(toWorld) {}
+    // homogeneous volume implementation that absorb/emission/scatter
+    // coefficients are constant
+    class HomogeneousVolumeRegion : public VolumeRegion {
+    public:
+        HomogeneousVolumeRegion(const Color& absorption,
+            const Color& emission, const Color& scatter,
+            float g, float stepSize, int sampleNum, const BBox& b,
+            const Transform& toWorld): VolumeRegion(g, stepSize, sampleNum, b, toWorld),
+            mAbsorption(absorption), mEmission(emission), mScatter(scatter) {}
 
-    inline Color VolumeRegion::getAbsorption(const Vector3& p) const {
-        bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-        return inside ? mAbsorption : Color(0.0f);
-    }
+        Color getAbsorption(const Vector3& p) const {
+            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
+            return inside ? mAbsorption : Color(0.0f);
+        }
 
-    inline Color VolumeRegion::getEmission(const Vector3& p) const {
-        bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-        return inside ? mEmission : Color(0.0f);
-    }
+        Color getEmission(const Vector3& p) const {
+            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
+            return inside ? mEmission : Color(0.0f);
+        }
 
-    inline Color VolumeRegion::getScatter(const Vector3& p) const {
-        bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-        return inside ? mScatter : Color(0.0f);
-    }
+        Color getScatter(const Vector3& p) const {
+            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
+            return inside ? mScatter : Color(0.0f);
+        }
 
-    inline Color VolumeRegion::getAttenuation(const Vector3& p) const {
-        bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-        return inside ? mAbsorption + mScatter : Color(0.0f);
-    }
+        Color getAttenuation(const Vector3& p) const {
+            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
+            return inside ? mAbsorption + mScatter : Color(0.0f);
+        }
 
-    inline float VolumeRegion::getSampleStepSize() const {
-        return mStepSize;
-    }
+        Color opticalThickness(const Ray& ray) const;
 
-    inline int VolumeRegion::getLightSampleNum() const {
-        return mSampleNum;
-    }
+    private:
+        Color mAbsorption;
+        Color mEmission;
+        Color mScatter;
+    };
 
+    // Henyey-Greenstein phase function.
     inline float phaseHG(const Vector3& wi, const Vector3& wo, float g) {
         if(g < 1e-3) {
             return 0.25f * INV_PI;
@@ -86,13 +116,11 @@ namespace Goblin {
 
     class ParamSet;
 
-    class VolumeCreator : public 
+    class HomogeneousVolumeCreator : public
         Creator<VolumeRegion, const ParamSet&> {
     public:
         VolumeRegion* create(const ParamSet& params) const;
     };
-
-
 
 }
 
