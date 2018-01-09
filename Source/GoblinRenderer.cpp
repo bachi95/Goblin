@@ -41,7 +41,7 @@ namespace Goblin {
                 float w = mCamera->generateRay(samples[s], &ray);
                 Color L = mRenderer->Li(mScene, ray, samples[s], 
                     *mRNG, renderingTLS);
-                Color tr = mRenderer->transmittance(mScene, ray);
+                Color tr = mRenderer->transmittance(mScene, ray, *mRNG);
                 Color Lv = mRenderer->Lv(mScene, ray, *mRNG);
                 tile->addSample(samples[s].imageX, samples[s].imageY,
                     w * (tr * L + Lv));
@@ -300,99 +300,158 @@ namespace Goblin {
         if(!volume || !volume->intersect(ray, &tMin, &tMax)) {
             return Color::Black;
         }
-        if ((tMax - tMin) < 1e-5f *tMax) {
+        if ((tMax - tMin) < 1e-5f) {
             return Color::Black;
         }
         Color Lv(0.0f);
-        size_t lightSampleNum = volume->getLightSampleNum();
-        for (size_t i = 0; i < lightSampleNum; ++i) {
-            float pickLightSample = rng.randomFloat();
-            float pickLightPdf;
-            const Light* light = scene->sampleLight(pickLightSample,
-                &pickLightPdf);
-            if(light != NULL && pickLightPdf != 0.0f) {
-                LightSample lsEqui(rng);
-                // fisrt pick a light pivot position
-                Vector3 nLight;
-                float pdfA;
-                Vector3 pLight = light->samplePosition(scene, lsEqui,
-                    &nLight, &pdfA);
-                float delta = dot(pLight - ray.o, ray.d);
-                float a = tMin - delta;
-                float b = tMax - delta;
-                // equi-angular sampling
-                float D = length(pLight - ray(delta));
-                float thetaA = atan2(a, D);
-                float thetaB = atan2(b, D);
-                float ue = rng.randomFloat();
-                float te = equiAngularSample(ue, D, thetaA, thetaB);
-                float pdfTe = equiAngularPdf(te, D, thetaA, thetaB);
-                Vector3 pCurrentEqui = ray(delta + te);
-                Color sigmaTe = volume->getAttenuation(pCurrentEqui);
-                Color trEqui(
-                    exp(-sigmaTe.r * (te - a)),
-                    exp(-sigmaTe.g * (te - a)),
-                    exp(-sigmaTe.b * (te - a)));
-                // sample light for in scattring part
-                Color scatterEqui = volume->getScatter(pCurrentEqui);
-                Ray shadowRayEqui;
-                Vector3 wiEqui;
-                float lightPdfEqui;
-                Color Lequi = light->sampleL(pCurrentEqui, 0.0f, lsEqui,
-                    &wiEqui, &lightPdfEqui, &shadowRayEqui);
-                if (Lequi != Color::Black && lightPdfEqui > 0.0f) {
-                    if (!scene->intersect(shadowRayEqui)) {
-                        Color Ld = volume->transmittance(shadowRayEqui) *
-                            Lequi / (pickLightPdf * lightPdfEqui);
-                        float phase = volume->phase(pCurrentEqui, ray.d, wiEqui);
-                        float pdfTd = exponentialPdf(te, sigmaTe.luminance(), a, b);
-                        float misWeight = powerHeuristic(1, pdfTe, 1, pdfTd);
-                        Lv += misWeight * trEqui * scatterEqui *
-                            phase * Ld / pdfTe;
+        if (volume->isHomogeneous()) {
+            size_t lightSampleNum = volume->getLightSampleNum();
+            for (size_t i = 0; i < lightSampleNum; ++i) {
+                float pickLightSample = rng.randomFloat();
+                float pickLightPdf;
+                const Light* light = scene->sampleLight(pickLightSample,
+                    &pickLightPdf);
+                if(light != NULL && pickLightPdf != 0.0f) {
+                    LightSample lsEqui(rng);
+                    // fisrt pick a light pivot position
+                    Vector3 nLight;
+                    float pdfA;
+                    Vector3 pLight = light->samplePosition(scene, lsEqui,
+                        &nLight, &pdfA);
+                    float delta = dot(pLight - ray.o, ray.d);
+                    float a = tMin - delta;
+                    float b = tMax - delta;
+                    // equi-angular sampling
+                    float D = length(pLight - ray(delta));
+                    float thetaA = atan2(a, D);
+                    float thetaB = atan2(b, D);
+                    float ue = rng.randomFloat();
+                    float te = equiAngularSample(ue, D, thetaA, thetaB);
+                    float pdfTe = equiAngularPdf(te, D, thetaA, thetaB);
+                    Vector3 pCurrentEqui = ray(delta + te);
+                    Color sigmaTe, scatterEqui, emissionEqui;
+                    volume->eval(pCurrentEqui, sigmaTe, scatterEqui, emissionEqui);
+                    Color trEqui(
+                        exp(-sigmaTe.r * (te - a)),
+                        exp(-sigmaTe.g * (te - a)),
+                        exp(-sigmaTe.b * (te - a)));
+                    // sample light for in scattring part
+                    Ray shadowRayEqui;
+                    Vector3 wiEqui;
+                    float lightPdfEqui;
+                    Color Lequi = light->sampleL(pCurrentEqui, 0.0f, lsEqui,
+                        &wiEqui, &lightPdfEqui, &shadowRayEqui);
+                    if (Lequi != Color::Black && lightPdfEqui > 0.0f) {
+                        if (!scene->intersect(shadowRayEqui)) {
+                            Color trToLight = volume->transmittance(
+                                shadowRayEqui, rng);
+                            Color Ld = trToLight * Lequi /
+                                (pickLightPdf * lightPdfEqui);
+                            float phase = volume->phase(pCurrentEqui,
+                                ray.d, wiEqui);
+                            float pdfTd = exponentialPdf(te,
+                                sigmaTe.luminance(), a, b);
+                            float misWeight = powerHeuristic(1, pdfTe, 1, pdfTd);
+                            Lv += misWeight * trEqui * scatterEqui *
+                                phase * Ld / pdfTe;
+                        }
                     }
-                }
-
-                // distance sampling
-                Color sigmaTd = volume->getAttenuation(ray(tMin + 1e-5f * tMax));
-                float ud = rng.randomFloat();
-                float td = exponentialSample(ud, sigmaTd.luminance(), a, b);
-                float pdfTd = exponentialPdf(td, sigmaTd.luminance(), a, b);
-                Vector3 pCurrentDistance = ray(delta + td);
-                Color trDistance(
-                    exp(-sigmaTd.r * (td - a)),
-                    exp(-sigmaTd.g * (td - a)),
-                    exp(-sigmaTd.b * (td - a)));
-                // sample light for in scattring part
-                Color scatterDistance = volume->getScatter(pCurrentDistance);
-                LightSample lsDistance(rng);
-                Ray shadowRayDistance;
-                Vector3 wi;
-                float lightPdf;
-                Color Ldistance = light->sampleL(pCurrentDistance, 0.0f, lsDistance,
-                    &wi, &lightPdf, &shadowRayDistance);
-                if (Ldistance != Color::Black && lightPdf > 0.0f) {
-                    if (!scene->intersect(shadowRayDistance)) {
-                        Color Ld = volume->transmittance(shadowRayDistance) *
-                            Ldistance / (pickLightPdf * lightPdf);
-                        float phase = volume->phase(pCurrentDistance, ray.d, wi);
-                        float pdfTe = equiAngularPdf(td, D, thetaA, thetaB);
-                        float misWeight = powerHeuristic(1, pdfTd, 1, pdfTe);
-                        Lv += misWeight * trDistance * scatterDistance *
-                            phase * Ld / pdfTd;
+                    // distance sampling
+                    Color sigmaTd = volume->getAttenuation(
+                        ray(0.5f * (tMin + tMax)));
+                    float ud = rng.randomFloat();
+                    float td = exponentialSample(ud, sigmaTd.luminance(), a, b);
+                    float pdfTd = exponentialPdf(td, sigmaTd.luminance(), a, b);
+                    Vector3 pCurrentDistance = ray(delta + td);
+                    Color trDistance(
+                        exp(-sigmaTd.r * (td - a)),
+                        exp(-sigmaTd.g * (td - a)),
+                        exp(-sigmaTd.b * (td - a)));
+                    // sample light for in scattring part
+                    Color scatterDistance, emissionDistance;
+                    volume->eval(pCurrentDistance, sigmaTd, scatterDistance,
+                        emissionDistance);
+                    LightSample lsDistance(rng);
+                    Ray shadowRayDistance;
+                    Vector3 wi;
+                    float lightPdf;
+                    Color Ldistance = light->sampleL(pCurrentDistance, 0.0f,
+                        lsDistance, &wi, &lightPdf, &shadowRayDistance);
+                    if (Ldistance != Color::Black && lightPdf > 0.0f) {
+                        if (!scene->intersect(shadowRayDistance)) {
+                            Color trToLight = volume->transmittance(
+                                shadowRayDistance, rng);
+                            Color Ld = trToLight * Ldistance /
+                                (pickLightPdf * lightPdf);
+                            float phase = volume->phase(pCurrentDistance,
+                                ray.d, wi);
+                            float pdfTe = equiAngularPdf(td, D, thetaA, thetaB);
+                            float misWeight = powerHeuristic(1, pdfTd, 1, pdfTe);
+                            Lv += misWeight * trDistance * scatterDistance *
+                                phase * Ld / pdfTd;
+                        }
                     }
                 }
             }
+            return Lv / static_cast<float>(lightSampleNum);
+        } else {
+            float stepSize = volume->getSampleStepSize();
+            Vector3 pPrevious = ray(tMin);
+            float tCurrent = tMin + stepSize * rng.randomFloat();
+            Vector3 pCurrent = ray(tCurrent);
+            Color transmittance(1.0f);
+            while(tCurrent <= tMax) {
+                Color sigmaT, sigmaS, emission;
+                volume->eval(pCurrent, sigmaT, sigmaS, emission);
+                Color tau = sigmaT * length(pCurrent - pPrevious);
+                transmittance *= Color(exp(-tau.r), exp(-tau.g), exp(-tau.b));
+                // the emission part
+                Lv += transmittance * emission;
+                // sample light for in scattring part
+                float pickLightSample = rng.randomFloat();
+                float pickLightPdf;
+                const Light* light = scene->sampleLight(pickLightSample,
+                    &pickLightPdf);
+                if(light != NULL && pickLightPdf != 0.0f) {
+                    Ray shadowRay;
+                    Vector3 wi;
+                    float lightPdf;
+                    LightSample ls(rng);
+                    Color L = light->sampleL(pCurrent, 0.0f, ls,
+                        &wi, &lightPdf, &shadowRay);
+                    if(L != Color::Black && lightPdf > 0.0f) {
+                        if(!scene->intersect(shadowRay)) {
+                            Color trToLight = volume->transmittance(
+                                shadowRay, rng);
+                            Color Ld = trToLight * L /
+                                (pickLightPdf * lightPdf);
+                            float phase = volume->phase(pCurrent, ray.d, wi);
+                            Lv += transmittance * sigmaS * phase * Ld;
+                        }
+                    }
+                }
+                // advance to the next sample segment
+                tCurrent += stepSize;
+                pPrevious = pCurrent;
+                pCurrent = ray(tCurrent);
+            }
+            /*
+             * the monte carlo estimator for integrate source term
+             * from tMin to tMax is (1 / N) * sum(source_term(pi), 1, N) / pdf(pi)
+             * where pdf(pi) is 1 / (tMax - tMin) and stepSize = (tMax - tMin) / N
+             * which give us the following sweet result
+             */
+            return stepSize * Lv;
         }
-        return Lv / static_cast<float>(lightSampleNum);
     }
 
     Color Renderer::transmittance(const ScenePtr& scene, 
-        const Ray& ray) const {
+        const Ray& ray, const RNG& rng) const {
         const VolumeRegion* volume = scene->getVolumeRegion();
         if(volume == NULL) {
             return Color(1.0f);
         }
-        return volume->transmittance(ray);
+        return volume->transmittance(ray, rng);
     }
 
     Color Renderer::singleSampleLd(const ScenePtr& scene, const Ray& ray,

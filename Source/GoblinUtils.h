@@ -130,7 +130,8 @@ namespace Goblin {
         else return f;
     }
 
-    inline float lerp(float t, float v1, float v2) {
+    template <typename T>
+    T lerp(float t, const T& v1, const T& v2) {
         return (1.0f - t) * v1 + t * v2;
     }
 

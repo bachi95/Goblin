@@ -31,7 +31,8 @@ namespace Goblin {
         CameraPtr parseCamera(const PropertyTree& pt, Film* film,
             SceneCache* sceneCache);
 
-        VolumeRegion* parseVolume(const PropertyTree& pt);
+        VolumeRegion* parseVolume(const PropertyTree& pt,
+            SceneCache* sceneCache);
 
         void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache);
 
@@ -48,7 +49,8 @@ namespace Goblin {
         scoped_ptr<Factory<Film, const ParamSet&, Filter*> > mFilmFactory;
         scoped_ptr<Factory<Camera, const ParamSet&, Film*> > mCameraFactory;
         scoped_ptr<Factory<Renderer, const ParamSet&> > mRendererFactory;
-        scoped_ptr<Factory<VolumeRegion, const ParamSet& > > mVolumeFactory;
+        scoped_ptr<Factory<VolumeRegion, const ParamSet&, const SceneCache& > >
+            mVolumeFactory;
         scoped_ptr<Factory<Geometry, const ParamSet&, const SceneCache&> > 
             mGeometryFactory;
         scoped_ptr<Factory<Texture<float>, const ParamSet&, const SceneCache&> >

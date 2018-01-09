@@ -68,7 +68,9 @@ namespace Goblin {
             const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
             RenderingTLS* tls = NULL) const;
 
-        Color transmittance(const ScenePtr& scene, const Ray& ray) const;
+        // volume transmittance alone the ray
+        Color transmittance(const ScenePtr& scene, const Ray& ray,
+            const RNG& rng) const;
 
     protected:
         Color singleSampleLd(const ScenePtr& scene, const Ray& ray,

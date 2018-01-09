@@ -8,32 +8,28 @@
 
 namespace Goblin {
     class Ray;
+    class RNG;
 
     class VolumeRegion {
     public:
         VolumeRegion(float g, float stepSize, int sampleNum, const BBox& b,
-            const Transform& toWorld) :
+            const Transform& toWorld, bool isHomogeneous) :
             mG(g), mStepSize(stepSize), mSampleNum(sampleNum),
-            mLocalRegion(b), mToWorld(toWorld) {}
+            mLocalRegion(b), mToWorld(toWorld), mIsHomogeneous(isHomogeneous)
+        {}
 
         virtual ~VolumeRegion() {}
 
-        // query absorbtion coefficient(sigmaA) at world space position p
-        virtual Color getAbsorption(const Vector3& p) const = 0;
-
-        // query emission coefficient(Lve) at world space position p
-        virtual Color getEmission(const Vector3& p) const = 0;
-
-        // query scatter coefficient(sigmaS) at world space position p
-        virtual Color getScatter(const Vector3& p) const = 0;
+        // query volume rendering coefficients at world space position p
+        virtual void eval(const Vector3& p, Color& attenuation, Color& scatter,
+            Color& emission) const = 0;
 
         // query extinction coefficient(sigmaT) at world space position p
         // sigmaT = sigmaA + sigmaS
         virtual Color getAttenuation(const Vector3& p) const = 0;
 
-        // calculate opticalThickness alone input ray
-        // (the integration of extinction coefficient alone the ray)
-        virtual Color opticalThickness(const Ray& ray) const = 0;
+        // calculate transmittance alone input ray
+        virtual Color transmittance(const Ray& ray, const RNG& rng) const = 0;
 
         // query ray marching step size (measured in world space)
         float getSampleStepSize() const {
@@ -51,55 +47,79 @@ namespace Goblin {
         float phase(const Vector3& p, const Vector3& wi, 
             const Vector3& wo) const;
 
-        // calculate transmittance alone input ray
-        Color transmittance(const Ray& ray) const;
+        bool isHomogeneous() const { return mIsHomogeneous; }
 
     protected:
         // param for Henyey-Greenstein evaluation
         float mG;
-        // sample step size for source term and optical thickness
+        // sample step size for ray marching calculation
         float mStepSize;
         int mSampleNum;
         BBox mLocalRegion;
         Transform mToWorld;
+        bool mIsHomogeneous;
     };
 
     // homogeneous volume implementation that absorb/emission/scatter
     // coefficients are constant
     class HomogeneousVolumeRegion : public VolumeRegion {
     public:
-        HomogeneousVolumeRegion(const Color& absorption,
-            const Color& emission, const Color& scatter,
-            float g, float stepSize, int sampleNum, const BBox& b,
-            const Transform& toWorld): VolumeRegion(g, stepSize, sampleNum, b, toWorld),
-            mAbsorption(absorption), mEmission(emission), mScatter(scatter) {}
+        HomogeneousVolumeRegion(const Color& attenuation, const Color& albedo,
+            const Color& emission, float g, int sampleNum,
+            const BBox& b, const Transform& toWorld):
+            VolumeRegion(g, 0.0f, sampleNum, b, toWorld, true),
+            mAttenuation(attenuation), mScatter(attenuation * albedo),
+            mEmission(emission) {}
 
-        Color getAbsorption(const Vector3& p) const {
+        void eval(const Vector3& p, Color& attenuation, Color& scatter,
+            Color& emission) const {
             bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-            return inside ? mAbsorption : Color(0.0f);
-        }
-
-        Color getEmission(const Vector3& p) const {
-            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-            return inside ? mEmission : Color(0.0f);
-        }
-
-        Color getScatter(const Vector3& p) const {
-            bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-            return inside ? mScatter : Color(0.0f);
+            if (inside) {
+                attenuation = mAttenuation;
+                scatter = mScatter;
+                emission = mEmission;
+            } else {
+                attenuation = Color(0.0f);
+                scatter = Color(0.0f);
+                emission = Color(0.0f);
+            }
         }
 
         Color getAttenuation(const Vector3& p) const {
             bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
-            return inside ? mAbsorption + mScatter : Color(0.0f);
+            return inside ? mAttenuation : Color(0.0f);
         }
 
-        Color opticalThickness(const Ray& ray) const;
+        Color transmittance(const Ray& ray, const RNG& rng) const;
 
     private:
-        Color mAbsorption;
-        Color mEmission;
+        // the extinction coefficient (sigmaT)
+        Color mAttenuation;
+        // the scattering coefficient (sigmaS)
         Color mScatter;
+        // the emission coefficient (Lve)
+        Color mEmission;
+    };
+
+    class VolumeGrid;
+
+    class HeterogeneousVolumeRegion : public VolumeRegion {
+    public:
+        HeterogeneousVolumeRegion(VolumeGrid* density, const Color& albedo, float g,
+            float stepSize, int sampleNum, const BBox& b, const Transform& toWorld);
+
+        ~HeterogeneousVolumeRegion();
+
+        void eval(const Vector3& p, Color& attenuation, Color& scatter,
+            Color& emission) const;
+
+        Color getAttenuation(const Vector3& p) const;
+
+        Color transmittance(const Ray& ray, const RNG& rng) const;
+
+    private:
+        VolumeGrid* mDensity;
+        Color mAlbedo;
     };
 
     // Henyey-Greenstein phase function.
@@ -113,15 +133,22 @@ namespace Goblin {
         }
     }
 
-
     class ParamSet;
+    class SceneCache;
 
     class HomogeneousVolumeCreator : public
-        Creator<VolumeRegion, const ParamSet&> {
+        Creator<VolumeRegion, const ParamSet&, const SceneCache&> {
     public:
-        VolumeRegion* create(const ParamSet& params) const;
+        VolumeRegion* create(const ParamSet& params,
+            const SceneCache& sceneCache) const;
     };
 
+    class HeterogeneousVolumeCreator : public
+        Creator<VolumeRegion, const ParamSet&, const SceneCache&> {
+    public:
+        VolumeRegion* create(const ParamSet& params,
+            const SceneCache& sceneCache) const;
+    };
 }
 
 #endif //GOBLIN_VOLUME_H

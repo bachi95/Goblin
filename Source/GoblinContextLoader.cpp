@@ -111,7 +111,8 @@ namespace Goblin {
         mFilmFactory(new Factory<Film, const ParamSet&, Filter*>()),
         mCameraFactory(new Factory<Camera, const ParamSet&, Film*>()),
         mRendererFactory(new Factory<Renderer, const ParamSet&>()),
-        mVolumeFactory(new Factory<VolumeRegion, const ParamSet&>()),
+        mVolumeFactory(
+            new Factory<VolumeRegion, const ParamSet&, const SceneCache&>()),
         mGeometryFactory(
             new Factory<Geometry, const ParamSet&, const SceneCache&>()),
         mFloatTextureFactory(
@@ -157,6 +158,8 @@ namespace Goblin {
         // volume
         mVolumeFactory->registerCreator("homogeneous",
             new HomogeneousVolumeCreator);
+        mVolumeFactory->registerCreator("heterogeneous",
+            new HeterogeneousVolumeCreator);
         mVolumeFactory->setDefault("homogeneous");
         // geometry
         mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);
@@ -293,7 +296,8 @@ namespace Goblin {
         return RendererPtr(mRendererFactory->create(method, setting));
     }
 
-    VolumeRegion* ContextLoader::parseVolume(const PropertyTree& pt) {
+    VolumeRegion* ContextLoader::parseVolume(const PropertyTree& pt,
+        SceneCache* sceneCache) {
         if(!pt.hasChild("volume")) {
             return NULL;
         }
@@ -305,7 +309,7 @@ namespace Goblin {
         parseParamSet(volumePt, &volumeParams);
         string type = volumeParams.getString("type");
         cout << string(sDelimiterWidth, '-') << endl;
-        return mVolumeFactory->create(type, volumeParams);
+        return mVolumeFactory->create(type, volumeParams, *sceneCache);
     }
 
     void ContextLoader::parseGeometry(const PropertyTree& pt, 
@@ -443,7 +447,7 @@ namespace Goblin {
 
         CameraPtr camera = parseCamera(pt, film, &sceneCache);
 
-        VolumeRegion* volume = parseVolume(pt);
+        VolumeRegion* volume = parseVolume(pt, &sceneCache);
 
         PtreeList geometryNodes;
         pt.getChildren("geometry", &geometryNodes);
