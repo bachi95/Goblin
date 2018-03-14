@@ -68,7 +68,6 @@ namespace Goblin {
     struct VolHeader
     {
         bool isValid(std::string* msg = NULL) const {
-            bool isValid = true;
             if (mSignature[0] != 'V' ||
                 mSignature[1] != 'O' ||
                 mSignature[2] != 'L') {
@@ -192,6 +191,24 @@ namespace Goblin {
 
         const BBox& getBBox() const { return mBBox; }
 
+        void fillHeaderInfo(VolHeader& header) const {
+            header.mSignature[0] = 'V';
+            header.mSignature[1] = 'O';
+            header.mSignature[2] = 'L';
+            header.mSignature[3] = 3;
+            header.mEncoding = VolumeEncodingFloat32;
+            header.mNx = mNx;
+            header.mNy = mNy;
+            header.mNz = mNz;
+            header.mNChannel = mNChannel;
+            header.mMin = mBBox.pMin;
+            header.mMax = mBBox.pMax;
+        }
+
+        const float* getData() const {
+            return &mVoxelData[0];
+        }
+
     private:
         int32_t mNx;
         int32_t mNy;
@@ -204,7 +221,7 @@ namespace Goblin {
 
     VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = NULL) {
         VolumeGrid* result = NULL;
-        std::ifstream stream(filePath, std::ios::in | std::ios::binary);
+        std::ifstream stream(filePath.c_str(), std::ios::in | std::ios::binary);
         if (stream.is_open()) {
             std::streampos begin = stream.tellg();
             stream.seekg (0, std::ios::end);
@@ -232,6 +249,30 @@ namespace Goblin {
             }
         } else {
             std::cout << "fail to open vol file " << filePath <<std::endl;
+        }
+        stream.close();
+        return result;
+    }
+
+    bool writeVolFile(const std::string& filePath,
+        const VolumeGrid* volumeGrid, std::string* error = NULL) {
+        bool result = false;
+        std::ofstream stream(filePath.c_str(), std::ios::out | std::ios::binary);
+        if (stream.is_open()) {
+            stream.seekp(0);
+            VolHeader header;
+            volumeGrid->fillHeaderInfo(header);
+            stream.write(reinterpret_cast<char*>(&header), sizeof(header));
+            std::string msg;
+            size_t nFloat = header.getEntryCount() * header.mNChannel;
+            stream.seekp(sizeof(header));
+            stream.write(reinterpret_cast<const char*>(volumeGrid->getData()),
+                nFloat * sizeof(float));
+            result = true;
+        } else {
+            if (error != NULL){
+                *error = "fail to open vol file ";
+            }
         }
         stream.close();
         return result;
@@ -326,6 +367,7 @@ namespace Goblin {
             densityGrid = new VolumeGrid(1, 1, 1, 1,
                 BBox(Vector3(-1, -1, -1), Vector3(1, 1, 1)), &d);
         }
+
         Color albedo = params.getColor("albedo");
         float g = params.getFloat("g", 0.0f);
         float stepSize = params.getFloat("step_size", 0.1f);
