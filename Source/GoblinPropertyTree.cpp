@@ -52,7 +52,7 @@ namespace Goblin {
     }
 
     bool PropertyTree::hasChild(const char* key) const {
-        return mPtree.get_child_optional(key);
+        return mPtree.find(key) != mPtree.not_found();
     }
 
     bool PropertyTree::getChild(const char* key, PropertyTree* child) const {

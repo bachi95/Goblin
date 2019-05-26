@@ -211,9 +211,9 @@ namespace Goblin {
             line.clear();
         }
 
-        int verticesNum = vertexList.size();
-        int normalNum = normalList.size();
-        int texCoordNum = uvList.size();
+        int verticesNum = static_cast<int>(vertexList.size());
+        int normalNum = static_cast<int>(normalList.size());
+        int texCoordNum = static_cast<int>(uvList.size());
         
         for(size_t i = 0; i < faceList.size(); ++i) {
             Face& face = faceList[i];

@@ -119,8 +119,8 @@ void Disk::buildSlices() {
     for (size_t i = 0; i < mNumSlices; ++i) {
         TriangleIndex triangle;
         triangle.v[0] = 0;
-        triangle.v[1] = i % mNumSlices + 1;
-        triangle.v[2] = (i + 1) % mNumSlices + 1;
+        triangle.v[1] = static_cast<unsigned int>(i % mNumSlices + 1);
+        triangle.v[2] = static_cast<unsigned int>((i + 1) % mNumSlices + 1);
         mTriangles.push_back(triangle);
     }
 }

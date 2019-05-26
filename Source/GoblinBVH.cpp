@@ -50,14 +50,14 @@ namespace Goblin {
         buildInfoList.reserve(mRefinedPrimitives.size());
         for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             BBox b = mRefinedPrimitives[i]->getAABB();
-            buildInfoList.push_back(BVHPrimitiveInfo(b, i));
+            buildInfoList.push_back(BVHPrimitiveInfo(b, static_cast<int>(i)));
         } 
         //buildDataSummary(buildInfoList);
         PrimitiveList orderedPrims;
         orderedPrims.reserve(mRefinedPrimitives.size());
         mBVHNodes.reserve(2 * mRefinedPrimitives.size() - 1);
         uint32_t offset = 0;
-        buildLinearBVH(buildInfoList, 0, buildInfoList.size(),
+        buildLinearBVH(buildInfoList, 0, static_cast<uint32_t>(buildInfoList.size()),
             &offset, orderedPrims);
         mRefinedPrimitives.swap(orderedPrims);
         //compactSummary();
@@ -79,7 +79,7 @@ namespace Goblin {
         uint32_t primitivesNum = end - start;
         // leaf node case
         if(primitivesNum == 1) {
-            int firstPrimIndex = orderedPrims.size();
+            uint32_t firstPrimIndex = static_cast<uint32_t>(orderedPrims.size());
             //leafSummary(buildData, start, end, firstPrimIndex, primitivesNum);
             for(uint32_t i = start; i < end; ++i) {
                 uint32_t pIndex = buildData[i].primitiveIndexNum;
@@ -96,7 +96,7 @@ namespace Goblin {
             // all primitives clutter in one point... should be a rare case
             // just make this a leaf node then
             if(centersUnion.pMin[dim] == centersUnion.pMax[dim]) {
-                uint32_t firstPrimIndex = orderedPrims.size();
+                uint32_t firstPrimIndex = static_cast<uint32_t>(orderedPrims.size());
                 //leafSummary(buildData, start, end, 
                 //    firstPrimIndex, primitivesNum);
                 for(uint32_t i = start; i < end; ++i) {

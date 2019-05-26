@@ -536,7 +536,7 @@ namespace Goblin {
         vector<SampleRange> sampleRanges;
         getSampleRanges(film, sampleRanges);
         vector<Task*> bdptTasks;
-        RenderProgress progress(sampleRanges.size());
+        RenderProgress progress(static_cast<int>(sampleRanges.size()));
         for (size_t i = 0; i < sampleRanges.size(); ++i) {
             bdptTasks.push_back(new BDPTTask(this,
                 camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,

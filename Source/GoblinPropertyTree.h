@@ -1,6 +1,7 @@
 #ifndef GOBLIN_PROPERTY_TREE_H
 #define GOBLIN_PROPERTY_TREE_H
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
