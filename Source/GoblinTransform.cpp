@@ -42,14 +42,14 @@ namespace Goblin {
         }
 
         const Matrix4& Transform::getMatrix() const {
-            if(!isUpdated()) {
+            if (!isUpdated()) {
                 update();
             }
             return mCachedMatrix;
         }
 
         const Matrix4& Transform::getInverse() const {
-            if(!isUpdated()) {
+            if (!isUpdated()) {
                 update();
             }
             return mCachedInverse;

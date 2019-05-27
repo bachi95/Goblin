@@ -7,7 +7,7 @@ namespace Goblin {
 
     PropertyTree::PropertyTree(const ptree& pt):
         mPtree(pt) {
-        for(ptree::const_iterator it = mPtree.begin(); 
+        for (ptree::const_iterator it = mPtree.begin(); 
             it != mPtree.end(); it++) {
             std::string key(it->first);
             std::pair<std::string, PropertyTree> pair(it->first,
@@ -19,7 +19,7 @@ namespace Goblin {
     bool PropertyTree::read(const std::string& filename) {
         try {
             read_json(filename, mPtree);
-            for(ptree::const_iterator it = mPtree.begin(); 
+            for (ptree::const_iterator it = mPtree.begin(); 
                 it != mPtree.end(); it++) {
                 std::string key(it->first);
                 std::pair<std::string, PropertyTree> pair(it->first,
@@ -42,8 +42,8 @@ namespace Goblin {
     bool PropertyTree::getChildren(const char* key, 
         PtreeList* children) const {
         bool findAny = false;
-        for(size_t i = 0; i < mChildren.size(); ++i) {
-            if(mChildren[i].first == key) {
+        for (size_t i = 0; i < mChildren.size(); ++i) {
+            if (mChildren[i].first == key) {
                 children->push_back(mChildren[i]);
                 findAny = true;
             }
@@ -111,7 +111,7 @@ namespace Goblin {
         std::vector<float> rv;
         try {
             ptree c = mPtree.get_child(key);
-            for(ptree::const_iterator it = c.begin(); it != c.end(); it++) {
+            for (ptree::const_iterator it = c.begin(); it != c.end(); it++) {
                 rv.push_back(lexical_cast<float>(it->second.data()));
             }
         }

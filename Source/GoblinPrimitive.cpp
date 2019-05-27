@@ -33,7 +33,7 @@ namespace Goblin {
     void Intersection::computeUVDifferential(const RayDifferential& ray) {
         float dudx, dvdx, dudy, dvdy;
         dudx = dvdx = dudy = dvdy = 0.0f;
-        if(ray.hasDifferential) {
+        if (ray.hasDifferential) {
             const Vector3& p = fragment.getPosition();
             const Vector3& n = fragment.getNormal();
             /*
@@ -46,7 +46,7 @@ namespace Goblin {
             float minusD = dot(p, n);
             float tdx = (minusD - dot(ray.dxOrigin, n)) / dot(ray.dxDir, n);
             float tdy = (minusD - dot(ray.dyOrigin, n)) / dot(ray.dyDir, n);
-            if(!isNaN(tdx) && !isNaN(tdy)) {
+            if (!isNaN(tdx) && !isNaN(tdy)) {
                 Vector3 pdx = ray.dxOrigin + tdx * ray.dxDir;
                 Vector3 pdy = ray.dyOrigin  +tdy * ray.dyDir;
                 Vector3 dpdx = pdx - p;
@@ -60,11 +60,11 @@ namespace Goblin {
                  * to get dudx, dvdx, dudy, dvdy
                  */
                 int axis[2];
-                if(fabs(n.x) > fabs(n.y) && fabs(n.x) > fabs(n.z)) {
+                if (fabs(n.x) > fabs(n.y) && fabs(n.x) > fabs(n.z)) {
                     // closer to yz plane
                     axis[0] = 1;
                     axis[1] = 2;
-                } else if(fabs(n.y) > fabs(n.z)) {
+                } else if (fabs(n.y) > fabs(n.z)) {
                     // closer to xz plane
                     axis[0] = 0;
                     axis[1] = 2;
@@ -83,13 +83,13 @@ namespace Goblin {
                 float Bx[2];
                 Bx[0] = dpdx[axis[0]];
                 Bx[1] = dpdx[axis[1]];
-                if(!solve2x2LinearSystem(A, Bx, &dudx, &dvdx)) {
+                if (!solve2x2LinearSystem(A, Bx, &dudx, &dvdx)) {
                     dudx = dvdx = 0.0f;
                 }
                 float By[2];
                 By[0] = dpdy[axis[0]];
                 By[1] = dpdy[axis[1]];
-                if(!solve2x2LinearSystem(A, By, &dudy, &dvdy)) {
+                if (!solve2x2LinearSystem(A, By, &dudy, &dvdy)) {
                     dudy = dvdy = 0.0f;
                 }
             }
@@ -116,7 +116,7 @@ namespace Goblin {
         Intersection* intersection, IntersectFilter f) const {
         Ray r = mToWorld.invertRay(ray);
         bool hit = mPrimitive->intersect(r, epsilon, intersection, f);
-        if(hit) {
+        if (hit) {
             intersection->fragment.transform(mToWorld);
             ray.maxt = r.maxt;
         }
@@ -151,33 +151,33 @@ namespace Goblin {
 
     Aggregate::Aggregate(const PrimitiveList& primitives):
         mInputPrimitives(primitives) {
-        for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
+        for (size_t i = 0; i < mInputPrimitives.size(); ++i) {
             const Primitive* primitive = mInputPrimitives[i];
-            if(primitive->intersectable()) {
+            if (primitive->intersectable()) {
                 mRefinedPrimitives.push_back(mInputPrimitives[i]);
             } else {
                 primitive->refine(mRefinedPrimitives);
             }
         }
 
-        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+        for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             mAABB.expand(mRefinedPrimitives[i]->getAABB());
         }
     }
     
     void Aggregate::collectRenderList(RenderList& rList, 
         const Matrix4& m) const {
-        for(size_t i = 0; i < mInputPrimitives.size(); ++i) {
+        for (size_t i = 0; i < mInputPrimitives.size(); ++i) {
             mInputPrimitives[i]->collectRenderList(rList, m);
         }
     }
 
     bool Aggregate::intersect(const Ray& ray, IntersectFilter f) const {
-        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-            if(f != NULL && !f(mRefinedPrimitives[i], ray)) {
+        for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            if (f != NULL && !f(mRefinedPrimitives[i], ray)) {
                 return false;
             }
-            if(mRefinedPrimitives[i]->intersect(ray, f)) {
+            if (mRefinedPrimitives[i]->intersect(ray, f)) {
                 return true;
             }
         }
@@ -187,11 +187,11 @@ namespace Goblin {
     bool Aggregate::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection, IntersectFilter f) const {
         bool hit = false;
-        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-            if(f != NULL && !f(mRefinedPrimitives[i], ray)) {
+        for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+            if (f != NULL && !f(mRefinedPrimitives[i], ray)) {
                 return false;
             }
-            if(mRefinedPrimitives[i]->intersect(ray, epsilon, 
+            if (mRefinedPrimitives[i]->intersect(ray, epsilon, 
                 intersection, f)) {
                 hit = true;
             }

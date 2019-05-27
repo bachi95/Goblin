@@ -132,7 +132,7 @@ namespace Goblin {
                     }
                     mPixelData[i].Phi += photonCache[i].Phi;
                     photonCache[i].Phi = Color::Black;
-                    mPixelData[i].Mi += photonCache[i].Mi;
+                    mPixelData[i].Mi += (int)photonCache[i].Mi;
                     photonCache[i].Mi = 0;
                 }
                 *mEmittedPhotons += photonTraceTLS->mEmittedPhotons;
@@ -569,7 +569,7 @@ namespace Goblin {
             // report progress
             std::cout << "\rIteration: " << i + 1 << "/" << iterationCount;
             std::cout.flush();
-            if(i == iterationCount - 1) {
+            if (i == iterationCount - 1) {
                 std::cout << "\rRender Complete!         " << std::endl;
                 std::cout.flush();
             }
@@ -587,7 +587,7 @@ namespace Goblin {
         float invIterationCount = 1.0f / (float)iterationCount;
         for (size_t i = 0; i < mPixelData.size(); ++i) {
             int x, y;
-            filmRect.offsetToPixel(i, &x, &y);
+            filmRect.offsetToPixel((int)i, &x, &y);
             // direct lighting from ray trace pass
             Color Ld = mPixelData[i].Ld * invIterationCount;
             float r = mPixelData[i].Ri;
@@ -603,15 +603,15 @@ namespace Goblin {
     void SPPM::querySampleQuota(const ScenePtr& scene,
         SampleQuota* sampleQuota){
 
-        if(mLightSampleIndexes) {
+        if (mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         }
-        if(mBSDFSampleIndexes) {
+        if (mBSDFSampleIndexes) {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPickLightSampleIndexes) {
+        if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
@@ -623,15 +623,14 @@ namespace Goblin {
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
         // for spawning new ray
         mBSDFSampleIndexes = new BSDFSampleIndex[mMaxPathLength + 1];
-        for(int i = 0; i < mMaxPathLength + 1; ++i) {
+        for (int i = 0; i < mMaxPathLength + 1; ++i) {
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
         }
     }
 
     Renderer* SPPMCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
-        int threadNum = params.getInt("thread_num",
-            boost::thread::hardware_concurrency());
+        int threadNum = params.getInt("thread_num", getMaxThreadNum());
         int maxPathLength = params.getInt("max_path_length", 5);
         float initialRadius = params.getFloat("initial_radius",
             PixelData::sInvalidRadius);

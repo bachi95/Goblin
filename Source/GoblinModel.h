@@ -71,7 +71,7 @@ namespace Goblin {
     }
 
     inline void Model::clearRefinedModels() {
-        for(size_t i = 0; i < refinedModels.size(); ++i) {
+        for (size_t i = 0; i < refinedModels.size(); ++i) {
             delete [] refinedModels[i];
             refinedModels[i] = NULL;
         }

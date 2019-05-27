@@ -124,7 +124,7 @@ namespace Goblin {
 
     // Henyey-Greenstein phase function.
     inline float phaseHG(const Vector3& wi, const Vector3& wo, float g) {
-        if(g < 1e-3) {
+        if (g < 1e-3) {
             return 0.25f * INV_PI;
         } else {
             float cosTheta = dot(wi, wo);

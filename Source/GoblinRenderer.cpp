@@ -20,7 +20,7 @@ namespace Goblin {
     }
 
     RenderTask::~RenderTask() {
-        if(mRNG) {
+        if (mRNG) {
             delete mRNG;
             mRNG = NULL;
         }
@@ -36,7 +36,7 @@ namespace Goblin {
         Sample* samples = sampler.allocateSampleBuffer(batchAmount);
         int sampleNum = 0;
         while((sampleNum = sampler.requestSamples(samples)) > 0) {
-            for(int s = 0; s < sampleNum; ++s) {
+            for (int s = 0; s < sampleNum; ++s) {
                 RayDifferential ray;
                 float w = mCamera->generateRay(samples[s], &ray);
                 Color L = mRenderer->Li(mScene, ray, samples[s], 
@@ -69,7 +69,7 @@ namespace Goblin {
             "                     ";
 
         std::cout.flush();
-        if(mFinishedNum == mTasksNum) {
+        if (mFinishedNum == mTasksNum) {
             std::cout << "\rRender Complete!         " << std::endl;
             std::cout.flush();
         }
@@ -82,15 +82,15 @@ namespace Goblin {
         mThreadNum(threadNum) {}
 
     Renderer::~Renderer() {
-        if(mLightSampleIndexes) {
+        if (mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         }
-        if(mBSDFSampleIndexes) {
+        if (mBSDFSampleIndexes) {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPickLightSampleIndexes) {
+        if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
@@ -105,8 +105,8 @@ namespace Goblin {
         vector<SampleRange> sampleRanges;
         getSampleRanges(film, sampleRanges);
         vector<Task*> renderTasks;
-        RenderProgress progress(sampleRanges.size());
-        for(size_t i = 0; i < sampleRanges.size(); ++i) {
+        RenderProgress progress(static_cast<int>(sampleRanges.size()));
+        for (size_t i = 0; i < sampleRanges.size(); ++i) {
             renderTasks.push_back(new RenderTask(this, 
                 camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
                 &progress));
@@ -117,7 +117,7 @@ namespace Goblin {
         threadPool.enqueue(renderTasks);
         threadPool.waitForAll();
         //clean up
-        for(size_t i = 0; i < renderTasks.size(); ++i) {
+        for (size_t i = 0; i < renderTasks.size(); ++i) {
             delete renderTasks[i];
         }
         renderTasks.clear();
@@ -144,7 +144,7 @@ namespace Goblin {
         Vector3 woRefract = Goblin::specularRefract(wo, no, 1.0f, eta);
         Color Lsinglescatter(0.0f);
         // single scattering part
-        for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
+        for (uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
             const BSSRDFSample bssrdfSample(sample, *bssrdfSampleIndex, i);
             // sample a distance with exponential falloff
             float d = exponentialSample(bssrdfSample.uSingleScatter, falloff);
@@ -159,7 +159,7 @@ namespace Goblin {
             Ray shadowRay;
             Color L = light->sampleL(pSample, 1e-5f, bssrdfSample.ls, 
                 &wi, &lightPdf, &shadowRay);
-            if(L == Color::Black || lightPdf == 0.0f) {
+            if (L == Color::Black || lightPdf == 0.0f) {
                 continue;
             }
             // preserve the maxt since the next intersection test will modify
@@ -170,16 +170,16 @@ namespace Goblin {
             // TODO we can use a material indexed lookup table to query
             // surface with this particular BSSRDF instead of doing a whole
             // scene intersaction test 
-            if(scene->intersect(shadowRay, &epsilon, &wiIntersect)) {
+            if (scene->intersect(shadowRay, &epsilon, &wiIntersect)) {
                 // if not, the pSample is out of the BSSRDF geometry already
-                if(wiIntersect.getMaterial()->getBSSRDF() == bssrdf) {
+                if (wiIntersect.getMaterial()->getBSSRDF() == bssrdf) {
                     // update shadow ray to start from pwi
                     const Fragment& fwi = wiIntersect.fragment;
                     const Vector3& pwi = fwi.getPosition();
                     const Vector3& ni = fwi.getNormal();
                     shadowRay.mint = shadowRay.maxt + epsilon;
                     shadowRay.maxt = maxt;
-                    if(!scene->intersect(shadowRay)) {
+                    if (!scene->intersect(shadowRay)) {
                         float p = bssrdf->phase(wi, woRefract); 
                         float cosi = absdot(ni, wi);
                         float Fti = 1.0f - 
@@ -223,7 +223,7 @@ namespace Goblin {
         float skipRatio = 0.01f;
         float Rmax = sqrt(log(skipRatio) / -sigmaTr);
         Color Lmultiscatter(0.0f);
-        for(uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
+        for (uint32_t i = 0; i < bssrdfSampleIndex->samplesNum; ++i) {
             const BSSRDFSample bssrdfSample(sample, *bssrdfSampleIndex, i);
             // sample a probe ray with gaussian falloff pdf from intersection
             Ray probeRay;
@@ -235,8 +235,8 @@ namespace Goblin {
             // TODO we can use a material indexed lookup table to query
             // surface with this particular BSSRDF instead of doing a whole
             // scene intersaction test 
-            if(scene->intersect(probeRay, &epsilon, &probeIntersect)) {
-                if(probeIntersect.getMaterial()->getBSSRDF() == bssrdf) {
+            if (scene->intersect(probeRay, &epsilon, &probeIntersect)) {
+                if (probeIntersect.getMaterial()->getBSSRDF() == bssrdf) {
                     const Fragment& probeFragment = probeIntersect.fragment;
                     const Vector3& pProbe = probeFragment.getPosition();
                     Color Rd = bssrdf->Rd(probeFragment, 
@@ -251,7 +251,7 @@ namespace Goblin {
                     const Vector3& ni = probeFragment.getNormal();
                     Color L = light->sampleL(pProbe, epsilon, bssrdfSample.ls, 
                         &wi, &lightPdf, &shadowRay);
-                    if(L == Color::Black || lightPdf == 0.0f ||
+                    if (L == Color::Black || lightPdf == 0.0f ||
                         scene->intersect(shadowRay)) {
                         continue;
                     }
@@ -281,7 +281,7 @@ namespace Goblin {
             intersection.primitive->getMaterial();
         const BSSRDF* bssrdf = material->getBSSRDF();
         const vector<Light*>& lights = scene->getLights();
-        if(bssrdf == NULL || lights.size() == 0) {
+        if (bssrdf == NULL || lights.size() == 0) {
             return Color(0.0f);
         }
         const Fragment& fragment = intersection.fragment;
@@ -297,7 +297,7 @@ namespace Goblin {
         const RNG& rng) const {
         const VolumeRegion* volume = scene->getVolumeRegion();
         float tMin, tMax;
-        if(!volume || !volume->intersect(ray, &tMin, &tMax)) {
+        if (!volume || !volume->intersect(ray, &tMin, &tMax)) {
             return Color::Black;
         }
         if ((tMax - tMin) < 1e-5f) {
@@ -311,7 +311,7 @@ namespace Goblin {
                 float pickLightPdf;
                 const Light* light = scene->sampleLight(pickLightSample,
                     &pickLightPdf);
-                if(light != NULL && pickLightPdf != 0.0f) {
+                if (light != NULL && pickLightPdf != 0.0f) {
                     LightSample lsEqui(rng);
                     // fisrt pick a light pivot position
                     Vector3 nLight;
@@ -412,15 +412,15 @@ namespace Goblin {
                 float pickLightPdf;
                 const Light* light = scene->sampleLight(pickLightSample,
                     &pickLightPdf);
-                if(light != NULL && pickLightPdf != 0.0f) {
+                if (light != NULL && pickLightPdf != 0.0f) {
                     Ray shadowRay;
                     Vector3 wi;
                     float lightPdf;
                     LightSample ls(rng);
                     Color L = light->sampleL(pCurrent, 0.0f, ls,
                         &wi, &lightPdf, &shadowRay);
-                    if(L != Color::Black && lightPdf > 0.0f) {
-                        if(!scene->intersect(shadowRay)) {
+                    if (L != Color::Black && lightPdf > 0.0f) {
+                        if (!scene->intersect(shadowRay)) {
                             Color trToLight = volume->transmittance(
                                 shadowRay, rng);
                             Color Ld = trToLight * L /
@@ -448,7 +448,7 @@ namespace Goblin {
     Color Renderer::transmittance(const ScenePtr& scene, 
         const Ray& ray, const RNG& rng) const {
         const VolumeRegion* volume = scene->getVolumeRegion();
-        if(volume == NULL) {
+        if (volume == NULL) {
             return Color(1.0f);
         }
         return volume->transmittance(ray, rng);
@@ -479,16 +479,16 @@ namespace Goblin {
         BSDFType type) const {
         Color totalLd = Color::Black;
         const vector<Light*>& lights = scene->getLights();
-        for(size_t i = 0; i < lights.size(); ++i) {
+        for (size_t i = 0; i < lights.size(); ++i) {
             Color Ld = Color::Black;
             uint32_t samplesNum = lightSampleIndexes[i].samplesNum;
-            for(size_t n = 0; n < samplesNum; ++n) {
+            for (size_t n = 0; n < samplesNum; ++n) {
                 const Light* light = lights[i];
                 LightSample ls(rng);
                 BSDFSample bs(rng);
-                if(lightSampleIndexes != NULL && bsdfSampleIndexes != NULL) {
-                    ls = LightSample(sample, lightSampleIndexes[i], n);
-                    bs = BSDFSample(sample, bsdfSampleIndexes[i], n);
+                if (lightSampleIndexes != NULL && bsdfSampleIndexes != NULL) {
+                    ls = LightSample(sample, lightSampleIndexes[i], (uint32_t)n);
+                    bs = BSDFSample(sample, bsdfSampleIndexes[i], (uint32_t)n);
                 }
                 Ld += estimateLd(scene, -ray.d, epsilon, intersection,
                     light, ls, bs, type);
@@ -514,12 +514,12 @@ namespace Goblin {
         Ray shadowRay;
         // MIS for lighting part
         Color L = light->sampleL(p, epsilon, ls, &wi, &lightPdf, &shadowRay);
-        if(L != Color::Black && lightPdf > 0.0f) {
+        if (L != Color::Black && lightPdf > 0.0f) {
             Color f = material->bsdf(fragment, wo, wi);
-            if(f != Color::Black && !scene->intersect(shadowRay)) {
+            if (f != Color::Black && !scene->intersect(shadowRay)) {
                 // we don't do MIS for delta distribution light
                 // since there is only one sample need for it
-                if(light->isDelta()) {
+                if (light->isDelta()) {
                     return f * L * absdot(n, wi) / lightPdf;
                 } else {
                     bsdfPdf = material->pdf(fragment, wo, wi);
@@ -533,14 +533,14 @@ namespace Goblin {
         BSDFType sampledType;
         Color f = material->sampleBSDF(fragment, wo, bs, 
             &wi, &bsdfPdf, type, &sampledType);
-        if(f != Color::Black && bsdfPdf > 0.0f) {
+        if (f != Color::Black && bsdfPdf > 0.0f) {
             // calculate the misWeight if it's not a specular material
             // otherwise we should got 0 Ld from light sample earlier,
             // and count on this part for all the Ld contribution
             float fWeight = 1.0f;
-            if(!(sampledType & BSDFSpecular)) {
+            if (!(sampledType & BSDFSpecular)) {
                 lightPdf = light->pdf(p, wi);
-                if(lightPdf == 0.0f) {
+                if (lightPdf == 0.0f) {
                     return Ld;
                 }
                 fWeight = powerHeuristic(1, bsdfPdf, 1, lightPdf);
@@ -548,10 +548,10 @@ namespace Goblin {
             Intersection lightIntersect;
             float lightEpsilon;
             Ray r(fragment.getPosition(), wi, epsilon);
-            if(scene->intersect(r, &lightEpsilon, &lightIntersect)) {
-                if(lightIntersect.primitive->getAreaLight() == light) {
+            if (scene->intersect(r, &lightEpsilon, &lightIntersect)) {
+                if (lightIntersect.primitive->getAreaLight() == light) {
                     Color Li = lightIntersect.Le(-wi);
-                    if(Li != Color::Black) {
+                    if (Li != Color::Black) {
                         Ld += f * Li * absdot(wi, n) * fWeight / bsdfPdf;
                     }
                 }
@@ -587,8 +587,8 @@ namespace Goblin {
         float pdf;
         Ray shadowRay;
         Color L = light->sampleL(p, epsilon, ls, &wi, &pdf, &shadowRay);
-        if(L != Color::Black && pdf > 0.0f) {
-            if(!scene->intersect(shadowRay)) {
+        if (L != Color::Black && pdf > 0.0f) {
+            if (!scene->intersect(shadowRay)) {
                 irradiance += L * absdot(n, wi) / pdf;
             }
         }
@@ -612,7 +612,7 @@ namespace Goblin {
         Color f = material->sampleBSDF(intersection.fragment, 
             wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFReflection));
-        if(f != Color::Black && absdot(wi, n) != 0.0f) {
+        if (f != Color::Black && absdot(wi, n) != 0.0f) {
             RayDifferential reflectiveRay(p, wi, epsilon);
             reflectiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, reflectiveRay, sample, rng);
@@ -638,7 +638,7 @@ namespace Goblin {
         Color f = material->sampleBSDF(intersection.fragment, 
             wo, BSDFSample(rng), &wi, &pdf, 
             BSDFType(BSDFSpecular | BSDFTransmission));
-        if(f != Color::Black && absdot(wi, n) != 0.0f) {
+        if (f != Color::Black && absdot(wi, n) != 0.0f) {
             RayDifferential refractiveRay(p, wi, epsilon);
             refractiveRay.depth = ray.depth + 1;
             Color Lr = Li(scene, refractiveRay, sample, rng);
@@ -670,7 +670,7 @@ namespace Goblin {
         // if there is any debug data, transform it to screen space
         // and inject to image tile
         const vector<pair<Ray, Color> >& debugRays = debugData.getRays();
-        for(size_t i = 0; i < debugRays.size(); ++i) {
+        for (size_t i = 0; i < debugRays.size(); ++i) {
             const Ray& r = debugRays[i].first;
             Vector3 sWorld = r.o;
             Vector3 eWorld = r(r.maxt);
@@ -682,7 +682,7 @@ namespace Goblin {
         }
         const vector<pair<Vector3, Color> >& debugPoints = 
             debugData.getPoints();
-        for(size_t i = 0; i < debugPoints.size(); ++i) {
+        for (size_t i = 0; i < debugPoints.size(); ++i) {
             Vector3 pScreen = camera->worldToScreen(debugPoints[i].first);
             film->addDebugPoint(Vector2(pScreen.x, pScreen.y), 
                 debugPoints[i].second);

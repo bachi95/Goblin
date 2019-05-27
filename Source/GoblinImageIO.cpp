@@ -147,16 +147,16 @@ Color* loadImage(const string& filename, int *width, int *height) {
 bool writeImage(const string& filename, Color* colorBuffer,
         int width, int height, bool doToneMapping) {
     size_t extOffset = filename.rfind(".");
-    if(extOffset == string::npos) {
+    if (extOffset == string::npos) {
         return writeImagePPM(filename + ".ppm", colorBuffer, width, height);
     }
     string ext = filename.substr(extOffset);
-    if(ext == ".ppm" || ext == ".PPM") {
-        if(doToneMapping) {
+    if (ext == ".ppm" || ext == ".PPM") {
+        if (doToneMapping) {
             toneMapping(colorBuffer, width, height);
         }
         return writeImagePPM(filename, colorBuffer, width, height);
-    } else if(ext == ".exr" || ext == ".EXR") {
+    } else if (ext == ".exr" || ext == ".EXR") {
         return writeImageEXR(filename, colorBuffer, width, height);
     } else {
         // TODO .tiff .tga
@@ -175,7 +175,7 @@ void bloom(Color* colorBuffer, int width, int height,
     int filterWidth = ceilInt(bloomRadius * max(width, height)) / 2;
     float* filter = new float[filterWidth * filterWidth];
     for (int y = 0; y < filterWidth; ++y) {
-        for(int x = 0; x < filterWidth; ++x) {
+        for (int x = 0; x < filterWidth; ++x) {
             float d = sqrtf((float)(x * x + y * y)) / (float)filterWidth;
             filter[y * filterWidth + x] = powf(max(0.0f, 1.0f - d), 4.0f);
         }

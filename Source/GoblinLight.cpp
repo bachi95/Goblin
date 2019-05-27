@@ -277,10 +277,10 @@ namespace Goblin {
 
     float SpotLight::falloff(const Vector3& w) const {
         float cosTheta = dot(w, mToWorld.onVector(Vector3::UnitZ));
-        if(cosTheta < mCosThetaMax) {
+        if (cosTheta < mCosThetaMax) {
             return 0.0f;
         }
-        if(cosTheta > mCosFalloffStart) {
+        if (cosTheta > mCosFalloffStart) {
             return 1.0f;
         }
         float delta = (cosTheta - mCosThetaMax) / (mCosFalloffStart - mCosThetaMax);
@@ -289,14 +289,14 @@ namespace Goblin {
 
     GeometrySet::GeometrySet(const Geometry* geometry):
         mSumArea(0.0f), mAreaDistribution(NULL) {
-        if(geometry->intersectable()) {
+        if (geometry->intersectable()) {
             mGeometries.push_back(geometry);
         } else {
             geometry->refine(mGeometries);
         }
         mSumArea = 0.0f;
         mGeometriesArea.resize(mGeometries.size());
-        for(size_t i = 0; i < mGeometries.size(); ++i) {
+        for (size_t i = 0; i < mGeometries.size(); ++i) {
             float area = mGeometries[i]->area();
             mGeometriesArea[i] = area;
             mSumArea += area;
@@ -305,7 +305,7 @@ namespace Goblin {
     }
 
     GeometrySet::~GeometrySet() {
-        if(mAreaDistribution != NULL ) {
+        if (mAreaDistribution != NULL ) {
             delete mAreaDistribution;
             mAreaDistribution = NULL;
         }
@@ -336,7 +336,7 @@ namespace Goblin {
 
     float GeometrySet::pdf(const Vector3& p, const Vector3& wi) const {
         float pdf = 0.0f;
-        for(size_t i = 0; i < mGeometries.size(); ++i) {
+        for (size_t i = 0; i < mGeometries.size(); ++i) {
             pdf += mGeometriesArea[i] * mGeometries[i]->pdf(p, wi);    
         }
         pdf /= mSumArea;
@@ -360,7 +360,7 @@ namespace Goblin {
     }
 
     AreaLight::~AreaLight() {
-        if(mGeometrySet != NULL) {
+        if (mGeometrySet != NULL) {
             delete mGeometrySet;
             mGeometrySet = NULL;
         }
@@ -474,14 +474,14 @@ namespace Goblin {
         mToWorld.setOrientation(orientation * mToWorld.getOrientation());
         int width, height;
         Color* buffer = loadImage(radianceMap, &width, &height);
-        if(buffer == NULL) {
+        if (buffer == NULL) {
             std::cerr << "errror loading image " << radianceMap << std::endl;
             width = 1;
             height = 1;
             buffer = new Color[1];
             buffer[0] = Color::Magenta;
         }
-        for(int i = 0; i < width * height; ++i) {
+        for (int i = 0; i < width * height; ++i) {
             buffer[i] *= filter;
         }
 
@@ -496,9 +496,9 @@ namespace Goblin {
         int distWidth = distBuffer->width;
         int distHeight = distBuffer->height;
         float* dist = new float[distWidth * distHeight];
-        for(int i = 0; i < distHeight; ++i) {
+        for (int i = 0; i < distHeight; ++i) {
             float sinTheta = sin(((float)i + 0.5f) / (float)distHeight * PI);
-            for(int j = 0; j < distWidth; ++j) {
+            for (int j = 0; j < distWidth; ++j) {
                 int index = i * distWidth + j;
                 dist[index] = distImage[index].luminance() * sinTheta;
             }
@@ -508,11 +508,11 @@ namespace Goblin {
     }
 
     ImageBasedLight::~ImageBasedLight() {
-        if(mRadiance != NULL) {
+        if (mRadiance != NULL) {
             delete mRadiance;
             mRadiance = NULL;
         }
-        if(mDistribution != NULL) {
+        if (mDistribution != NULL) {
             delete mDistribution;
             mDistribution = NULL;
         }
@@ -542,7 +542,7 @@ namespace Goblin {
         Vector3 wLocal(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
         *wi = mToWorld.onVector(wLocal);
 
-        if(sinTheta == 0.0f) {
+        if (sinTheta == 0.0f) {
             *pdf = 0.0f;
         }
         *pdf = pdfST / (TWO_PI * PI * sinTheta);
@@ -620,7 +620,7 @@ namespace Goblin {
         Vector3 wiLocal = mToWorld.invertVector(wi);
         float theta = sphericalTheta(wiLocal);
         float sinTheta = sin(theta);
-        if(sinTheta == 0.0f) {
+        if (sinTheta == 0.0f) {
             return 0.0f;
         }
         float phi = sphericalPhi(wiLocal);

@@ -342,7 +342,7 @@ namespace Goblin {
         getSampleRanges(film, sampleRanges);
         vector<Task*> lightTraceTasks;
         RenderProgress progress((int)sampleRanges.size());
-        for(size_t i = 0; i < sampleRanges.size(); ++i) {
+        for (size_t i = 0; i < sampleRanges.size(); ++i) {
             lightTraceTasks.push_back(new LightTraceTask(this,
                 camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
                 mMaxPathLength, &progress));
@@ -353,7 +353,7 @@ namespace Goblin {
         threadPool.enqueue(lightTraceTasks);
         threadPool.waitForAll();
         //clean up
-        for(size_t i = 0; i < lightTraceTasks.size(); ++i) {
+        for (size_t i = 0; i < lightTraceTasks.size(); ++i) {
             delete lightTraceTasks[i];
         }
         lightTraceTasks.clear();
@@ -369,15 +369,15 @@ namespace Goblin {
     void LightTracer::querySampleQuota(const ScenePtr& scene,
         SampleQuota* sampleQuota){
 
-        if(mLightSampleIndexes) {
+        if (mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         }
-        if(mBSDFSampleIndexes) {
+        if (mBSDFSampleIndexes) {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPickLightSampleIndexes) {
+        if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
@@ -387,15 +387,14 @@ namespace Goblin {
         mPickLightSampleIndexes = new SampleIndex[1];
         mPickLightSampleIndexes[0] = sampleQuota->requestOneDQuota(1);
         mBSDFSampleIndexes = new BSDFSampleIndex[mMaxPathLength + 1];
-        for(int i = 0; i < mMaxPathLength + 1; ++i) {
+        for (int i = 0; i < mMaxPathLength + 1; ++i) {
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
         }
     }
 
     Renderer* LightTracerCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
-        int threadNum = params.getInt("thread_num",
-            boost::thread::hardware_concurrency());
+        int threadNum = params.getInt("thread_num", getMaxThreadNum());
         int maxPathLength = params.getInt("max_path_length", 5);
         return new LightTracer(samplePerPixel, threadNum, maxPathLength);
     }

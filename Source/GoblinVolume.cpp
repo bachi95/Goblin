@@ -16,7 +16,7 @@ namespace Goblin {
 
     float VolumeRegion::phase(const Vector3& p, const Vector3& wi, 
         const Vector3& wo) const {
-        if(!mLocalRegion.contain(mToWorld.invertPoint(p))) {
+        if (!mLocalRegion.contain(mToWorld.invertPoint(p))) {
             return 0.0f;
         }
         return phaseHG(wi, wo, mG);
@@ -26,7 +26,7 @@ namespace Goblin {
         const RNG& rng) const {
         // homogeneous transmittance can be analytically solved by Beer's law
         float tMin, tMax;
-        if(!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
+        if (!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
             return Color(1.0f);
         }
         Color tau = length(ray(tMax) - ray(tMin)) * mAttenuation;;
@@ -323,7 +323,7 @@ namespace Goblin {
         // TODO replace biased ray marching approach with unbiased solution
         // (ratio tracking or residual ratio tracking)
         float tMin, tMax;
-        if(!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
+        if (!mLocalRegion.intersect(mToWorld.invertRay(ray), &tMin, &tMax)) {
             return Color(0.0f);
         }
         float stepSize = getSampleStepSize();

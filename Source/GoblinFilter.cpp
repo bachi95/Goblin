@@ -86,7 +86,7 @@ namespace Goblin {
     float MitchellFilter::Mitchell(float x) const {
         x = fabs(2.0f * x);
         float m = 0.0f;
-        if(x > 1.0f) {
+        if (x > 1.0f) {
             m = ((-mB - 6 * mC) * x * x * x + (6 * mB + 30 * mC) * x * x +
                 (-12 * mB - 48 * mC) * x + (8 * mB + 24 * mC)) / 6.0f;
         } else {

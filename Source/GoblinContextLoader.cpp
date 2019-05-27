@@ -22,7 +22,7 @@ namespace Goblin {
     static Vector2 parseVector2(const PropertyTree& pt, const char* key,
         const Vector2& fallback = Vector2::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
-        if(rv.size() != 2) {
+        if (rv.size() != 2) {
             std::cerr << "invalid value for Vector2 " << key << endl;
             return fallback;
         }
@@ -32,7 +32,7 @@ namespace Goblin {
     static Vector3 parseVector3(const PropertyTree& pt, const char* key,
         const Vector3& fallback = Vector3::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
-        if(rv.size() != 3) {
+        if (rv.size() != 3) {
             std::cerr << "invalid value for Vector3 " << key << endl;
             return fallback;
         }
@@ -42,7 +42,7 @@ namespace Goblin {
     static Vector4 parseVector4(const PropertyTree& pt, const char* key,
         const Vector4& fallback = Vector4::Zero) {
         std::vector<float> rv = pt.parseFloatArray(key);
-        if(rv.size() != 4) {
+        if (rv.size() != 4) {
             std::cerr << "invalid value for Vector4 " << key << endl;
             return fallback;
         }
@@ -52,7 +52,7 @@ namespace Goblin {
     static Color parseColor(const PropertyTree& pt, const char* key,
         const Color& fallback = Color::White) {
         std::vector<float> rv = pt.parseFloatArray(key);
-        if(rv.size() != 3) {
+        if (rv.size() != 3) {
             std::cerr << "invalid value for Color " << key << endl;
             return fallback;
         }
@@ -61,43 +61,43 @@ namespace Goblin {
 
     static void parseParamSet(const PropertyTree& pt, ParamSet* params) {
         const PtreeList& nodes = pt.getChildren(); 
-        for(PtreeList::const_iterator it = nodes.begin(); 
+        for (PtreeList::const_iterator it = nodes.begin(); 
             it != nodes.end(); it++) {
             std::string type(it->first);
             const PtreeList& keyValuePairs = it->second.getChildren();
-            for(PtreeList::const_iterator kv = keyValuePairs.begin(); 
+            for (PtreeList::const_iterator kv = keyValuePairs.begin(); 
                 kv != keyValuePairs.end(); kv++) {
                 std::string key(kv->first);
                 cout << type << " " << key << " ";
-                if(type == "bool") {
+                if (type == "bool") {
                     bool v = it->second.parseBool(key.c_str());
                     params->setBool(key, v);
                     cout << v << endl; 
-                } else if(type == "int") {
+                } else if (type == "int") {
                     int v = it->second.parseInt(key.c_str());
                     params->setInt(key, v);
                     cout << v << endl;
-                } else if(type == "float") {
+                } else if (type == "float") {
                     float v = it->second.parseFloat(key.c_str());
                     params->setFloat(key, v);
                     cout << v << endl;
-                } else if(type == "string") {
+                } else if (type == "string") {
                     std::string v = it->second.parseString(key.c_str());
                     params->setString(key, v);
                     cout << v << endl;
-                }  else if(type == "vec2") {
+                }  else if (type == "vec2") {
                     Vector2 v = parseVector2(it->second, key.c_str());
                     params->setVector2(key, v);
                     cout << v << endl;
-                }  else if(type == "vec3") {
+                }  else if (type == "vec3") {
                     Vector3 v = parseVector3(it->second, key.c_str());
                     params->setVector3(key, v);
                     cout << v << endl;
-                }  else if(type == "vec4") {
+                }  else if (type == "vec4") {
                     Vector4 v = parseVector4(it->second, key.c_str());
                     params->setVector4(key, v);
                     cout << v << endl;
-                } else if(type == "color") {
+                } else if (type == "color") {
                     Color v = parseColor(it->second, key.c_str());
                     params->setColor(key, v);
                     cout << v << endl;
@@ -256,7 +256,7 @@ namespace Goblin {
         // need to add lens into scene so that it can be intersected by
         // light particles
         float lensRadius = cameraParams.getFloat("lens_radius");
-        if(lensRadius != 0.0f) {
+        if (lensRadius != 0.0f) {
             // we need to push this geometry into scene so that it can
             // be intersection tested. the run time material/model
             // creation is pretty awkward at this moment...definitly should
@@ -298,7 +298,7 @@ namespace Goblin {
 
     VolumeRegion* ContextLoader::parseVolume(const PropertyTree& pt,
         SceneCache* sceneCache) {
-        if(!pt.hasChild("volume")) {
+        if (!pt.hasChild("volume")) {
             return NULL;
         }
         cout << "volume" << endl;
@@ -342,11 +342,11 @@ namespace Goblin {
         string textureFormat = textureParams.getString("format", "color");
         string type = textureParams.getString("type");
         string name = textureParams.getString("name");
-        if(textureFormat == "float") {
+        if (textureFormat == "float") {
             FloatTexturePtr texture(mFloatTextureFactory->create(type, 
                 textureParams, *sceneCache));
             sceneCache->addFloatTexture(name, texture);
-        } else if(textureFormat == "color") {
+        } else if (textureFormat == "color") {
             ColorTexturePtr texture(mColorTextureFactory->create(type, 
                 textureParams, *sceneCache));
             sceneCache->addColorTexture(name, texture);
@@ -386,7 +386,7 @@ namespace Goblin {
         cout << "BBox min: " << bbox.pMin << endl;
         cout << "BBox max: " << bbox.pMax << endl;
         cout << "BBox center: " << bbox.center() << endl;
-        if(type == "instance") {
+        if (type == "instance") {
             sceneCache->addInstance(primitive);
         }
         cout << string(sDelimiterWidth, '-') << endl;
@@ -402,7 +402,7 @@ namespace Goblin {
         string name = lightParams.getString("name");
         Light* light = mLightFactory->create(type, lightParams, *sceneCache);
         sceneCache->addLight(light);
-        if(type == "area") {
+        if (type == "area") {
             // we need to push this geometry into scene so that it can
             // be intersection tested. the run time material/model
             // creation is pretty awkward at this moment...definitly should
@@ -434,7 +434,7 @@ namespace Goblin {
     RenderContext* ContextLoader::load(const string& filename) {
         PropertyTree pt;
         path scenePath(filename);
-        if(!exists(scenePath) || !pt.read(filename)) {
+        if (!exists(scenePath) || !pt.read(filename)) {
             cerr << "error reading scene file: " << filename << endl;
             return NULL;
         }
@@ -451,27 +451,27 @@ namespace Goblin {
 
         PtreeList geometryNodes;
         pt.getChildren("geometry", &geometryNodes);
-        for(size_t i = 0; i < geometryNodes.size(); ++i) {
+        for (size_t i = 0; i < geometryNodes.size(); ++i) {
             parseGeometry(geometryNodes[i].second, &sceneCache);
         }
         PtreeList textureNodes;
         pt.getChildren("texture", &textureNodes);
-        for(size_t i = 0; i < textureNodes.size(); ++i) {
+        for (size_t i = 0; i < textureNodes.size(); ++i) {
             parseTexture(textureNodes[i].second, &sceneCache);
         }
         PtreeList materialNodes;
         pt.getChildren("material", &materialNodes);
-        for(size_t i = 0; i < materialNodes.size(); ++i) {
+        for (size_t i = 0; i < materialNodes.size(); ++i) {
             parseMaterial(materialNodes[i].second, &sceneCache);
         }
         PtreeList primitiveNodes;
         pt.getChildren("primitive", &primitiveNodes);
-        for(size_t i = 0; i < primitiveNodes.size(); ++i) {
+        for (size_t i = 0; i < primitiveNodes.size(); ++i) {
             parsePrimitive(primitiveNodes[i].second, &sceneCache);
         }
         PtreeList lightNodes;
         pt.getChildren("light", &lightNodes);
-        for(size_t i = 0; i < lightNodes.size(); ++i) {
+        for (size_t i = 0; i < lightNodes.size(); ++i) {
             parseLight(lightNodes[i].second, &sceneCache);
         }
         PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),

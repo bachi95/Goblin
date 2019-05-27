@@ -10,9 +10,8 @@
 #include <utility>
 #include <vector>
 #include <map>
-
-#include <boost/scoped_ptr.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
+#include <thread>
 
 #include "GoblinVector.h"
 
@@ -60,9 +59,9 @@ namespace Goblin {
     class Renderer;
     class Scene;
     class Transform;
-    typedef boost::shared_ptr<Camera> CameraPtr;
-    typedef boost::shared_ptr<Renderer> RendererPtr;
-    typedef boost::shared_ptr<Scene> ScenePtr;
+    typedef std::shared_ptr<Camera> CameraPtr;
+    typedef std::shared_ptr<Renderer> RendererPtr;
+    typedef std::shared_ptr<Scene> ScenePtr;
 
     const float PI = 3.14159265358979323f;
     const float TWO_PI = 6.28318530718f;
@@ -149,7 +148,7 @@ namespace Goblin {
 
     inline int roundToSquare(int n, int* root = NULL) {
         int s = ceilInt(sqrt(static_cast<float>(n)));
-        if(root) {
+        if (root) {
             *root = s;
         }
         return s * s;
@@ -176,12 +175,12 @@ namespace Goblin {
     inline bool solve2x2LinearSystem(const float A[2][2], const float B[2],
         float* x, float* y) {
         float det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
-        if(fabs(det) < 1e-10f) {
+        if (fabs(det) < 1e-10f) {
             return false;
         }
         *x = (+A[1][1] * B[0] - A[0][1] * B[1]) / det;
         *y = (-A[1][0] * B[0] + A[0][0] * B[1]) / det;
-        if(isNaN(*x) || isNaN(*y)) {
+        if (isNaN(*x) || isNaN(*y)) {
             return false;
         }
         return true;
@@ -222,6 +221,10 @@ namespace Goblin {
 
     // get first N prime numbers sequence
     void getPrimes(size_t N, vector<uint32_t>& primes);
+
+	inline unsigned int getMaxThreadNum() {
+		return std::thread::hardware_concurrency();
+	}
 }
 
 #endif // GOBLIN_UTILS_H

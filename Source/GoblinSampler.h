@@ -57,9 +57,9 @@ namespace Goblin {
 
     inline Sample::~Sample() {
         // release u1D/u2D
-        if(u1D != NULL) {
+        if (u1D != NULL) {
             // release the float buffer that u1D/u2D point to
-            if(u1D[0] != NULL) {
+            if (u1D[0] != NULL) {
                 delete [] u1D[0];
                 u1D[0] = NULL;
             }
@@ -150,9 +150,9 @@ namespace Goblin {
 
     template<typename T>
     void shuffle(T* buffer, uint32_t num, uint32_t dim, RNG* rng) {
-        for(uint32_t n = 0; n < num; ++n) {
+        for (uint32_t n = 0; n < num; ++n) {
             size_t toShuffle = rng->randomUInt() % num;
-            for(uint32_t d = 0; d < dim; ++d) {
+            for (uint32_t d = 0; d < dim; ++d) {
                 swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
             }
         }

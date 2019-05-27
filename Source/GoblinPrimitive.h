@@ -42,7 +42,7 @@ namespace Goblin {
     typedef std::vector<Renderable> RenderList;
 
     class Primitive;
-    typedef boost::shared_ptr<Primitive> PrimitivePtr;
+    typedef std::shared_ptr<Primitive> PrimitivePtr;
     typedef vector<const Primitive*> PrimitiveList;
 
     struct Intersection {
@@ -124,7 +124,7 @@ namespace Goblin {
     }
 
     inline void Primitive::clearAllocatedPrimitives() {
-        for(size_t i = 0; i < allocatedPrimitives.size(); ++i) {
+        for (size_t i = 0; i < allocatedPrimitives.size(); ++i) {
             delete allocatedPrimitives[i];
             allocatedPrimitives[i] = NULL;
         }

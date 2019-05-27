@@ -18,7 +18,7 @@ namespace Goblin {
      * normal is Vector3(0, 0, 1) in this shading space
      */
     Matrix3 Fragment::getWorldToShade() const {
-        if(!mIsUpdated) {
+        if (!mIsUpdated) {
             Vector3 n = mNormal;
             Vector3 t = normalize(mDPDU - n * dot(mDPDU, n));
             Vector3 b = cross(n, t);
@@ -52,7 +52,7 @@ namespace Goblin {
         Ray ray(p, wi, 1e-3f);
         float epsilon;
         Fragment fragment;
-        if(!intersect(ray, &epsilon, &fragment)) {
+        if (!intersect(ray, &epsilon, &fragment)) {
             return 0.0f;
         } 
         /* 
@@ -63,7 +63,7 @@ namespace Goblin {
          */
         float pdf = squaredLength(p - fragment.getPosition()) / 
             (area() * absdot(-wi, fragment.getNormal()));
-        if(isinf(pdf)) {
+        if (isinf(pdf)) {
             pdf = 0.0f;
         }
         return pdf;

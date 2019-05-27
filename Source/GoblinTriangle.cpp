@@ -50,25 +50,25 @@ namespace Goblin {
         Vector3 e2 = p2 - p0;
         Vector3 s1 = cross(ray.d, e2);
         float divisor = dot(s1, e1);
-        if(divisor == 0.0f) {
+        if (divisor == 0.0f) {
             return false;
         }
         float invDivisor = 1.0f / divisor;
         float fEpsilon = 1e-7f;
         Vector3 s = ray.o - p0;
         float b1 = dot(s, s1) * invDivisor;
-        if(b1 + fEpsilon < 0.0f || b1 - fEpsilon > 1.0f) {
+        if (b1 + fEpsilon < 0.0f || b1 - fEpsilon > 1.0f) {
             return false;
         }
 
         Vector3 s2 = cross(s, e1);
         float b2 = dot(ray.d, s2) * invDivisor;
-        if(b2 + fEpsilon < 0.0f || b1 + b2 - fEpsilon > 1.0f) {
+        if (b2 + fEpsilon < 0.0f || b1 + b2 - fEpsilon > 1.0f) {
             return false;
         }
 
         float t = dot(e2, s2) * invDivisor;
-        if(t < ray.mint || t > ray.maxt) {
+        if (t < ray.mint || t > ray.maxt) {
             return false;
         }
         return true;
@@ -93,25 +93,25 @@ namespace Goblin {
         Vector3 e2 = p2 - p0;
         Vector3 s1 = cross(ray.d, e2);
         float divisor = dot(s1, e1);
-        if(divisor == 0.0f) {
+        if (divisor == 0.0f) {
             return false;
         }
         float invDivisor = 1.0f / divisor;
         float fEpsilon = 1e-7f;
         Vector3 s = ray.o - p0;
         float b1 = dot(s, s1) * invDivisor;
-        if(b1 + fEpsilon < 0.0f || b1 - fEpsilon > 1.0f) {
+        if (b1 + fEpsilon < 0.0f || b1 - fEpsilon > 1.0f) {
             return false;
         }
 
         Vector3 s2 = cross(s, e1);
         float b2 = dot(ray.d, s2) * invDivisor;
-        if(b2 + fEpsilon < 0.0f || b1 + b2 - fEpsilon > 1.0f) {
+        if (b2 + fEpsilon < 0.0f || b1 + b2 - fEpsilon > 1.0f) {
             return false;
         }
 
         float t = dot(e2, s2) * invDivisor;
-        if(t < ray.mint || t > ray.maxt) {
+        if (t < ray.mint || t > ray.maxt) {
             return false;
         }
 
@@ -122,7 +122,7 @@ namespace Goblin {
         // position, normal, uv, dpdu, dpdv....
         Vector3 position(ray(t));
         Vector3 normal;
-        if(mParentMesh->hasNormal()) {
+        if (mParentMesh->hasNormal()) {
             const Vector3& n0 = v0.normal;
             const Vector3& n1 = v1.normal;
             const Vector3& n2 = v2.normal;
@@ -132,7 +132,7 @@ namespace Goblin {
         }
 
         Vector2 uvs[3];
-        if(mParentMesh->hasTexCoord()) {
+        if (mParentMesh->hasTexCoord()) {
             uvs[0] = v0.texC;
             uvs[1] = v1.texC;
             uvs[2] = v2.texC;
@@ -149,7 +149,7 @@ namespace Goblin {
         float dv2 = uvs[2].y - uvs[0].y;
         float determinant = du1 * dv2 - dv1 * du2;
         Vector3 dpdu, dpdv;
-        if(determinant == 0.0f) {
+        if (determinant == 0.0f) {
             // form a random shading coordinate from normal then
             dpdu = normalize(e1 - 
                 dot(fragment->getNormal(), e1) * fragment->getNormal());
