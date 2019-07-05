@@ -91,7 +91,7 @@ namespace Goblin {
         return mLights[lightIndex];
     }
 
-    SceneCache::SceneCache(const path& sceneRoot): 
+    SceneCache::SceneCache(const std::string& sceneRoot):
         mSceneRoot(sceneRoot),
         mErrorCode("error") {
         initDefault();
@@ -223,11 +223,12 @@ namespace Goblin {
     }
 
     string SceneCache::resolvePath(const string& filename) const {
-        path filePath(filename);
-        if (filePath.is_absolute()) {
-            return filePath.generic_string();
+        if (filename[0] == '/' || filename[1] == ':') {
+			// absolute path
+            return filename;
         } else {
-            return (mSceneRoot / filename).generic_string();
+			// relative path
+            return mSceneRoot + "/" + filename;
         }
     }
 }

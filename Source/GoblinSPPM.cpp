@@ -112,7 +112,7 @@ namespace Goblin {
         void initialize(TLSPtr& tlsPtr) {
             {
                 // TODO this can probably be replaced with an atomic
-                boost::lock_guard<boost::mutex> lk(mSyncTLSMutex);
+                std::lock_guard<std::mutex> lk(mSyncTLSMutex);
                 size_t threadID = mNextThreadID++;
                 tlsPtr.reset(new PhotonTraceTLS(mSampleQuota, threadID,
                     mPhotonCache[threadID]));
@@ -121,7 +121,7 @@ namespace Goblin {
 
         void finalize(TLSPtr& tlsPtr) {
             {
-                boost::lock_guard<boost::mutex> lk(mSyncTLSMutex);
+                std::lock_guard<std::mutex> lk(mSyncTLSMutex);
                 PhotonTraceTLS* photonTraceTLS =
                     static_cast<PhotonTraceTLS*>(tlsPtr.get());
                 vector<PhotonCache>& photonCache =
@@ -140,7 +140,7 @@ namespace Goblin {
         }
 
     private:
-        boost::mutex mSyncTLSMutex;
+        std::mutex mSyncTLSMutex;
         const SampleQuota& mSampleQuota;
         size_t mNextThreadID;
         vector<PixelData>& mPixelData;

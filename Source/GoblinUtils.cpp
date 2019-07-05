@@ -6,18 +6,13 @@
 
 #include <ctime>
 #include <limits>
-#include <boost/generator_iterator.hpp>
-#include <boost/random.hpp>
+#include <random>
 
 namespace Goblin {
 
-    typedef boost::mt19937 RNGType;
-    typedef boost::uniform_real<float> RealDist;
-    typedef boost::uniform_int<uint32_t> UInt32Dist;
-    typedef boost::variate_generator< RNGType, boost::uniform_real<float> >
-        RealGenerator;
-    typedef boost::variate_generator< RNGType, boost::uniform_int<uint32_t> >
-        UInt32Generator;
+    typedef std::mt19937 RNGType;
+    typedef std::uniform_real<float> RealDist;
+    typedef std::uniform_int<uint32_t> UInt32Dist;
 
     class RNGImp {
     public:
@@ -29,33 +24,27 @@ namespace Goblin {
         RNGType* mEngine;
         RealDist* mRealDist;
         UInt32Dist* mUInt32Dist;
-        RealGenerator* mRealGenerator;
-        UInt32Generator* mUInt32Generator;
     };
 
     RNGImp::RNGImp() {
         mEngine = new RNGType(static_cast<uint32_t>(rand()));
-        mRealDist = new boost::uniform_real<float>(0.0f, 1.0f);
-        mUInt32Dist = new boost::uniform_int<uint32_t>(0, 
-            numeric_limits<uint32_t>::max() );
-        mRealGenerator = new RealGenerator(*mEngine, *mRealDist);
-        mUInt32Generator = new UInt32Generator(*mEngine, *mUInt32Dist);
+        mRealDist = new std::uniform_real<float>(0.0f, 1.0f);
+        mUInt32Dist = new std::uniform_int<uint32_t>(
+			0, numeric_limits<uint32_t>::max());
     }
 
     RNGImp::~RNGImp() {
         delete mEngine;
         delete mRealDist;
         delete mUInt32Dist;
-        delete mRealGenerator;
-        delete mUInt32Generator;
     }
 
     float RNGImp::randomFloat() const {
-        return (*mRealGenerator)();
+        return (*mRealDist)(*mEngine);
     }
 
     uint32_t RNGImp::randomUInt() const {
-        return (*mUInt32Generator)();
+        return (*mUInt32Dist)(*mEngine);
     }
 
     RNG::RNG() {

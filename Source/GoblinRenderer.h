@@ -23,7 +23,7 @@ namespace Goblin {
         void reset();
         void update();
     private:
-        boost::mutex mUpdateMutex;
+        std::mutex mUpdateMutex;
         int mFinishedNum, mTasksNum;
     };
 

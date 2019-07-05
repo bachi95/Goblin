@@ -204,9 +204,9 @@ namespace Goblin {
     void drawPoint(const Vector2& p, Color* buffer, int xRes, int yRes,
         const Color& color, int radius = 1);
 
-    // random number generator utils from boost
+    // random number generator utils
     class RNGImp;
-
+	// TODO consider replacing this with PCG
     class RNG {
     public:
         RNG();

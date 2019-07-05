@@ -433,12 +433,23 @@ namespace Goblin {
 
     RenderContext* ContextLoader::load(const string& filename) {
         PropertyTree pt;
-        path scenePath(filename);
-        if (!exists(scenePath) || !pt.read(filename)) {
+        if (!pt.read(filename)) {
             cerr << "error reading scene file: " << filename << endl;
             return NULL;
         }
-        SceneCache sceneCache(canonical(scenePath.parent_path()));
+		// TODO replace this workaround as soon as we have std::filesystem
+		std::string sceneDir = ".";
+		std::size_t substrIndex = filename.find_last_of('/');
+		if (substrIndex != std::string::npos) {
+			sceneDir = filename.substr(0, substrIndex);
+		}
+		else {
+			substrIndex = filename.find_last_of('\\');
+			if (substrIndex != std::string::npos) {
+				sceneDir = filename.substr(0, substrIndex);
+			}
+		}
+        SceneCache sceneCache(sceneDir);
 
         RendererPtr renderer = parseRenderer(pt);
 

@@ -16,14 +16,14 @@ namespace Goblin {
         }
         for (size_t i = 0; i < mCoreNum; ++i) {
             mWorkers.push_back(
-                new boost::thread(&ThreadPool::taskEntry, this));
+                new std::thread(&ThreadPool::taskEntry, this));
         }
     }
 
     void ThreadPool::taskEntry() {
-        static TLSPtr tlsPtr;
+        static thread_local TLSPtr tlsPtr;
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             while(!mStartWork) {
                 mStartCondition.wait(lk);
             }
@@ -34,7 +34,7 @@ namespace Goblin {
         while(true) {
             Task* task = NULL;
             {
-                boost::lock_guard<boost::mutex> lk(mTaskQueueMutex);
+                std::lock_guard<std::mutex> lk(mTaskQueueMutex);
                 if (mTasks.size() == 0) {
                     break;
                 }
@@ -47,7 +47,7 @@ namespace Goblin {
             }
 
             {
-                boost::unique_lock<boost::mutex> lk(mTaskQueueMutex);
+                std::unique_lock<std::mutex> lk(mTaskQueueMutex);
                 if (--mTasksNum == 0) {
                     mTasksCondition.notify_all();
                     break;
@@ -75,7 +75,7 @@ namespace Goblin {
         }
     
         {
-            boost::lock_guard<boost::mutex> lk(mTaskQueueMutex);
+            std::lock_guard<std::mutex> lk(mTaskQueueMutex);
             for (size_t i = 0; i < tasks.size(); ++i) {
                 mTasks.push_back(tasks[i]);
             }
@@ -90,14 +90,14 @@ namespace Goblin {
 
         // let the worker start working
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             mStartWork = true;
         }
         mStartCondition.notify_all();
 
         // wake me up til all the taks finish
         { 
-            boost::unique_lock<boost::mutex> lk(mTaskQueueMutex);
+            std::unique_lock<std::mutex> lk(mTaskQueueMutex);
             while(mTasksNum != 0) {
                 mTasksCondition.wait(lk);
             }
@@ -114,7 +114,7 @@ namespace Goblin {
         }
         mWorkers.clear();
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             mStartWork = false;
         }
 

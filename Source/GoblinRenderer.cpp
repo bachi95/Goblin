@@ -56,12 +56,12 @@ namespace Goblin {
     }
 
     void RenderProgress::reset() {
-        boost::lock_guard<boost::mutex> lk(mUpdateMutex);
+        std::lock_guard<std::mutex> lk(mUpdateMutex);
         mFinishedNum = 0;
     }
 
     void RenderProgress::update() {
-        boost::lock_guard<boost::mutex> lk(mUpdateMutex);
+        std::lock_guard<std::mutex> lk(mUpdateMutex);
         mFinishedNum++;
         std::cout.precision(3);
         std::cout << "\rProgress: %" << 
