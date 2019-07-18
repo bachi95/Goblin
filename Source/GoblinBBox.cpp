@@ -36,17 +36,17 @@ namespace Goblin {
     bool BBox::intersect(const Ray& ray) const {
         float t0 = ray.mint;
         float t1 = ray.maxt;
-        for(size_t i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             float invDir = 1.0f / ray.d[i];
             float tNear = (pMin[i] - ray.o[i]) * invDir;
             float tFar = (pMax[i] - ray.o[i]) * invDir;
             // ray might travel in/away
-            if(tNear > tFar) {
+            if (tNear > tFar) {
                 swap(tNear, tFar);
             }
             t0 = (tNear > t0) ? tNear : t0;
             t1 = (tFar < t1) ? tFar : t1;
-            if(t0 > t1) {
+            if (t0 > t1) {
                 return false;
             }
         }
@@ -56,17 +56,17 @@ namespace Goblin {
     bool BBox::intersect(const Ray& ray, float* tMin, float* tMax) const {
         float t0 = ray.mint;
         float t1 = ray.maxt;
-        for(size_t i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             float invDir = 1.0f / ray.d[i];
             float tNear = (pMin[i] - ray.o[i]) * invDir;
             float tFar = (pMax[i] - ray.o[i]) * invDir;
             // ray might travel in/away
-            if(tNear > tFar) {
+            if (tNear > tFar) {
                 swap(tNear, tFar);
             }
             t0 = (tNear > t0) ? tNear : t0;
             t1 = (tFar < t1) ? tFar : t1;
-            if(t0 > t1) {
+            if (t0 > t1) {
                 return false;
             }
         }
@@ -77,9 +77,9 @@ namespace Goblin {
 
     int BBox::longestAxis() const {
         Vector3 delta = pMax - pMin;
-        if(delta.x > delta.y && delta.x > delta.z) {
+        if (delta.x > delta.y && delta.x > delta.z) {
             return 0;
-        } else if(delta.y > delta.z) {
+        } else if (delta.y > delta.z) {
             return 1;
         } else {
             return 2;

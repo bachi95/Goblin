@@ -43,7 +43,7 @@ namespace Goblin {
     template<typename Product, typename P1, typename P2, typename P3> 
     Factory<Product, P1, P2, P3>::~Factory() {
         typename CreatorTable::iterator it = mCreatorTable.begin();
-        for(; it != mCreatorTable.end(); ++it) {
+        for (; it != mCreatorTable.end(); ++it) {
             delete it->second;
         }
         mCreatorTable.clear();
@@ -52,7 +52,7 @@ namespace Goblin {
     template<typename Product, typename P1, typename P2, typename P3> 
     bool Factory<Product, P1, P2, P3>::registerCreator(const string& type, 
         Creator<Product, P1, P2, P3>* creator) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             cerr << "type " << type << " already registered" << endl;
             return false;
         } else {
@@ -64,9 +64,9 @@ namespace Goblin {
 
     template<typename Product, typename P1, typename P2, typename P3> 
     Product* Factory<Product, P1, P2, P3>::create(const string& type) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             return mCreatorTable[type]->create(); 
-        } else if(mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
+        } else if (mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
             cerr << "unrecognized type: " << type << 
                 ", fallback to " << mDefaultType <<endl;
             return mCreatorTable[mDefaultType]->create();
@@ -79,9 +79,9 @@ namespace Goblin {
     template<typename Product, typename P1, typename P2, typename P3> 
     Product* Factory<Product, P1, P2, P3>::create(const string& type,
         P1 p1) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             return mCreatorTable[type]->create(p1); 
-        } else if(mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
+        } else if (mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
             cerr << "unrecognized type: " << type << 
                 ", fallback to " << mDefaultType <<endl;
             return mCreatorTable[mDefaultType]->create(p1);
@@ -94,9 +94,9 @@ namespace Goblin {
     template<typename Product, typename P1, typename P2, typename P3> 
     Product* Factory<Product, P1, P2, P3>::create(const string& type,
         P1 p1, P2 p2) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             return mCreatorTable[type]->create(p1, p2); 
-        } else if(mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
+        } else if (mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
             cerr << "unrecognized type: " << type << 
                 ", fallback to " << mDefaultType <<endl;
             return mCreatorTable[mDefaultType]->create(p1, p2);
@@ -109,9 +109,9 @@ namespace Goblin {
     template<typename Product, typename P1, typename P2, typename P3> 
     Product* Factory<Product, P1, P2, P3>::create(const string& type,
         P1 p1, P2 p2, P3 p3) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             return mCreatorTable[type]->create(p1, p2, p3); 
-        } else if(mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
+        } else if (mCreatorTable.find(mDefaultType) != mCreatorTable.end()) {
             cerr << "unrecognized type: " << type << 
                 ", fallback to " << mDefaultType <<endl;
             return mCreatorTable[mDefaultType]->create(p1, p2, p3);
@@ -123,7 +123,7 @@ namespace Goblin {
 
     template<typename Product, typename P1, typename P2, typename P3> 
     bool Factory<Product, P1, P2, P3>::setDefault(const string & type) {
-        if(mCreatorTable.find(type) != mCreatorTable.end()) {
+        if (mCreatorTable.find(type) != mCreatorTable.end()) {
             mDefaultType = type;
             return true;
         } else {

@@ -1,9 +1,11 @@
 #ifndef GOBLIN_THREAD_LOCAL_STORAGE_H
 #define GOBLIN_THREAD_LOCAL_STORAGE_H
 
-#include <boost/thread.hpp>
 #include "GoblinDebugData.h"
 #include "GoblinFilm.h"
+
+#include <thread>
+#include <mutex>
 
 namespace Goblin {
 
@@ -12,7 +14,7 @@ namespace Goblin {
         virtual ~ThreadLocalStorage() {}
     };
 
-    typedef boost::thread_specific_ptr<ThreadLocalStorage> TLSPtr;
+    typedef std::unique_ptr<ThreadLocalStorage> TLSPtr;
 
     class TLSManager {
     public:
@@ -66,7 +68,7 @@ namespace Goblin {
 
         void finalize(TLSPtr& tlsPtr) {
             {
-                boost::lock_guard<boost::mutex> lk(mMergeTLSMutex);
+                std::lock_guard<std::mutex> lk(mMergeTLSMutex);
                 RenderingTLS* renderingTLS =
                     static_cast<RenderingTLS*>(tlsPtr.get());
                 mFilm->mergeTile(*renderingTLS->getTile());
@@ -93,7 +95,7 @@ namespace Goblin {
 
     private:
         Film* mFilm;
-        boost::mutex mMergeTLSMutex;
+        std::mutex mMergeTLSMutex;
         uint64_t mTotalSampleCount;
         DebugData mDebugData;
     };

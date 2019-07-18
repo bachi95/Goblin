@@ -16,7 +16,7 @@ namespace Goblin{
             break;
         }
         case AddressBorder: {
-            if(s < 0 || t < 0 || s >= width || t >= height) {
+            if (s < 0 || t < 0 || s >= width || t >= height) {
                 return T(0.0f);
             }
             break;
@@ -24,10 +24,10 @@ namespace Goblin{
         case AddressRepeat: default: {
             s = s % width;
             t = t % height;
-            if(s < 0) {
+            if (s < 0) {
                 s += width;
             }
-            if(t < 0) {
+            if (t < 0) {
                 t += height;
             }
             break;
@@ -40,7 +40,7 @@ namespace Goblin{
     MIPMap<T>::MIPMap(T* image, int w, int h, float maxAniso): 
         mWidth(w), mHeight(h), mMaxAnisotropy(maxAniso) {
         // resize the image to power of 2 for easier mipmap process
-        if(!isPowerOf2(mWidth) || !isPowerOf2(mHeight)) {
+        if (!isPowerOf2(mWidth) || !isPowerOf2(mHeight)) {
             int wPow2 = roundUpPow2(mWidth);
             int hPow2 = roundUpPow2(mHeight);
             T* resizeBuffer = 
@@ -54,7 +54,7 @@ namespace Goblin{
         mPyramid.push_back(new ImageBuffer<T>(image, mWidth, mHeight));
         mLevelsNum = floorInt(
             max(log2((float)mWidth), log2((float)mHeight))) + 1;
-        for(int i = 1; i < mLevelsNum; ++i) {
+        for (int i = 1; i < mLevelsNum; ++i) {
             const ImageBuffer<T>* buffer = mPyramid[i - 1];
             int resizedW = max(1, buffer->width >> 1);
             int resizedH = max(1, buffer->height >> 1);
@@ -65,14 +65,14 @@ namespace Goblin{
                 new ImageBuffer<T>(resizedBuffer, resizedW, resizedH));
         }
 
-        if(EWALut.empty()) {
+        if (EWALut.empty()) {
             initEWALut();
         }
     }
 
     template<typename T>
     MIPMap<T>::~MIPMap() {
-        for(size_t i = 0; i < mPyramid.size(); ++i) {
+        for (size_t i = 0; i < mPyramid.size(); ++i) {
             delete mPyramid[i];
             mPyramid[i] = NULL;
         }
@@ -82,17 +82,17 @@ namespace Goblin{
     template<typename T>
     T MIPMap<T>::lookup(const TextureCoordinate& tc, 
         FilterType f, AddressMode m) const {
-        if(f == FilterNone) {
+        if (f == FilterNone) {
             return lookupNearest(tc.st[0], tc.st[1], m);
-        } else if(f == FilterBilinear) {
+        } else if (f == FilterBilinear) {
             float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
                 max(fabs(tc.dsdy), fabs(tc.dtdy)));
             return lookupBilinear(tc.st[0], tc.st[1], width, m);
-        } else if(f == FilterTrilinear) {
+        } else if (f == FilterTrilinear) {
             float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
                 max(fabs(tc.dsdy), fabs(tc.dtdy)));
             return lookupTrilinear(tc.st[0], tc.st[1], width, m);
-        } else if(f == FilterEWA) {
+        } else if (f == FilterEWA) {
             return lookupEWA(tc, m);
         } else {
             return lookupNearest(tc.st[0], tc.st[1], m);
@@ -117,9 +117,9 @@ namespace Goblin{
         AddressMode m) const {
         float level = mLevelsNum - 1 + log2(max(width, 1e-8f));
         int iLevel = floorInt(level);
-        if(iLevel < 0) {
+        if (iLevel < 0) {
             return lookup(0, s, t, m);
-        } else if(iLevel >= mLevelsNum - 1) {
+        } else if (iLevel >= mLevelsNum - 1) {
             return lookup(mLevelsNum - 1, s, t, m);
         } else {
             float delta = level - (float)iLevel;
@@ -136,13 +136,13 @@ namespace Goblin{
         float dt1 = tc.dtdy;
         float majorLength = sqrt(ds0 * ds0 + dt0 * dt0);
         float minorLength = sqrt(ds1 * ds1 + dt1 * dt1);
-        if(majorLength < minorLength) {
+        if (majorLength < minorLength) {
             swap(ds0, ds1);
             swap(dt0, dt1);
             swap(majorLength, minorLength);
         }
         // clamp the eccentricity to a reasonable number
-        if(minorLength * mMaxAnisotropy < majorLength && minorLength > 0.0f) {
+        if (minorLength * mMaxAnisotropy < majorLength && minorLength > 0.0f) {
             float scale = majorLength / (minorLength * mMaxAnisotropy);
             minorLength *= scale;
             ds1 *= scale;
@@ -178,7 +178,7 @@ namespace Goblin{
         // unable to form an ellipse, fallback to trilinear filter then
         float s = tc.st[0];
         float t = tc.st[1];
-        if(minorLength == 0.0f || F <= 0.0f) {
+        if (minorLength == 0.0f || F <= 0.0f) {
             return lookupTrilinear(s, t, minorLength, m);
         }
         float invF = 1.0f / F;
@@ -187,9 +187,9 @@ namespace Goblin{
         C *= invF;
         float level = mLevelsNum - 1 + log2(minorLength);
         int iLevel = floorInt(level);
-        if(iLevel < 0) {
+        if (iLevel < 0) {
             return lookup(0, s, t, m);
-        } else if(iLevel >= mLevelsNum - 1) {
+        } else if (iLevel >= mLevelsNum - 1) {
             return lookup(mLevelsNum - 1, s, t, m);
         } else {
             float delta = level - (float)iLevel;
@@ -238,12 +238,12 @@ namespace Goblin{
         // loop over bounding box region and accumulate pixel contribution
         float weightSum = 0.0f;
         T result(0.0f);
-        for(int is = s0; is <= s1; ++is) {
-            for(int it = t0; it <= t1; ++it) {
+        for (int is = s0; is <= s1; ++is) {
+            for (int it = t0; it <= t1; ++it) {
                 float ss = is - s;
                 float tt = it - t;
                 float r2 = A * ss * ss + B * ss * tt + C * tt * tt;
-                if(r2 <= 1.0f) {
+                if (r2 <= 1.0f) {
                     size_t lutIndex = (size_t)floorInt(r2 * EWA_LUT_SIZE);
                     float weight = EWALut[min(lutIndex, EWA_LUT_SIZE - 1)];
                     result += weight * image->texel(is, it, m);
@@ -251,7 +251,7 @@ namespace Goblin{
                 }
             }
         }
-        if(weightSum > 0.0f) {
+        if (weightSum > 0.0f) {
             result /= weightSum;
         } else {
             result = image->texel((int)s, (int)t, m);
@@ -263,7 +263,7 @@ namespace Goblin{
     void MIPMap<T>::initEWALut() {
         EWALut.resize(EWA_LUT_SIZE);
         const float falloff = 2.0f;
-        for(size_t i = 0; i < EWA_LUT_SIZE; ++i) {
+        for (size_t i = 0; i < EWA_LUT_SIZE; ++i) {
             float r2 = float(i) / float(EWA_LUT_SIZE - 1);
             // offset the whole lut so the r2 >= 1 cases have weight 0
             EWALut[i] = expf(-falloff * r2) - expf(-falloff);
@@ -319,15 +319,15 @@ namespace Goblin{
         pointToST(p + f.getDPDY(), &sdy, &tdy);
         // take care of the discontinuous phi angle transition
         float dsdx = sdx - s;
-        if(dsdx > 0.5f) {
+        if (dsdx > 0.5f) {
             dsdx -= 1.0f;
-        } else if(dsdx < -0.5f) {
+        } else if (dsdx < -0.5f) {
             dsdx += 1.0f;
         }
         float dsdy = sdy -s;
-        if(dsdy > 0.5f) {
+        if (dsdy > 0.5f) {
             dsdy -= 1.0f;
-        } else if(dsdy < -0.5f) {
+        } else if (dsdy < -0.5f) {
             dsdy += 1.0f;
         }
         tc->dsdx = dsdx;
@@ -355,14 +355,14 @@ namespace Goblin{
 
     template<typename T>
     CheckboardTexture<T>::CheckboardTexture(TextureMapping* m,
-        const boost::shared_ptr<Texture<T> >& T1,
-        const boost::shared_ptr<Texture<T> >& T2,
+        const std::shared_ptr<Texture<T> >& T1,
+        const std::shared_ptr<Texture<T> >& T2,
         bool filter):
         mMapping(m), mT1(T1), mT2(T2), mFilter(filter) {}
 
     template<typename T>
     CheckboardTexture<T>::~CheckboardTexture() {
-        if(mMapping) {
+        if (mMapping) {
             delete mMapping;
         }
         mMapping = NULL;
@@ -380,7 +380,7 @@ namespace Goblin{
         mMapping->map(f, &tc);
         float s = tc.st[0];
         float t = tc.st[1];
-        if(!mFilter) {
+        if (!mFilter) {
             return (floorInt(s) + floorInt(t)) % 2 == 0 ?
                 mT1->lookup(f) : mT2->lookup(f);
         }
@@ -390,7 +390,7 @@ namespace Goblin{
         float s1 = s + ds;
         float t0 = t - dt;
         float t1 = t + dt;
-        if(floorInt(s0) == floorInt(s1) && floorInt(t0) == floorInt(t1)) {
+        if (floorInt(s0) == floorInt(s1) && floorInt(t0) == floorInt(t1)) {
             return (floorInt(s) + floorInt(t)) % 2 == 0 ?
                 mT1->lookup(f) : mT2->lookup(f);
         } else {
@@ -407,7 +407,7 @@ namespace Goblin{
              */
             float tex2Area = sTex2Ratio + tTex2Ratio - 
                 2.0f * sTex2Ratio * tTex2Ratio;
-            if(ds > 1.0f || dt > 1.0f) {
+            if (ds > 1.0f || dt > 1.0f) {
                 tex2Area = 0.5f;
             }
             return (1.0f - tex2Area) * mT1->lookup(f) + 
@@ -416,7 +416,7 @@ namespace Goblin{
     }
 
     template<typename T>
-    ScaleTexture<T>::ScaleTexture(const boost::shared_ptr<Texture<T> >& t, 
+    ScaleTexture<T>::ScaleTexture(const std::shared_ptr<Texture<T> >& t, 
         const FloatTexturePtr& s): mTexture(t), mScale(s) {}
 
     template<typename T>
@@ -438,7 +438,7 @@ namespace Goblin{
 
     template<typename T>
     ImageTexture<T>::~ImageTexture() {
-        if(mMapping) {
+        if (mMapping) {
             delete mMapping;
         }
         mMapping = NULL;
@@ -453,13 +453,13 @@ namespace Goblin{
 
     template<typename T>
     MIPMap<T>* ImageTexture<T>::getMIPMap(const TextureId& id) {
-        if(imageCache.find(id) != imageCache.end()) {
+        if (imageCache.find(id) != imageCache.end()) {
             return imageCache[id];
         }
         int width, height;
         Color* colorBuffer = Goblin::loadImage(id.filename, &width, &height);
         T* texelBuffer;
-        if(!colorBuffer) {
+        if (!colorBuffer) {
             std::cerr << "error loading image file " << 
                 id.filename << std::endl;
             texelBuffer = new T[1];
@@ -469,7 +469,7 @@ namespace Goblin{
             width =  height = 1;
         } else {
             texelBuffer = new T[width * height];
-            for(int i = 0; i < width * height; ++i) {
+            for (int i = 0; i < width * height; ++i) {
                 convertTexel(colorBuffer[i], &texelBuffer[i], 
                     id.gamma, id.channel);
             }
@@ -484,15 +484,15 @@ namespace Goblin{
     template<>
     void ImageTexture<float>::convertTexel(const Color& in, float* out, 
         float gamma, ImageChannel channel) {
-        if(channel == ChannelR) {
+        if (channel == ChannelR) {
             *out = pow(in.r, gamma);
-        } else if(channel == ChannelG) {
+        } else if (channel == ChannelG) {
             *out = pow(in.g, gamma);
-        } else if(channel == ChannelB) {
+        } else if (channel == ChannelB) {
             *out = pow(in.b, gamma);
-        } else if(channel == ChannelA) {
+        } else if (channel == ChannelA) {
             *out = pow(in.a, gamma);
-        } else if(channel == ChannelAll) {
+        } else if (channel == ChannelAll) {
             *out = pow(in.luminance(), gamma);
         }
     }
@@ -501,13 +501,13 @@ namespace Goblin{
     void ImageTexture<Color>::convertTexel(const Color& in, Color* out, 
         float gamma, ImageChannel channel) {
         Color c(in);
-        if(channel == ChannelR) {
+        if (channel == ChannelR) {
             c = Color(in.r);
-        } else if(channel == ChannelG) {
+        } else if (channel == ChannelG) {
             c = Color(in.g);
-        } else if(channel == ChannelB) {
+        } else if (channel == ChannelB) {
             c = Color(in.b);
-        } else if(channel == ChannelA) {
+        } else if (channel == ChannelA) {
             c = Color(in.a);
         }
         (*out).r = gamma == 1.0f ? c.r : pow(c.r, gamma);
@@ -531,7 +531,7 @@ namespace Goblin{
 
         float* sSampleWeight = new float[dstWidth * nSamples];
         int* sSampleIndex = new int[dstWidth];
-        for(int s = 0; s < dstWidth; ++s) {
+        for (int s = 0; s < dstWidth; ++s) {
             float center = ((float)s + 0.5f) / dstWidth * srcWidth;
             // the subtle from continuous space to discrete space offset...
             // if center at 2.75 (discrete space 2.25) you should sample
@@ -540,45 +540,45 @@ namespace Goblin{
                 floorInt(center - filterWidth + 0.5f);
             float weightSum = 0.0f;
             int wOffset = s * nSamples;
-            for(int i = 0; i < nSamples; ++i) {
+            for (int i = 0; i < nSamples; ++i) {
                 float p = sSampleIndex[s] + 0.5f + i;
                 sSampleWeight[wOffset + i] = gaussian(p - center, filterWidth);
                 weightSum += sSampleWeight[wOffset + i];
             }
             float invW = 1.0f / weightSum;
-            for(int i = 0; i < nSamples; ++i) {
+            for (int i = 0; i < nSamples; ++i) {
                 sSampleWeight[wOffset + i] *= invW;
             }
         }
 
         float* tSampleWeight = new float[dstHeight * nSamples];
         int* tSampleIndex = new int[dstHeight];
-        for(int t = 0; t < dstHeight; ++t) {
+        for (int t = 0; t < dstHeight; ++t) {
             float center = ((float)t + 0.5f) / dstHeight * srcHeight;
             tSampleIndex[t] = 
                 floorInt(center - filterWidth + 0.5f);
             float weightSum = 0.0f;
             int wOffset = t * nSamples;
-            for(int i = 0; i < nSamples; ++i) {
+            for (int i = 0; i < nSamples; ++i) {
                 float p = tSampleIndex[t] + 0.5f + i;
                 tSampleWeight[wOffset + i] = gaussian(p - center, filterWidth);
                 weightSum += tSampleWeight[wOffset + i];
             }
             float invW = 1.0f / weightSum;
-            for(int i = 0; i < nSamples; ++i) {
+            for (int i = 0; i < nSamples; ++i) {
                 tSampleWeight[wOffset + i] *= invW;
             }
         }
 
         T* dstBuffer = new T[dstWidth * dstHeight];
-        for(int t = 0; t < dstHeight; ++t) {
-            for(int s = 0; s < dstWidth; ++s) {
+        for (int t = 0; t < dstHeight; ++t) {
+            for (int s = 0; s < dstWidth; ++s) {
                 int index = t * dstWidth + s;
                 dstBuffer[index] = T(0.0f);
-                for(int i = 0; i < nSamples; ++i) {
+                for (int i = 0; i < nSamples; ++i) {
                     int srcT = clamp(tSampleIndex[t] + i, 0,
                         srcHeight - 1);
-                    for(int j = 0; j < nSamples; ++j) {
+                    for (int j = 0; j < nSamples; ++j) {
                         int srcS = clamp(sSampleIndex[s] + j, 0,
                             srcWidth - 1);
                         float w = tSampleWeight[t * nSamples + i] * 
@@ -600,11 +600,11 @@ namespace Goblin{
     static TextureMapping* getTextureMapping(const ParamSet& params) {
         TextureMapping* m;
         string type = params.getString("mapping", "uv");
-        if(type == "uv") {
+        if (type == "uv") {
             Vector2 scale = params.getVector2("scale", Vector2(1.0f, 1.0f));
             Vector2 offset = params.getVector2("offset", Vector2::Zero);
             m = new UVMapping(scale, offset);
-        } else if(type == "spherical") {
+        } else if (type == "spherical") {
             Transform toTex = getTransform(params);
             m = new SphericalMapping(toTex);
         } else {
@@ -659,13 +659,13 @@ namespace Goblin{
         ip.filePath = sceneCache.resolvePath(filename);
 
         string filterStr = params.getString("filter", "nearest");
-        if(filterStr == "nearest") {
+        if (filterStr == "nearest") {
             ip.filter = FilterNone;
-        } else if(filterStr == "bilinear") {
+        } else if (filterStr == "bilinear") {
             ip.filter = FilterBilinear;
-        } else if(filterStr == "trilinear") {
+        } else if (filterStr == "trilinear") {
             ip.filter = FilterTrilinear;
-        } else if(filterStr == "EWA") {
+        } else if (filterStr == "EWA") {
             ip.filter = FilterEWA;
         } else {
             cerr << "unrecognize filter: " << filterStr << endl;
@@ -673,11 +673,11 @@ namespace Goblin{
         }
 
         string addressStr = params.getString("address", "repeat");
-        if(addressStr == "repeat") {
+        if (addressStr == "repeat") {
             ip.addressMode = AddressRepeat;
-        } else if(addressStr == "clamp") {
+        } else if (addressStr == "clamp") {
             ip.addressMode = AddressClamp;
-        } else if(addressStr == "border") {
+        } else if (addressStr == "border") {
             ip.addressMode = AddressBorder;
         } else {
             cerr << "unrecognize address mode: " << addressStr << endl;
@@ -687,15 +687,15 @@ namespace Goblin{
         ip.gamma = params.getFloat("gamma", 1.0f);
 
         string channelStr = params.getString("channel", "All");
-        if(channelStr == "R") {
+        if (channelStr == "R") {
             ip.channel = ChannelR;
-        } else if(channelStr == "G") {
+        } else if (channelStr == "G") {
             ip.channel = ChannelG;
-        } else if(channelStr == "B") {
+        } else if (channelStr == "B") {
             ip.channel = ChannelB;
-        } else if(channelStr == "A") {
+        } else if (channelStr == "A") {
             ip.channel = ChannelA;
-        } else if(channelStr == "All") {
+        } else if (channelStr == "All") {
             ip.channel = ChannelAll;
         } else {
             cerr << "unrecognize channel: " << channelStr << endl;
@@ -714,8 +714,8 @@ namespace Goblin{
 
     Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
-        Color c = params.getColor("color", Color::Magenta);
-        return new ConstantTexture<Color>(c);
+        Vector3 c = params.getVector3("color");
+        return new ConstantTexture<Color>(Color(c[0], c[1], c[2]));
     }
 
     Texture<Color>* ColorCheckboardTextureCreator::create(

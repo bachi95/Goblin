@@ -18,7 +18,7 @@ namespace Goblin {
         Color Li = Color::Black;
         float epsilon;
         Intersection intersection;
-        if(scene->intersect(ray, &epsilon, &intersection)) {
+        if (scene->intersect(ray, &epsilon, &intersection)) {
             intersection.computeUVDifferential(ray);
             // if intersect an area light
             Li += intersection.Le(-ray.d);
@@ -31,7 +31,7 @@ namespace Goblin {
                 mLightSampleIndexes, mBSDFSampleIndexes,
                 BSDFType(BSDFAll & ~BSDFSpecular)); 
             // reflection and refraction
-            if(ray.depth < mMaxRayDepth) {
+            if (ray.depth < mMaxRayDepth) {
                 Li += specularReflect(scene, ray, epsilon, intersection, 
                     sample, rng);
                 Li += specularRefract(scene, ray, epsilon, intersection,
@@ -46,22 +46,22 @@ namespace Goblin {
 
     void WhittedRenderer::querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota) {
-        if(mLightSampleIndexes) {
+        if (mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         } 
-        if(mBSDFSampleIndexes) {
+        if (mBSDFSampleIndexes) {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPickLightSampleIndexes) {
+        if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
         const vector<Light*>& lights = scene->getLights();
         mLightSampleIndexes = new LightSampleIndex[lights.size()];
         mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
-        for(size_t i = 0; i < lights.size(); ++i) {
+        for (size_t i = 0; i < lights.size(); ++i) {
             uint32_t samplesNum = lights[i]->getSamplesNum();
             mLightSampleIndexes[i] = LightSampleIndex(sampleQuota, samplesNum);
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, samplesNum);
@@ -73,8 +73,7 @@ namespace Goblin {
 
     Renderer* WhittedRendererCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
-        int threadNum = params.getInt("thread_num", 
-            boost::thread::hardware_concurrency());
+        int threadNum = params.getInt("thread_num", getMaxThreadNum());
         int maxRayDepth = params.getInt("max_ray_depth", 5);
         int bssrdfSampleNum = params.getInt("bssrdf_sample_num", 4);
         return new WhittedRenderer(samplePerPixel, threadNum, 

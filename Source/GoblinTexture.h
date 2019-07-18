@@ -130,8 +130,8 @@ namespace Goblin {
         virtual T lookup(const Fragment& f) const = 0;
     };
 
-    typedef boost::shared_ptr<Texture<Color> > ColorTexturePtr;
-    typedef boost::shared_ptr<Texture<float> > FloatTexturePtr;
+    typedef std::shared_ptr<Texture<Color> > ColorTexturePtr;
+    typedef std::shared_ptr<Texture<float> > FloatTexturePtr;
 
 
     template<typename T>
@@ -147,25 +147,25 @@ namespace Goblin {
     class CheckboardTexture : public Texture<T> {
     public:
         CheckboardTexture(TextureMapping* m,
-            const boost::shared_ptr<Texture<T> >& T1,
-            const boost::shared_ptr<Texture<T> >& T2,
+            const std::shared_ptr<Texture<T> >& T1,
+            const std::shared_ptr<Texture<T> >& T2,
             bool mFilter);
         ~CheckboardTexture();
         T lookup(const Fragment& f) const;
     private:
         TextureMapping* mMapping;
-        boost::shared_ptr<Texture<T> > mT1, mT2;
+        std::shared_ptr<Texture<T> > mT1, mT2;
         bool mFilter;
     };
 
     template<typename T>
     class ScaleTexture : public Texture<T> {
     public:
-        ScaleTexture(const boost::shared_ptr<Texture<T> >& t, 
+        ScaleTexture(const std::shared_ptr<Texture<T> >& t, 
             const FloatTexturePtr& s);
         T lookup(const Fragment& f) const;
     private:
-        boost::shared_ptr<Texture<T> > mTexture;
+        std::shared_ptr<Texture<T> > mTexture;
         FloatTexturePtr mScale;
     };
 
@@ -180,11 +180,11 @@ namespace Goblin {
     };
 
     inline bool TextureId::operator<(const TextureId & rhs) const {
-        if(gamma != rhs.gamma) {
+        if (gamma != rhs.gamma) {
             return gamma < rhs.gamma;
-        } else if(channel != rhs.channel) {
+        } else if (channel != rhs.channel) {
             return channel < rhs.channel;
-        } else if(maxAnisotropy != rhs.maxAnisotropy) {
+        } else if (maxAnisotropy != rhs.maxAnisotropy) {
             return maxAnisotropy < rhs.maxAnisotropy;
         }
         return filename < rhs.filename;
@@ -216,7 +216,7 @@ namespace Goblin {
     template<typename T>
     void ImageTexture<T>::clearImageCache() {
         typename std::map<TextureId, MIPMap<T>* >::iterator it;
-        for(it = imageCache.begin(); it != imageCache.end(); ++it) {
+        for (it = imageCache.begin(); it != imageCache.end(); ++it) {
             delete it->second;
         }
         imageCache.clear();

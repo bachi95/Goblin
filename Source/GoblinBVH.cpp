@@ -35,12 +35,12 @@ namespace Goblin {
         const std::string& splitMethod):
         Aggregate(primitives),
         mMaxPrimitivesNum(maxPrimitivesNum) {
-        if(mRefinedPrimitives.size() == 0) {
+        if (mRefinedPrimitives.size() == 0) {
             return;
         }
-        if(splitMethod == "middle") {
+        if (splitMethod == "middle") {
             mSplitMethod = Middle;
-        } else if(splitMethod == "equal_count") {
+        } else if (splitMethod == "equal_count") {
             mSplitMethod = EqualCount;
         } else {
             mSplitMethod = EqualCount;
@@ -48,16 +48,16 @@ namespace Goblin {
         // collect BVHPrimitiveInfo list for the recusive BVH construction
         std::vector<BVHPrimitiveInfo> buildInfoList;
         buildInfoList.reserve(mRefinedPrimitives.size());
-        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+        for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             BBox b = mRefinedPrimitives[i]->getAABB();
-            buildInfoList.push_back(BVHPrimitiveInfo(b, i));
+            buildInfoList.push_back(BVHPrimitiveInfo(b, static_cast<int>(i)));
         } 
         //buildDataSummary(buildInfoList);
         PrimitiveList orderedPrims;
         orderedPrims.reserve(mRefinedPrimitives.size());
         mBVHNodes.reserve(2 * mRefinedPrimitives.size() - 1);
         uint32_t offset = 0;
-        buildLinearBVH(buildInfoList, 0, buildInfoList.size(),
+        buildLinearBVH(buildInfoList, 0, static_cast<uint32_t>(buildInfoList.size()),
             &offset, orderedPrims);
         mRefinedPrimitives.swap(orderedPrims);
         //compactSummary();
@@ -73,33 +73,33 @@ namespace Goblin {
         CompactBVHNode& node = mBVHNodes[nodeOffset];
 
         BBox bbox;
-        for(uint32_t i = start; i < end; ++i) {
+        for (uint32_t i = start; i < end; ++i) {
             bbox.expand(buildData[i].bbox);
         }
         uint32_t primitivesNum = end - start;
         // leaf node case
-        if(primitivesNum == 1) {
-            int firstPrimIndex = orderedPrims.size();
+        if (primitivesNum == 1) {
+            uint32_t firstPrimIndex = static_cast<uint32_t>(orderedPrims.size());
             //leafSummary(buildData, start, end, firstPrimIndex, primitivesNum);
-            for(uint32_t i = start; i < end; ++i) {
+            for (uint32_t i = start; i < end; ++i) {
                 uint32_t pIndex = buildData[i].primitiveIndexNum;
                 orderedPrims.push_back(mRefinedPrimitives[pIndex]);
             }
             node.initLeaf(bbox, firstPrimIndex, primitivesNum);
         } else {
             BBox centersUnion;
-            for(uint32_t i = start; i < end; ++i) {
+            for (uint32_t i = start; i < end; ++i) {
                 centersUnion.expand(buildData[i].center);
             }
             // pick the axis with largest variant to split
             int dim = centersUnion.longestAxis();
             // all primitives clutter in one point... should be a rare case
             // just make this a leaf node then
-            if(centersUnion.pMin[dim] == centersUnion.pMax[dim]) {
-                uint32_t firstPrimIndex = orderedPrims.size();
+            if (centersUnion.pMin[dim] == centersUnion.pMax[dim]) {
+                uint32_t firstPrimIndex = static_cast<uint32_t>(orderedPrims.size());
                 //leafSummary(buildData, start, end, 
                 //    firstPrimIndex, primitivesNum);
-                for(uint32_t i = start; i < end; ++i) {
+                for (uint32_t i = start; i < end; ++i) {
                     uint32_t pIndex = buildData[i].primitiveIndexNum;
                     orderedPrims.push_back(mRefinedPrimitives[pIndex]);
                 }
@@ -117,7 +117,7 @@ namespace Goblin {
                 mid = midPtr - &buildData[0];
                 // can't split down further with middle method, let the 
                 // following split methods handle this case then
-                if(start!= mid && end != mid) {
+                if (start!= mid && end != mid) {
                     break;
                 }
             }
@@ -149,25 +149,25 @@ namespace Goblin {
         // intersect y tabs
         float tYMin = (bbox[dirIsNeg[1]].y - ray.o.y) * invDir.y;
         float tYMax = (bbox[1 - dirIsNeg[1]].y - ray.o.y) * invDir.y;
-        if(tYMax < tMin || tYMin > tMax) {
+        if (tYMax < tMin || tYMin > tMax) {
             return false;
         }
-        if(tYMin > tMin) {
+        if (tYMin > tMin) {
             tMin = tYMin;
         }
-        if(tYMax < tMax) {
+        if (tYMax < tMax) {
             tMax = tYMax;
         }
         // intersect ztabs
         float tZMin = (bbox[dirIsNeg[2]].z - ray.o.z) * invDir.z;
         float tZMax = (bbox[1 - dirIsNeg[2]].z - ray.o.z) * invDir.z;
-        if(tZMax < tMin || tZMin > tMax) {
+        if (tZMax < tMin || tZMin > tMax) {
             return false;
         }
-        if(tZMin > tMin) {
+        if (tZMin > tMin) {
             tMin = tZMin;
         }
-        if(tZMax < tMax) {
+        if (tZMax < tMax) {
             tMax = tZMax;
         }
 
@@ -175,7 +175,7 @@ namespace Goblin {
     }
 
     bool BVH::intersect(const Ray& ray, IntersectFilter f) const {
-        if(mBVHNodes.size() == 0) {
+        if (mBVHNodes.size() == 0) {
             return false;
         }
         Vector3 invDir(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
@@ -188,20 +188,20 @@ namespace Goblin {
         uint32_t todo[64];
         while(true) {
             const CompactBVHNode& node = mBVHNodes[nodeNum];
-            if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
-                if(node.primitivesNum > 0) {
-                    for(uint32_t i = 0; i < node.primitivesNum; ++i) {
+            if (Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
+                if (node.primitivesNum > 0) {
+                    for (uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;
-                        if(mRefinedPrimitives[index]->intersect(ray, f)) {
+                        if (mRefinedPrimitives[index]->intersect(ray, f)) {
                             return true;
                         }
                     }
-                    if(todoOffset == 0) {
+                    if (todoOffset == 0) {
                         break;
                     }
                     nodeNum = todo[--todoOffset];
                 } else {
-                    if(dirIsNeg[node.axis]) {
+                    if (dirIsNeg[node.axis]) {
                         todo[todoOffset++] = nodeNum + 1;
                         nodeNum = node.secondChildOffset;
                     } else {
@@ -210,7 +210,7 @@ namespace Goblin {
                     }
                 }
             } else {
-                if(todoOffset == 0) {
+                if (todoOffset == 0) {
                     break;
                 }
                 nodeNum = todo[--todoOffset];
@@ -221,7 +221,7 @@ namespace Goblin {
 
     bool BVH::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection, IntersectFilter f) const {
-        if(mBVHNodes.size() == 0) {
+        if (mBVHNodes.size() == 0) {
             return false;
         }
         Vector3 invDir(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
@@ -235,21 +235,21 @@ namespace Goblin {
         bool hit = false;
         while(true) {
             const CompactBVHNode& node = mBVHNodes[nodeNum];
-            if(Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
-                if(node.primitivesNum > 0) {
-                    for(uint32_t i = 0; i < node.primitivesNum; ++i) {
+            if (Goblin::intersect(node.bbox, ray, invDir, dirIsNeg)) {
+                if (node.primitivesNum > 0) {
+                    for (uint32_t i = 0; i < node.primitivesNum; ++i) {
                         uint32_t index = node.firstPrimIndex + i;
-                        if(mRefinedPrimitives[index]->intersect(ray, 
+                        if (mRefinedPrimitives[index]->intersect(ray, 
                             epsilon, intersection, f)) {
                             hit = true;
                         }
                     }
-                    if(todoOffset == 0) {
+                    if (todoOffset == 0) {
                         break;
                     }
                     nodeNum = todo[--todoOffset];
                 } else {
-                    if(dirIsNeg[node.axis]) {
+                    if (dirIsNeg[node.axis]) {
                         todo[todoOffset++] = nodeNum + 1;
                         nodeNum = node.secondChildOffset;
                     } else {
@@ -258,7 +258,7 @@ namespace Goblin {
                     }
                 }
             } else {
-                if(todoOffset == 0) {
+                if (todoOffset == 0) {
                     break;
                 }
                 nodeNum = todo[--todoOffset];
@@ -271,7 +271,7 @@ namespace Goblin {
     void BVH::buildDataSummary(
             const std::vector<BVHPrimitiveInfo> &buildData) const {
         std::cout << "--------------------------------\n";
-        for(size_t i = 0; i < buildData.size(); ++i) {
+        for (size_t i = 0; i < buildData.size(); ++i) {
             std::cout << 
                 buildData[i].primitiveIndexNum <<
                 " c " <<buildData[i].center <<
@@ -284,7 +284,7 @@ namespace Goblin {
         int start, int end, int firstPrimIndex, int primitivesNum) const {
         std::cout << "--------------------------------\n";
         std::cout << "leaf push in :";
-        for(int i = start; i < end; ++i) {
+        for (int i = start; i < end; ++i) {
             int pIndex = buildData[i].primitiveIndexNum;
             std::cout << pIndex << " ";
         }
@@ -300,13 +300,13 @@ namespace Goblin {
         std::cout << "start " << start << " end " 
             << end  << " mid " << mid << std::endl; 
         std::cout << "left child: ";
-        for(int i = start; i < mid; ++i) {
+        for (int i = start; i < mid; ++i) {
             std::cout << buildData[i].primitiveIndexNum << " ";
         }
         std::cout << std::endl;
 
         std::cout << "right child: ";
-        for(int i = mid; i < end; ++i) {
+        for (int i = mid; i < end; ++i) {
             std::cout << buildData[i].primitiveIndexNum << " ";
         }
         std::cout << std::endl;
@@ -314,7 +314,7 @@ namespace Goblin {
 
     void BVH::compactSummary() const {
         std::cout << "--------------------------------\n";
-        for(size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+        for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
             BBox b = mRefinedPrimitives[i]->getAABB();
             std::cout << i << 
                 " c " << 0.5f * (b.pMin + b.pMax) <<
@@ -322,9 +322,9 @@ namespace Goblin {
                 " pMax " <<b.pMax << std::endl;
         }
 
-        for(size_t i = 0; i < mBVHNodes.size(); ++ i) {
+        for (size_t i = 0; i < mBVHNodes.size(); ++ i) {
             const CompactBVHNode& node = mBVHNodes[i];
-            if(node.primitivesNum == 0) {
+            if (node.primitivesNum == 0) {
                 std::cout << i << " axis " << (int)node.axis <<
                     " secondChild " << node.secondChildOffset << std::endl;
             } else {

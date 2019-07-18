@@ -20,21 +20,21 @@ namespace Goblin{
     }
 
     Camera::~Camera() {
-        if(mFilm != NULL) {
+        if (mFilm != NULL) {
             delete mFilm;
             mFilm = NULL;
         }
     }
 
     const Matrix4& Camera::getWorldMatrix() {
-        if(!isUpdated()) {
+        if (!isUpdated()) {
             update();
         }
         return mWorld;
     }
 
     const Matrix4& Camera::getViewMatrix() {
-        if(!isUpdated()) {
+        if (!isUpdated()) {
             update();
         }
         return mView;
@@ -118,7 +118,7 @@ namespace Goblin{
         float dyView = dyNDC / mProj[1][1];
         Vector3 dyViewDir(xView, dyView, zView);
 
-        if(mLensRadius == 0.0f) {
+        if (mLensRadius == 0.0f) {
             // view space to world space
             ray->o = ray->dxOrigin = ray->dyOrigin = mPosition;
             ray->d = mOrientation * normalize(viewDir);

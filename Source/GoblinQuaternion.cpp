@@ -21,7 +21,7 @@ namespace Goblin {
     Quaternion::Quaternion(const Matrix3& R) {
         float q[4];
         float trace = R[0][0] + R[1][1] + R[2][2];
-        if(trace > 0.0f) {
+        if (trace > 0.0f) {
             float s = sqrt(trace + 1.0f);
             q[3] = s * 0.5f;
             float t = 0.5f / s;
@@ -30,10 +30,10 @@ namespace Goblin {
             q[2] = (R[1][0] - R[0][1]) * t;
         } else {
             int i = 0;
-            if(R[1][1] > R[0][0]) {
+            if (R[1][1] > R[0][0]) {
                 i = 1;
             }
-            if(R[2][2] > R[i][i]) {
+            if (R[2][2] > R[i][i]) {
                 i = 2;
             }
             static const int next[3] = {1, 2, 0};
@@ -102,17 +102,17 @@ namespace Goblin {
     Quaternion eulerToQuaternion(const Vector3& xyzAngle,
         const std::string& rotationOrder) {
         RotationOrder order = XYZ;
-        if(rotationOrder == "xyz") {
+        if (rotationOrder == "xyz") {
             order = XYZ;
-        } else if(rotationOrder == "xzy") {
+        } else if (rotationOrder == "xzy") {
             order = XZY;
-        } else if(rotationOrder == "yxz") {
+        } else if (rotationOrder == "yxz") {
             order = YXZ;
-        } else if(rotationOrder == "yzx") {
+        } else if (rotationOrder == "yzx") {
             order = YZX;
-        } else if(rotationOrder == "zxy") {
+        } else if (rotationOrder == "zxy") {
             order = ZXY;
-        } else if(rotationOrder == "zyx") {
+        } else if (rotationOrder == "zyx") {
             order = ZYX;
         } else {
             cerr << "unrecognized rotation order " << rotationOrder <<
@@ -126,17 +126,17 @@ namespace Goblin {
         Quaternion qy(Vector3::UnitY, radians(xyzAngle.y));
         Quaternion qz(Vector3::UnitZ, radians(xyzAngle.z));
         Quaternion result;
-        if(order == XYZ) {
+        if (order == XYZ) {
             result = qz * qy * qx;
-        } else if(order == XZY) {
+        } else if (order == XZY) {
             result = qy * qz * qx;
-        } else if(order == YXZ) {
+        } else if (order == YXZ) {
             result = qz * qx * qy;
-        } else if(order == YZX) {
+        } else if (order == YZX) {
             result = qx * qz * qy;
-        } else if(order == ZXY) {
+        } else if (order == ZXY) {
             result = qy * qx * qz;
-        } else if(order == ZYX) {
+        } else if (order == ZYX) {
             result = qx * qy * qz;
         } else {
             cerr << "unrecognized rotation order, fall back to XYZ" << endl;

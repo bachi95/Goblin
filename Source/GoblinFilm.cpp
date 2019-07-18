@@ -16,9 +16,9 @@ namespace Goblin {
         float deltaY = mFilterWidth.y / FILTER_TABLE_WIDTH;
         float normalizeTerm = filter->getNormalizeTerm();
         size_t index = 0;
-        for(int y = 0; y < FILTER_TABLE_WIDTH; ++y) {
+        for (int y = 0; y < FILTER_TABLE_WIDTH; ++y) {
             float fy = y * deltaY;
-            for(int x = 0; x < FILTER_TABLE_WIDTH; ++x) {
+            for (int x = 0; x < FILTER_TABLE_WIDTH; ++x) {
                 float fx = x * deltaX;
                 mTable[index++] = filter->evaluate(fx, fy) /
                     normalizeTerm;
@@ -44,7 +44,7 @@ namespace Goblin {
     }
 
     ImageTile::~ImageTile() {
-        if(mPixels) {
+        if (mPixels) {
             delete [] mPixels;
             mPixels = NULL;
         }
@@ -59,7 +59,7 @@ namespace Goblin {
     }
 
     void ImageTile::addSample(float imageX, float imageY, const Color& L) {
-        if(L.isNaN()) {
+        if (L.isNaN()) {
             cout << "sample ("<< imageX << " " << imageY
                 << ") generate NaN point, discard this sample" << endl;
             return;
@@ -78,8 +78,8 @@ namespace Goblin {
         y0 = max(y0, mTileRect.yStart);
         y1 = min(y1, mTileRect.yStart + mTileRect.yCount - 1);
 
-        for(int y = y0; y <= y1; ++y) {
-            for(int x = x0; x <= x1; ++x) {
+        for (int y = y0; y <= y1; ++y) {
+            for (int x = x0; x <= x1; ++x) {
                 float w = mCachedFilter.evaluate(x - dImageX, y - dImageY);
                 int index = (y - mTileRect.yStart) * mTileRect.xCount + 
                     (x - mTileRect.xStart);
@@ -111,11 +111,11 @@ namespace Goblin {
     } 
     
     Film::~Film() {
-        if(mPixels != NULL) {
+        if (mPixels != NULL) {
             delete[] mPixels;
             mPixels = NULL;
         }
-        if(mFilter != NULL) {
+        if (mFilter != NULL) {
             delete mFilter;
             mFilter = NULL;
         }
@@ -142,8 +142,8 @@ namespace Goblin {
         tile.getTileRange(&xStart, &xEnd, &yStart, &yEnd);
         const Pixel* tileBuffer = tile.getTileBuffer();
         int tileWidth = xEnd - xStart;
-        for(int y = yStart; y < yEnd; ++y) {
-            for(int x = xStart; x < xEnd; ++x) {
+        for (int y = yStart; y < yEnd; ++y) {
+            for (int x = xStart; x < xEnd; ++x) {
                 int tileIndex = (y - yStart) * tileWidth + (x - xStart);
                 int filmIndex = y * mXRes + x;
                 mPixels[filmIndex].color += tileBuffer[tileIndex].color;
@@ -163,8 +163,8 @@ namespace Goblin {
 
     void Film::writeImage(bool normalize) {
         Color* colors = new Color[mXRes * mYRes];
-        for(int y = 0; y < mYRes; ++y) {
-            for(int x = 0; x < mXRes; ++x) {
+        for (int y = 0; y < mYRes; ++y) {
+            for (int x = 0; x < mXRes; ++x) {
                 int index = mXRes * y + x;
                 colors[index] = normalize?
                     mPixels[index].color / mPixels[index].weight:
@@ -174,18 +174,18 @@ namespace Goblin {
 
         // draw debug info
         cout << "drawing debug info: " << endl;
-        for(size_t i = 0; i < mDebugLines.size(); ++i) {
+        for (size_t i = 0; i < mDebugLines.size(); ++i) {
             const DebugLine& line = mDebugLines[i].first;
             drawLine(line.first, line.second, colors,
                 mXRes, mYRes, mDebugLines[i].second);
         }
-        for(size_t i = 0; i < mDebugPoints.size(); ++i) {
+        for (size_t i = 0; i < mDebugPoints.size(); ++i) {
             drawPoint(mDebugPoints[i].first, colors, mXRes, mYRes,
                 mDebugPoints[i].second, 1);
         }
 
         cout << "write image to : " << mFilename << endl;
-        if(mBloomRadius > 0.0f && mBloomWeight > 0.0f) {
+        if (mBloomRadius > 0.0f && mBloomWeight > 0.0f) {
             Goblin::bloom(colors, mXRes, mYRes, mBloomRadius, mBloomWeight);
         }
         Goblin::writeImage(mFilename, colors, mXRes, mYRes, mToneMapping);
@@ -208,7 +208,7 @@ namespace Goblin {
 
         Vector4 windowCrop = params.getVector4("crop", Vector4(0, 1, 0, 1));
         float crop[4];
-        for(int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {
             crop[i] = windowCrop[i];
         }
         string filePath = params.getString("file", "goblin.png");

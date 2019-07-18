@@ -22,16 +22,16 @@ bool Sphere::intersect(const Ray& ray) const {
     float B = 2.0f * dot(ray.d, ray.o);
     float C = squaredLength(ray.o) - mRadius * mRadius;
     float tNear, tFar;
-    if(!quadratic(A, B, C, &tNear, &tFar)) {
+    if (!quadratic(A, B, C, &tNear, &tFar)) {
         return false;
     }
-    if(tNear > ray.maxt || tFar < ray.mint) {
+    if (tNear > ray.maxt || tFar < ray.mint) {
         return false;
     }
     float tHit = tNear;
-    if(tHit < ray.mint) {
+    if (tHit < ray.mint) {
         tHit = tFar;
-        if(tHit > ray.maxt) {
+        if (tHit > ray.maxt) {
             return false;
         }
     }
@@ -44,16 +44,16 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
     float B = 2.0f * dot(ray.d, ray.o);
     float C = squaredLength(ray.o) - mRadius * mRadius;
     float tNear, tFar;
-    if(!quadratic(A, B, C, &tNear, &tFar)) {
+    if (!quadratic(A, B, C, &tNear, &tFar)) {
         return false;
     }
-    if(tNear > ray.maxt || tFar < ray.mint) {
+    if (tNear > ray.maxt || tFar < ray.mint) {
         return false;
     }
     float tHit = tNear;
-    if(tHit < ray.mint) {
+    if (tHit < ray.mint) {
         tHit = tFar;
-        if(tHit > ray.maxt) {
+        if (tHit > ray.maxt) {
             return false;
         }
     }
@@ -88,7 +88,7 @@ bool Sphere::intersect(const Ray& ray, float* epsilon,
      * sinPhi = y / sqrt(x * x + y * y)
      */
     float phi = atan2(pHit.y, pHit.x); 
-    if(phi < 0.0f) {
+    if (phi < 0.0f) {
         phi += TWO_PI;
     }
     float u = phi * INV_TWOPI;
@@ -117,7 +117,7 @@ Vector3 Sphere::sample(const Vector3& p, float u1, float u2,
     Vector3* normal) const {
     float squaredRadius = mRadius * mRadius;
     float squaredDistance = squaredLength(p);
-    if(squaredDistance - squaredRadius< 1e-4f) {
+    if (squaredDistance - squaredRadius< 1e-4f) {
         return sample(u1, u2, normal);
     }
     // local space, center is at (0, 0, 0)
@@ -133,7 +133,7 @@ Vector3 Sphere::sample(const Vector3& p, float u1, float u2,
     Fragment fragment; 
     float epsilon;
     Vector3 pHit;
-    if(intersect(ray, &epsilon, &fragment)) {
+    if (intersect(ray, &epsilon, &fragment)) {
         pHit = fragment.getPosition();
     } else {
         // ray scratches over sphere's surface
@@ -147,7 +147,7 @@ float Sphere::pdf(const Vector3& p, const Vector3& wi) const {
     // inside the sphere, return uniform weight
     float squaredDistance = squaredLength(p);
     float squaredRadius = mRadius * mRadius;
-    if(squaredDistance - squaredRadius< 1e-4f) {
+    if (squaredDistance - squaredRadius< 1e-4f) {
         return Geometry::pdf(p, wi);
     }
     // outside the sphere, use cone pdf 
@@ -169,9 +169,9 @@ void Sphere::buildStacks() {
     float phiStep = TWO_PI / mNumSlices;
     // two poles of the sphere are not counted as ring
     size_t numRings = mNumStacks - 1;
-    for(size_t i = 1; i <= numRings; ++i) {
+    for (size_t i = 1; i <= numRings; ++i) {
         float theta = i * thetaStep;
-        for(size_t j = 0; j <= mNumSlices; ++j) {
+        for (size_t j = 0; j <= mNumSlices; ++j) {
             float phi = j * phiStep;
             // from top to bottom
             Vertex v;
@@ -205,37 +205,37 @@ void Sphere::buildStacks() {
 
     size_t numRingVertices = mNumSlices + 1;
 
-    for(size_t i = 0; i < mNumStacks - 2; ++i) {
-        for(size_t j = 0; j < mNumSlices; ++j) {
+    for (size_t i = 0; i < mNumStacks - 2; ++i) {
+        for (size_t j = 0; j < mNumSlices; ++j) {
             TriangleIndex triangle;
-            triangle.v[0] = i * numRingVertices + j;
-            triangle.v[1] = i * numRingVertices + j + 1;
-            triangle.v[2] = (i + 1) * numRingVertices + j;
+            triangle.v[0] = (unsigned int)(i * numRingVertices + j);
+            triangle.v[1] = (unsigned int)(i * numRingVertices + j + 1);
+            triangle.v[2] = (unsigned int)((i + 1) * numRingVertices + j);
             mTriangles.push_back(triangle);
 
-            triangle.v[0] = (i + 1) * numRingVertices + j;
-            triangle.v[1] = i * numRingVertices + j + 1;
-            triangle.v[2] = (i + 1) * numRingVertices + j + 1;
+            triangle.v[0] = (unsigned int)((i + 1) * numRingVertices + j);
+            triangle.v[1] = (unsigned int)(i * numRingVertices + j + 1);
+            triangle.v[2] = (unsigned int)((i + 1) * numRingVertices + j + 1);
             mTriangles.push_back(triangle);
         }
     }
 
     //top ring is in the rear block of vertices
-    for(size_t i = 0; i < mNumSlices; ++i) {
+    for (size_t i = 0; i < mNumSlices; ++i) {
         TriangleIndex triangle;
-        triangle.v[0] = northPoleIndex;
-        triangle.v[1] = i + 1;
-        triangle.v[2] = i;
+        triangle.v[0] = (unsigned int)(northPoleIndex);
+        triangle.v[1] = (unsigned int)(i + 1);
+        triangle.v[2] = (unsigned int)(i);
         mTriangles.push_back(triangle);
     }
     // how the vertices layout:
     // | top ring . middle rings . bottom ring. south pole, north pole |
     size_t baseIndex = (numRings - 1) * numRingVertices;
-    for(size_t i = 0; i < mNumSlices; ++i) {
+    for (size_t i = 0; i < mNumSlices; ++i) {
         TriangleIndex triangle;
-        triangle.v[0] = southPoleIndex;
-        triangle.v[1] = baseIndex + i;
-        triangle.v[2] = baseIndex + i + 1;
+        triangle.v[0] = (unsigned int)(southPoleIndex);
+        triangle.v[1] = (unsigned int)(baseIndex + i);
+        triangle.v[2] = (unsigned int)(baseIndex + i + 1);
         mTriangles.push_back(triangle);
     }
 }

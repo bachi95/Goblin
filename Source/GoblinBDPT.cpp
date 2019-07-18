@@ -3,6 +3,8 @@
 #include "GoblinFilm.h"
 #include "GoblinRay.h"
 
+#include <thread>
+
 namespace Goblin {
 
     class BDPTTask : public RenderTask {
@@ -536,7 +538,7 @@ namespace Goblin {
         vector<SampleRange> sampleRanges;
         getSampleRanges(film, sampleRanges);
         vector<Task*> bdptTasks;
-        RenderProgress progress(sampleRanges.size());
+        RenderProgress progress(static_cast<int>(sampleRanges.size()));
         for (size_t i = 0; i < sampleRanges.size(); ++i) {
             bdptTasks.push_back(new BDPTTask(this,
                 camera, scene, sampleRanges[i], sampleQuota, mSamplePerPixel,
@@ -618,8 +620,7 @@ namespace Goblin {
 
     Renderer* BDPTCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
-        int threadNum = params.getInt("thread_num",
-            boost::thread::hardware_concurrency());
+        int threadNum = params.getInt("thread_num", getMaxThreadNum());
         int maxPathLength = params.getInt("max_path_length", 5);
         int debugS = params.getInt("debug_s", -1);
         int debugT = params.getInt("debug_t", -1);

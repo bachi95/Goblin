@@ -7,8 +7,6 @@
 #include "GoblinTexture.h"
 #include "GoblinUtils.h"
 
-#include <boost/filesystem.hpp>
-
 #include <vector>
 
 namespace Goblin {
@@ -50,11 +48,9 @@ namespace Goblin {
         CDF1D* mPowerDistribution;
     };
 
-    using boost::filesystem::path;
-
     class SceneCache {
     public:
-        SceneCache(const path& sceneRoot);
+        SceneCache(const std::string& sceneRoot);
         void addGeometry(const string& name, const Geometry* g);
         void addPrimitive(const string& name, const Primitive* p);
         void addMaterial(const string& name, const MaterialPtr& m);
@@ -91,7 +87,7 @@ namespace Goblin {
         AreaLightMap mAreaLightMap;
         PrimitiveList mInstances;
         vector<Light*> mLights;
-        path mSceneRoot;
+        std::string mSceneRoot;
         string mErrorCode;
     };
 

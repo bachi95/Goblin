@@ -96,7 +96,7 @@ namespace Goblin {
         // see Donner. C 2006 Chapter 5
         // the internal Fresnel reflectivity 
         // approximated with a simple polynomial expansion
-        if(eta < 1.0f) {
+        if (eta < 1.0f) {
             return -0.4399f + 0.7099f / eta - 0.3319f / (eta * eta) +
                 0.0636f / (eta * eta * eta);
         } else {
@@ -205,7 +205,7 @@ namespace Goblin {
         float etai, float etat);
 
 
-    typedef boost::shared_ptr<Material> MaterialPtr;
+    typedef std::shared_ptr<Material> MaterialPtr;
 
     class LambertMaterial : public Material {
     public:
@@ -405,7 +405,7 @@ namespace Goblin {
     }
 
     inline SubsurfaceMaterial::~SubsurfaceMaterial() {
-        if(mBSSRDF != NULL) {
+        if (mBSSRDF != NULL) {
             delete mBSSRDF;
             mBSSRDF = NULL;
         }

@@ -3,7 +3,8 @@
 
 #include "GoblinThreadLocalStorage.h"
 #include "GoblinUtils.h"
-#include <boost/thread.hpp>
+#include <thread>
+#include <mutex>
 
 namespace Goblin {
 
@@ -24,16 +25,16 @@ namespace Goblin {
         void initWorkers();
         void taskEntry();
     private:
-        vector<boost::thread*> mWorkers;
+        vector<std::thread*> mWorkers;
         unsigned int mCoreNum;
 
-        boost::condition_variable mTasksCondition;
-        boost::mutex mTaskQueueMutex;
+        std::condition_variable mTasksCondition;
+        std::mutex mTaskQueueMutex;
         vector<Task*> mTasks;
         size_t mTasksNum;
 
-        boost::condition_variable mStartCondition;
-        boost::mutex mStartMutex;
+        std::condition_variable mStartCondition;
+        std::mutex mStartMutex;
         bool mStartWork;
         TLSManager* mTLSManager;
     };

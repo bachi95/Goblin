@@ -14,7 +14,7 @@ namespace Goblin {
         mIsCameraLens(isCameraLens) {}
 
     bool Model::intersect(const Ray& ray, IntersectFilter f) const {
-        if(f != NULL && !f(this, ray)) {
+        if (f != NULL && !f(this, ray)) {
             return false;
         }
         return mGeometry->intersect(ray);
@@ -22,12 +22,12 @@ namespace Goblin {
 
     bool Model::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection, IntersectFilter f) const {
-        if(f != NULL && !f(this, ray)) {
+        if (f != NULL && !f(this, ray)) {
             return false;
         }
         bool hit = mGeometry->intersect(ray, epsilon, 
             &intersection->fragment);
-        if(hit) {
+        if (hit) {
             intersection->primitive = this;
         }
         return hit;
@@ -42,12 +42,12 @@ namespace Goblin {
         mGeometry->refine(refinedGeometries);
         
         Model* refined = new Model[refinedGeometries.size()];
-        for(size_t i = 0; i < refinedGeometries.size(); ++i) {
+        for (size_t i = 0; i < refinedGeometries.size(); ++i) {
             refined[i].init(refinedGeometries[i], mMaterial, getAreaLight());
         }
         refinedModels.push_back(refined);
 
-        for(size_t i = 0; i < refinedGeometries.size(); ++i) {
+        for (size_t i = 0; i < refinedGeometries.size(); ++i) {
             refinedPrimitives.push_back(&refined[i]);
         }
     }
@@ -68,7 +68,7 @@ namespace Goblin {
         MaterialPtr material = sceneCache.getMaterial(materialName);
 
         const AreaLight* areaLight = NULL;
-        if(params.hasString("area_light")) {
+        if (params.hasString("area_light")) {
             areaLight = sceneCache.getAreaLight(params.getString("area_light"));
         }
         bool isCameraLens = params.getBool("is_camera_lens");
@@ -76,7 +76,7 @@ namespace Goblin {
             isCameraLens);
         Primitive::allocatedPrimitives.push_back(model);
 
-        if(!model->intersectable()) {
+        if (!model->intersectable()) {
             PrimitiveList primitives;
             primitives.push_back(model);
             Primitive* aggregate = new BVH(primitives, 1, "equal_count");

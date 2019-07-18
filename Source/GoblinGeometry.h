@@ -125,7 +125,7 @@ namespace Goblin {
     };
 
     class Geometry;
-    typedef boost::shared_ptr<Geometry> GeometryPtr;
+    typedef std::shared_ptr<Geometry> GeometryPtr;
     typedef std::vector<const Geometry*> GeometryList;
 
     class Geometry {
@@ -182,7 +182,7 @@ namespace Goblin {
 
     inline void Geometry::clearGeometryCache() {
         std::map<size_t, Geometry*>::iterator it;
-        for(it = geometryCache.begin(); it != geometryCache.end(); ++it) {
+        for (it = geometryCache.begin(); it != geometryCache.end(); ++it) {
             delete it->second;
         }
         geometryCache.clear();

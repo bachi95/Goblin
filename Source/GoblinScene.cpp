@@ -13,7 +13,7 @@ namespace Goblin {
         mAggregate(root), mCamera(camera), mLights(lights), 
         mVolumeRegion(volumeRegion), mPowerDistribution(NULL) {
         vector<float> lightPowers;
-        for(size_t i = 0; i < lights.size(); ++i) {
+        for (size_t i = 0; i < lights.size(); ++i) {
             lightPowers.push_back(
                 lights[i]->power(*this).luminance());
         }
@@ -63,7 +63,7 @@ namespace Goblin {
     bool Scene::intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection, IntersectFilter f) const {
         bool isIntersect = mAggregate->intersect(ray, epsilon, intersection, f);
-        if(isIntersect) {
+        if (isIntersect) {
             const MaterialPtr& material = intersection->getMaterial();
             material->perturb(&intersection->fragment);
         }
@@ -72,7 +72,7 @@ namespace Goblin {
 
     Color Scene::evalEnvironmentLight(const Ray& ray) const {
         Color Lenv(0.0f);
-        for(size_t i = 0; i < mLights.size(); ++i) {
+        for (size_t i = 0; i < mLights.size(); ++i) {
             Lenv += mLights[i]->Le(ray);
         }
         return Lenv;
@@ -91,7 +91,7 @@ namespace Goblin {
         return mLights[lightIndex];
     }
 
-    SceneCache::SceneCache(const path& sceneRoot): 
+    SceneCache::SceneCache(const std::string& sceneRoot):
         mSceneRoot(sceneRoot),
         mErrorCode("error") {
         initDefault();
@@ -159,7 +159,7 @@ namespace Goblin {
 
     const Geometry* SceneCache::getGeometry(const string& name) const {
         GeometryMap::const_iterator it = mGeometryMap.find(name);
-        if(it == mGeometryMap.end()) {
+        if (it == mGeometryMap.end()) {
             std::cerr << "Geometry " << name << " not defined!\n";
             return mGeometryMap.find(mErrorCode)->second;
         }
@@ -168,7 +168,7 @@ namespace Goblin {
 
     const Primitive* SceneCache::getPrimitive(const string& name) const {
         PrimitiveMap::const_iterator it = mPrimitiveMap.find(name);
-        if(it == mPrimitiveMap.end()) {
+        if (it == mPrimitiveMap.end()) {
             std::cerr << "Primitive " << name << " not defined!\n";
             return mPrimitiveMap.find(mErrorCode)->second;
         }
@@ -177,7 +177,7 @@ namespace Goblin {
 
     const MaterialPtr& SceneCache::getMaterial(const string& name) const {
         MaterialMap::const_iterator it = mMaterialMap.find(name);
-        if(it == mMaterialMap.end()) {
+        if (it == mMaterialMap.end()) {
             std::cerr << "Material " << name << " not defined!\n";
             return mMaterialMap.find(mErrorCode)->second;
         }
@@ -188,7 +188,7 @@ namespace Goblin {
         const string& name) const {
         FloatTextureMap::const_iterator it = 
             mFloatTextureMap.find(name);
-        if(it == mFloatTextureMap.end()) {
+        if (it == mFloatTextureMap.end()) {
             std::cerr << "Texture " << name << " not defined!\n";
             return mFloatTextureMap.find(mErrorCode)->second;
         }
@@ -198,7 +198,7 @@ namespace Goblin {
     const ColorTexturePtr& SceneCache::getColorTexture(
         const string& name) const {
         ColorTextureMap::const_iterator it = mColorTextureMap.find(name);
-        if(it == mColorTextureMap.end()) {
+        if (it == mColorTextureMap.end()) {
             std::cerr << "Texture " << name << " not defined!\n";
             return mColorTextureMap.find(mErrorCode)->second;
         }
@@ -207,7 +207,7 @@ namespace Goblin {
 
     const AreaLight* SceneCache::getAreaLight(const string& name) const {
         AreaLightMap::const_iterator it = mAreaLightMap.find(name);
-        if(mAreaLightMap.find(name) == mAreaLightMap.end()) {
+        if (mAreaLightMap.find(name) == mAreaLightMap.end()) {
             std::cerr << "Area Light " << name << " not defined!\n";
             return mAreaLightMap.find(mErrorCode)->second;
         }
@@ -223,11 +223,12 @@ namespace Goblin {
     }
 
     string SceneCache::resolvePath(const string& filename) const {
-        path filePath(filename);
-        if(filePath.is_absolute()) {
-            return filePath.generic_string();
+        if (filename[0] == '/' || filename[1] == ':') {
+			// absolute path
+            return filename;
         } else {
-            return (mSceneRoot / filename).generic_string();
+			// relative path
+            return mSceneRoot + "/" + filename;
         }
     }
 }

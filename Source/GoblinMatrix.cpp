@@ -45,8 +45,8 @@ namespace Goblin {
 
     Matrix3 Matrix3::operator+(const Matrix3& rhs) const {
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = m[i][j] + rhs[i][j]; 
             }
         }
@@ -54,8 +54,8 @@ namespace Goblin {
     }
 
     Matrix3& Matrix3::operator+=(const Matrix3& rhs) {
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 m[i][j] += rhs[i][j];
             }
         }
@@ -64,8 +64,8 @@ namespace Goblin {
 
     Matrix3 Matrix3::operator-(const Matrix3& rhs) const {
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = m[i][j] - rhs[i][j];
             }
         }
@@ -73,8 +73,8 @@ namespace Goblin {
     }
 
     Matrix3& Matrix3::operator-=(const Matrix3& rhs) {
-        for(int i= 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i= 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 m[i][j] -= rhs[i][j];
             }
         }
@@ -83,8 +83,8 @@ namespace Goblin {
 
     Matrix3 Matrix3::operator*(const Matrix3& rhs) const {
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = m[i][0] * rhs[0][j] + m[i][1] * rhs[1][j] +
                     m[i][2] * rhs[2][j];
             }
@@ -99,8 +99,8 @@ namespace Goblin {
 
     Matrix3 Matrix3::operator*(float f) const {
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = f * m[i][j];
             }
         }
@@ -108,8 +108,8 @@ namespace Goblin {
     }
 
     Matrix3& Matrix3::operator*=(float f) {
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 m[i][j] *= f;
             }
         }
@@ -118,7 +118,7 @@ namespace Goblin {
      
     Vector3 Matrix3::operator*(const Vector3& rhs) const {
         Vector3 result;
-        for(int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             result[i] = m[i][0] * rhs[0] + m[i][1] * rhs[1] + m[i][2] * rhs[2]; 
         }
         return result;
@@ -127,8 +127,8 @@ namespace Goblin {
     Matrix3 Matrix3::operator/(float f) const {
         float inv = 1.0f / f;
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = m[i][j] * inv;
             }
         }
@@ -137,8 +137,8 @@ namespace Goblin {
 
     Matrix3& Matrix3::operator/=(float f) {
         float inv = 1.0f / f;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 m[i][j] *= inv;
             }
         }
@@ -147,8 +147,8 @@ namespace Goblin {
 
     Matrix3 Matrix3::operator-() const {
         Matrix3 result;
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
                 result[i][j] = -m[i][j];
             }
         }
@@ -188,7 +188,7 @@ namespace Goblin {
 
     Vector3 operator*(const Vector3& v, const Matrix3& m) {
         Vector3 result;
-        for(int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             result[i] = v[0] * m[0][i] + v[1] * m[1][i] + v[2] * m[2][i];
         }
         return result;
@@ -202,7 +202,7 @@ namespace Goblin {
 
         float det = m[0][0] * (*inv)[0][0] + m[0][1] * (*inv)[1][0] + 
             m[0][2] * (*inv)[2][0];
-        if(fabs(det) < MATRIX_INVERSE_EPSILON)
+        if (fabs(det) < MATRIX_INVERSE_EPSILON)
             return false;
         float invDet = 1.0f / det;
 
@@ -227,9 +227,9 @@ namespace Goblin {
     }
 
     bool isIdentity(const Matrix3& m) {
-        for(int i = 0; i < 3; ++i) {
-            for(int j = 0; j < 3; ++j) {
-                if(fabs(m[i][j] - float(i == j)) > MATRIX_EPSILON)
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                if (fabs(m[i][j] - float(i == j)) > MATRIX_EPSILON)
                    return false; 
             }
         }
@@ -267,8 +267,8 @@ namespace Goblin {
 
     Matrix4 Matrix4::operator+(const Matrix4& rhs) const {
         Matrix4 result;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = m[i][j] + rhs[i][j];
             }
         }
@@ -276,8 +276,8 @@ namespace Goblin {
     }
 
     Matrix4& Matrix4::operator+=(const Matrix4& rhs) {
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 m[i][j] += rhs[i][j];
             }
         }
@@ -286,8 +286,8 @@ namespace Goblin {
 
     Matrix4 Matrix4::operator-(const Matrix4& rhs) const {
         Matrix4 result;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = m[i][j] - rhs[i][j];
             }
         }
@@ -295,8 +295,8 @@ namespace Goblin {
     }
 
     Matrix4& Matrix4::operator-=(const Matrix4& rhs) {
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 m[i][j] -= rhs[i][j];
             }
         }
@@ -305,8 +305,8 @@ namespace Goblin {
 
     Matrix4 Matrix4::operator*(const Matrix4& rhs) const {
         Matrix4 result;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = m[i][0] * rhs[0][j] + m[i][1] * rhs[1][j] +
                     m[i][2] * rhs[2][j] + m[i][3] * rhs[3][j];
             }
@@ -321,8 +321,8 @@ namespace Goblin {
 
     Matrix4 Matrix4::operator*(float f) const {
         Matrix4 result;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = f * m[i][j];
             }
         }
@@ -330,8 +330,8 @@ namespace Goblin {
     }
 
     Matrix4& Matrix4::operator*=(float f) {
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 m[i][j] *= f;
             }
         }
@@ -340,7 +340,7 @@ namespace Goblin {
 
     Vector4 Matrix4::operator*(const Vector4& rhs) const {
         Vector4 result;
-        for(int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {
            result[i] = m[i][0] * rhs[0] + m[i][1] * rhs[1] + m[i][2] * rhs[2] +
                m[i][3] * rhs[3];
         }
@@ -350,8 +350,8 @@ namespace Goblin {
     Matrix4 Matrix4::operator/(float f) const {
         Matrix4 result;
         float inv = 1.0f / f;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = m[i][j] * inv;
             }
         }
@@ -360,8 +360,8 @@ namespace Goblin {
 
     Matrix4& Matrix4::operator/=(float f) {
         float inv = 1.0f / f;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 m[i][j] *= inv;
             }
         }
@@ -370,8 +370,8 @@ namespace Goblin {
 
     Matrix4 Matrix4::operator-() const {
         Matrix4 result;
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
                 result[i][j] = -m[i][j];
             }
         }
@@ -386,8 +386,8 @@ namespace Goblin {
     }
 
     Matrix4& Matrix4::transposeSelf() {
-        for(int i = 0; i < 4; ++i) {
-            for(int j = i + 1; j < 4; ++j) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = i + 1; j < 4; ++j) {
                 float tmp = m[i][j];
                 m[i][j] = m[j][i];
                 m[j][i] = tmp;
@@ -410,7 +410,7 @@ namespace Goblin {
 
     Vector4 operator*(const Vector4& v, const Matrix4& m) {
         Vector4 result;
-        for(int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {
             result[i] = v[0] * m[0][i] + v[1] * m[1][i] + v[2] * m[2][i] +
                 v[3] * m[3][i];
         }
@@ -450,7 +450,7 @@ namespace Goblin {
 
         float det = m00 * (*inv)[0][0] + m01 * (*inv)[1][0] + 
                     m02 * (*inv)[2][0] + m03 * (*inv)[3][0];
-        if(fabs(det) < MATRIX_EPSILON)
+        if (fabs(det) < MATRIX_EPSILON)
             return false;
         float invDet = 1.0f / det;
 
@@ -488,9 +488,9 @@ namespace Goblin {
     }
 
     bool isIdentity(const Matrix4& m) {
-        for(int i = 0; i < 4; ++i) {
-            for(int j = 0; j < 4; ++j) {
-                if(fabs(m[i][j] - float(i == j)) > MATRIX_EPSILON)
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                if (fabs(m[i][j] - float(i == j)) > MATRIX_EPSILON)
                    return false; 
             }
         }

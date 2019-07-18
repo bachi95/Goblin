@@ -6,25 +6,24 @@ namespace Goblin {
         TLSManager* tlsManager):
         mTasksNum(0), mStartWork(false), mTLSManager(tlsManager) {
         mCoreNum = coreNum == 0 ?
-            boost::thread::hardware_concurrency() : 
-            min(boost::thread::hardware_concurrency(), coreNum);
+            getMaxThreadNum() : min(getMaxThreadNum(), coreNum);
     }
 
 
     void ThreadPool::initWorkers() {
-        if(mCoreNum == 1) {
+        if (mCoreNum == 1) {
             return;
         }
-        for(size_t i = 0; i < mCoreNum; ++i) {
+        for (size_t i = 0; i < mCoreNum; ++i) {
             mWorkers.push_back(
-                new boost::thread(&ThreadPool::taskEntry, this));
+                new std::thread(&ThreadPool::taskEntry, this));
         }
     }
 
     void ThreadPool::taskEntry() {
-        static TLSPtr tlsPtr;
+        static thread_local TLSPtr tlsPtr;
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             while(!mStartWork) {
                 mStartCondition.wait(lk);
             }
@@ -35,21 +34,21 @@ namespace Goblin {
         while(true) {
             Task* task = NULL;
             {
-                boost::lock_guard<boost::mutex> lk(mTaskQueueMutex);
-                if(mTasks.size() == 0) {
+                std::lock_guard<std::mutex> lk(mTaskQueueMutex);
+                if (mTasks.size() == 0) {
                     break;
                 }
                 task= mTasks.back();
                 mTasks.pop_back();
             }
 
-            if(task) {
+            if (task) {
                 task->run(tlsPtr);
             }
 
             {
-                boost::unique_lock<boost::mutex> lk(mTaskQueueMutex);
-                if(--mTasksNum == 0) {
+                std::unique_lock<std::mutex> lk(mTaskQueueMutex);
+                if (--mTasksNum == 0) {
                     mTasksCondition.notify_all();
                     break;
                 }
@@ -61,23 +60,23 @@ namespace Goblin {
     }
 
     void ThreadPool::enqueue(const vector<Task*>& tasks) {
-        if(mCoreNum == 1) {
+        if (mCoreNum == 1) {
             TLSPtr tlsPtr;
             mTLSManager->initialize(tlsPtr);
-            for(size_t i = 0; i < tasks.size(); ++i) {
+            for (size_t i = 0; i < tasks.size(); ++i) {
                 tasks[i]->run(tlsPtr);
             }
             mTLSManager->finalize(tlsPtr);
             return;
         }
 
-        if(mWorkers.size() == 0) {
+        if (mWorkers.size() == 0) {
             initWorkers();
         }
     
         {
-            boost::lock_guard<boost::mutex> lk(mTaskQueueMutex);
-            for(size_t i = 0; i < tasks.size(); ++i) {
+            std::lock_guard<std::mutex> lk(mTaskQueueMutex);
+            for (size_t i = 0; i < tasks.size(); ++i) {
                 mTasks.push_back(tasks[i]);
             }
             mTasksNum += mTasks.size();
@@ -85,20 +84,20 @@ namespace Goblin {
     };
 
     void ThreadPool::waitForAll() {
-        if(mCoreNum == 1) {
+        if (mCoreNum == 1) {
             return;
         }
 
         // let the worker start working
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             mStartWork = true;
         }
         mStartCondition.notify_all();
 
         // wake me up til all the taks finish
         { 
-            boost::unique_lock<boost::mutex> lk(mTaskQueueMutex);
+            std::unique_lock<std::mutex> lk(mTaskQueueMutex);
             while(mTasksNum != 0) {
                 mTasksCondition.wait(lk);
             }
@@ -107,15 +106,15 @@ namespace Goblin {
     }
 
     void ThreadPool::cleanup() {
-        for(size_t i = 0; i < mWorkers.size(); ++i) {
-            if(mWorkers[i]->joinable()) {
+        for (size_t i = 0; i < mWorkers.size(); ++i) {
+            if (mWorkers[i]->joinable()) {
                 mWorkers[i]->join();
             }
             delete mWorkers[i];
         }
         mWorkers.clear();
         {
-            boost::unique_lock<boost::mutex> lk(mStartMutex);
+            std::unique_lock<std::mutex> lk(mStartMutex);
             mStartWork = false;
         }
 

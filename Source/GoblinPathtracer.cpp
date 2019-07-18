@@ -26,7 +26,7 @@ namespace Goblin {
         float epsilon;
         Intersection intersection;
         while(true) {
-            if(!scene->intersect(currentRay,
+            if (!scene->intersect(currentRay,
                 &epsilon, &intersection, &notOpaque)) {
                 break;
             } 
@@ -37,7 +37,7 @@ namespace Goblin {
             float pdf;
             throughput *= material->sampleBSDF(fragment, wo, bs, 
                 &wi, &pdf, BSDFNull);
-            if(throughput == Color::Black) {
+            if (throughput == Color::Black) {
                 break;
             }
             // move forward ray's start point
@@ -51,14 +51,14 @@ namespace Goblin {
         const Sample& sample, const RNG& rng,
         RenderingTLS* tls) const {
         const vector<Light*>& lights = scene->getLights();
-        if(lights.size() == 0) {
+        if (lights.size() == 0) {
             return Color(0.0f);
         }
 
         Color Li(0.0f);
         float epsilon;
         Intersection intersection;
-        if(!scene->intersect(ray, &epsilon, &intersection)) {
+        if (!scene->intersect(ray, &epsilon, &intersection)) {
             // get image based lighting if ray didn't hit anything
             Li += scene->evalEnvironmentLight(ray);
             return Li;
@@ -73,7 +73,7 @@ namespace Goblin {
         vector<Ray> debugRays;
         Color throughput(1.0f);
         bool firstBounce = true;
-        for(int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
+        for (int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
             intersection.computeUVDifferential(currentRay);
             LightSample ls(sample, mLightSampleIndexes[bounces], 0);
             BSDFSample bs(sample, mBSDFSampleIndexes[bounces], 0);
@@ -94,16 +94,16 @@ namespace Goblin {
             Ray shadowRay;
             // lighting sample
             Color L = light->sampleL(p, epsilon, ls, &wi, &lightPdf, &shadowRay);
-            if(L != Color::Black && lightPdf > 0.0f) {
+            if (L != Color::Black && lightPdf > 0.0f) {
                 Color f = material->bsdf(fragment, wo, wi);
-                if(f != Color::Black && 
+                if (f != Color::Black && 
                     !scene->intersect(shadowRay, &isOpaque)) {
                     // calculate the transmittance alone index-matched material
                     Color tr = evalAttenuation(scene, shadowRay,
                         BSDFSample(rng)); 
                     // we don't do MIS for delta distribution light
                     // since there is only one sample need for it
-                    if(light->isDelta()) {
+                    if (light->isDelta()) {
                         Ld += f * tr * L * absdot(n, wi) / lightPdf;
                     } else {
                         bsdfPdf = material->pdf(fragment, wo, wi);
@@ -116,16 +116,16 @@ namespace Goblin {
             BSDFType sampledType;
             Color f = material->sampleBSDF(fragment, wo, bs, 
                 &wi, &bsdfPdf, BSDFAll, &sampledType);
-            if(f != Color::Black && bsdfPdf > 0.0f) {
+            if (f != Color::Black && bsdfPdf > 0.0f) {
                 // this sample steps on an index-matched BSDF
                 // should punch through it with attenuation accounted
-                if(sampledType == BSDFNull) {
+                if (sampledType == BSDFNull) {
                     throughput *= (f / bsdfPdf);
                     currentRay = RayDifferential(p, wi, epsilon);
-                    if(!scene->intersect(currentRay, &epsilon, &intersection)) {
+                    if (!scene->intersect(currentRay, &epsilon, &intersection)) {
                         // primary ray need to evaluate image based lighting
                         // in this case
-                        if(firstBounce) {
+                        if (firstBounce) {
                             Li += throughput * 
                                 scene->evalEnvironmentLight(currentRay);
                         }
@@ -138,19 +138,19 @@ namespace Goblin {
                 // otherwise we should got 0 Ld from light sample earlier,
                 // and count on this part for all the Ld contribution
                 float fWeight = 1.0f;
-                if(!(sampledType & BSDFSpecular)) {
+                if (!(sampledType & BSDFSpecular)) {
                     lightPdf = light->pdf(p, wi);
                     fWeight = powerHeuristic(1, bsdfPdf, 1, lightPdf);
                 }
                 Intersection lightIntersect;
                 float lightEpsilon;
                 Ray r(p, wi, epsilon);
-                if(scene->intersect(r, &lightEpsilon, 
+                if (scene->intersect(r, &lightEpsilon, 
                     &lightIntersect, &isOpaque)) {
                     Color tr = evalAttenuation(scene, r, BSDFSample(rng));
-                    if(lightIntersect.primitive->getAreaLight() == light) {
+                    if (lightIntersect.primitive->getAreaLight() == light) {
                         Color Li = lightIntersect.Le(-wi);
-                        if(Li != Color::Black) {
+                        if (Li != Color::Black) {
                             Ld += f * tr * Li * absdot(wi, n) * fWeight / bsdfPdf;
                         }
                     }
@@ -163,12 +163,12 @@ namespace Goblin {
             Li += throughput * Ld / pickLightPdf;
 
             // indirect lighting
-            if( f == Color::Black || bsdfPdf == 0.0f) {
+            if ( f == Color::Black || bsdfPdf == 0.0f) {
                 break;
             }
             throughput *= f * absdot(wi, n) / bsdfPdf;
             currentRay = RayDifferential(p, wi, epsilon);
-            if(!scene->intersect(currentRay, &epsilon, &intersection)) {
+            if (!scene->intersect(currentRay, &epsilon, &intersection)) {
                 break;
             }
             firstBounce = false;
@@ -180,15 +180,15 @@ namespace Goblin {
 
     void PathTracer::querySampleQuota(const ScenePtr& scene, 
             SampleQuota* sampleQuota) {
-        if(mLightSampleIndexes) {
+        if (mLightSampleIndexes) {
             delete [] mLightSampleIndexes;
             mLightSampleIndexes = NULL;
         }
-        if(mBSDFSampleIndexes) {
+        if (mBSDFSampleIndexes) {
             delete [] mBSDFSampleIndexes;
             mBSDFSampleIndexes = NULL;
         }
-        if(mPickLightSampleIndexes) {
+        if (mPickLightSampleIndexes) {
             delete [] mPickLightSampleIndexes;
             mPickLightSampleIndexes = NULL;
         }
@@ -197,7 +197,7 @@ namespace Goblin {
         mLightSampleIndexes = new LightSampleIndex[bounces];
         mBSDFSampleIndexes = new BSDFSampleIndex[bounces];
         mPickLightSampleIndexes = new SampleIndex[bounces];
-        for(int i = 0; i < bounces; ++i) {
+        for (int i = 0; i < bounces; ++i) {
             mLightSampleIndexes[i] = LightSampleIndex(sampleQuota, 1);
             mBSDFSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
             mPickLightSampleIndexes[i] = sampleQuota->requestOneDQuota(1);
@@ -209,8 +209,7 @@ namespace Goblin {
 
     Renderer* PathTracerCreator::create(const ParamSet& params) const {
         int samplePerPixel = params.getInt("sample_per_pixel", 1);
-        int threadNum = params.getInt("thread_num", 
-            boost::thread::hardware_concurrency());
+        int threadNum = params.getInt("thread_num", getMaxThreadNum());
         int maxRayDepth = params.getInt("max_ray_depth", 5);
         int bssrdfSampleNum = params.getInt("bssrdf_sample_num", 4);
         return new PathTracer(samplePerPixel, threadNum, 

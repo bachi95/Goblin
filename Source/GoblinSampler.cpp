@@ -11,10 +11,10 @@ namespace Goblin {
     
     size_t SampleQuota::size() const {
         size_t totalSize = 0;
-        for(size_t i = 0; i < n1D.size(); ++i) {
+        for (size_t i = 0; i < n1D.size(); ++i) {
             totalSize += n1D[i];
         }
-        for(size_t i = 0; i < n2D.size(); ++i) {
+        for (size_t i = 0; i < n2D.size(); ++i) {
             totalSize += 2 * n2D[i];
         }
         return totalSize;
@@ -23,13 +23,13 @@ namespace Goblin {
     SampleIndex SampleQuota::requestOneDQuota(uint32_t samplesNum) {
         int nSample = roundToSquare(samplesNum);
         n1D.push_back(nSample);
-        return SampleIndex(n1D.size() - 1, nSample);
+        return SampleIndex((uint32_t)n1D.size() - 1, nSample);
     }
 
     SampleIndex SampleQuota::requestTwoDQuota(uint32_t samplesNum) {
         int nSample = roundToSquare(samplesNum);
         n2D.push_back(roundToSquare(nSample));
-        return SampleIndex(n2D.size() - 1, nSample);
+        return SampleIndex((uint32_t)n2D.size() - 1, nSample);
     }
 
     void Sample::allocateQuota(const SampleQuota& quota) {
@@ -37,8 +37,8 @@ namespace Goblin {
         n2D = quota.n2D;
 
         uint32_t patternNum = 0;
-        patternNum = n1D.size() + n2D.size();
-        if(patternNum == 0) {
+        patternNum = (uint32_t)(n1D.size() + n2D.size());
+        if (patternNum == 0) {
             u1D = NULL;
             u2D = NULL;
             return;
@@ -49,11 +49,11 @@ namespace Goblin {
 
         // allocate a chunk of float buffer that can host all 1d/2d values
         float* quotaBuffer = new float[quota.size()];
-        for(uint32_t i = 0; i < n1D.size(); ++i) {
+        for (uint32_t i = 0; i < n1D.size(); ++i) {
             u1D[i] = quotaBuffer;
             quotaBuffer += n1D[i];
         }
-        for(uint32_t i = 0; i < n2D.size(); ++i) {
+        for (uint32_t i = 0; i < n2D.size(); ++i) {
             u2D[i] = quotaBuffer;
             quotaBuffer += 2 * n2D[i];
         }
@@ -74,7 +74,7 @@ namespace Goblin {
     }
 
     Sampler::~Sampler() {
-        if(mSampleBuffer != NULL) {
+        if (mSampleBuffer != NULL) {
             delete [] mSampleBuffer;
             mSampleBuffer = NULL;
         }
@@ -106,10 +106,10 @@ namespace Goblin {
      *
      */
     int Sampler::requestSamples(Sample* samples) {
-        if(mCurrentY == mYEnd) {
+        if (mCurrentY == mYEnd) {
             return 0;
         }
-        if(mSampleBuffer == NULL) {
+        if (mSampleBuffer == NULL) {
             // 4(imageX, imageY, lensU1, lensU2) + 
             // quota size(extra requested 1/2D samples)
             size_t bufferSize = mSamplesPerPixel * (4 + mSampleQuota.size());
@@ -124,11 +124,11 @@ namespace Goblin {
         stratifiedUniform2D(imageBuffer, 1);
         stratifiedUniform2D(lensBuffer, 1);
         float* currentOffset = quotaBuffer;
-        for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
+        for (size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
             stratifiedUniform1D(currentOffset, mSampleQuota.n1D[i]);
             currentOffset += mSampleQuota.n1D[i] * mSamplesPerPixel;
         }
-        for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
+        for (size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
             stratifiedUniform2D(currentOffset, mSampleQuota.n2D[i]);
             currentOffset += 2 * mSampleQuota.n2D[i] * mSamplesPerPixel;
         }
@@ -136,40 +136,40 @@ namespace Goblin {
         shuffle(lensBuffer, mSamplesPerPixel, 2, mRNG);
 
         float* shuffleBuffer = quotaBuffer;
-        for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
-            for(uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
+        for (size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
+            for (uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
                 shuffle(shuffleBuffer, mSamplesPerPixel, 1, mRNG);
                 shuffleBuffer += mSamplesPerPixel;
             }
         }
-        for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
-            for(uint32_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
+        for (size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
+            for (uint32_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
                 shuffle(shuffleBuffer, mSamplesPerPixel, 2, mRNG);
                 shuffleBuffer += 2 * mSamplesPerPixel;
             }
         }
 
         // fill in mSampleBuffer to samples
-        for(int i = 0; i < mSamplesPerPixel; ++i) {
+        for (int i = 0; i < mSamplesPerPixel; ++i) {
             samples[i].imageX = mCurrentX + imageBuffer[2 * i];
             samples[i].imageY = mCurrentY + imageBuffer[2 * i + 1];
         }
-        for(int i = 0; i < mSamplesPerPixel; ++i) {
+        for (int i = 0; i < mSamplesPerPixel; ++i) {
             samples[i].lensU1 = lensBuffer[2 * i];
             samples[i].lensU2 = lensBuffer[2 * i + 1];
         } 
         float* fillinBuffer = quotaBuffer;
-        for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
-            for(uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
-                for(int k = 0; k < mSamplesPerPixel; ++k) {
+        for (size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
+            for (uint32_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
+                for (int k = 0; k < mSamplesPerPixel; ++k) {
                     samples[k].u1D[i][j] = fillinBuffer[k];
                 }
                 fillinBuffer += mSamplesPerPixel;
             }
         }
-        for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
-            for(uint32_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
-                for(int k = 0; k < mSamplesPerPixel; ++k) {
+        for (size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
+            for (uint32_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
+                for (int k = 0; k < mSamplesPerPixel; ++k) {
                     samples[k].u2D[i][2 * j] = fillinBuffer[2 * k];
                     samples[k].u2D[i][2 * j + 1] = fillinBuffer[2 * k + 1];
                 }
@@ -178,18 +178,18 @@ namespace Goblin {
         }
         // another round of shuffle, so that all the u1D u2D in one sample
         // won't have correlation
-        for(int i = 0; i < mSamplesPerPixel; ++i) {
-            for(size_t j = 0; j < mSampleQuota.n1D.size(); ++j) {
+        for (int i = 0; i < mSamplesPerPixel; ++i) {
+            for (size_t j = 0; j < mSampleQuota.n1D.size(); ++j) {
                 shuffle(samples[i].u1D[j], mSampleQuota.n1D[j], 1, mRNG);
             }
-            for(size_t j = 0; j < mSampleQuota.n2D.size(); ++j) {
+            for (size_t j = 0; j < mSampleQuota.n2D.size(); ++j) {
                 shuffle(samples[i].u2D[j], mSampleQuota.n2D[j], 2, mRNG);
             }
         }
 
         //debugOutput(samples);
 
-        if(++mCurrentX == mXEnd) {
+        if (++mCurrentX == mXEnd) {
             mCurrentX= mXStart;
             mCurrentY++;
         }
@@ -198,19 +198,19 @@ namespace Goblin {
 
     void Sampler::debugOutput(Sample* samples) {
         static bool debugFlip = true;
-        if(debugFlip) {
+        if (debugFlip) {
             debugFlip = false;
             // debug output, remove me later
             float* currentOffset = mSampleBuffer;
             std::cout << "image sample \n";
-            for(int i = 0; i < mSamplesPerPixel; ++i) {
+            for (int i = 0; i < mSamplesPerPixel; ++i) {
                 float x = currentOffset[2 * i];
                 float y = currentOffset[2 * i + 1];
                 std::cout << "(" << x << ", " << y << ") ";
             }
             std::cout << "\nlens samples\n";
             currentOffset += 2 * mSamplesPerPixel;
-            for(int i = 0; i < mSamplesPerPixel; ++i) {
+            for (int i = 0; i < mSamplesPerPixel; ++i) {
                 float x = currentOffset[2 * i];
                 float y = currentOffset[2 * i + 1];
                 std::cout << "(" << x << ", " << y << ") ";
@@ -219,9 +219,9 @@ namespace Goblin {
             std::cout << "\nintegrator samples\n";
             currentOffset += 2 * mSamplesPerPixel;
 
-            for(size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
-                for(size_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
-                    for(int k = 0; k < mSamplesPerPixel; ++k) {
+            for (size_t i = 0; i < mSampleQuota.n1D.size(); ++i) {
+                for (size_t j = 0; j < mSampleQuota.n1D[i]; ++j) {
+                    for (int k = 0; k < mSamplesPerPixel; ++k) {
                         std::cout << currentOffset[k] << " ";
                     }
                     std::cout << std::endl;
@@ -230,9 +230,9 @@ namespace Goblin {
                 std::cout << std::endl;
             }
 
-            for(size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
-                for(size_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
-                    for(int k = 0; k < mSamplesPerPixel; ++k) {
+            for (size_t i = 0; i < mSampleQuota.n2D.size(); ++i) {
+                for (size_t j = 0; j < mSampleQuota.n2D[i]; ++j) {
+                    for (int k = 0; k < mSamplesPerPixel; ++k) {
                         int index = 2 * k;
                         std::cout <<"(" << currentOffset[index] << 
                             ", "<< currentOffset[index + 1] << ") ";
@@ -243,18 +243,18 @@ namespace Goblin {
                 std::cout << std::endl;
             }
 
-            for(int i = 0; i < mSamplesPerPixel; ++i) {
+            for (int i = 0; i < mSamplesPerPixel; ++i) {
                 std::cout << "samples " << i << std::endl;
                 std::cout << "n1d\n";
-                for(size_t j = 0; j < samples[i].n1D.size(); ++j) {
-                    for(size_t k = 0; k < samples[i].n1D[j]; ++k) {
+                for (size_t j = 0; j < samples[i].n1D.size(); ++j) {
+                    for (size_t k = 0; k < samples[i].n1D[j]; ++k) {
                         std::cout << samples[i].u1D[j][k] << " ";
                     }
                     std::cout << std::endl;
                 }
                 std::cout << "n2d\n";
-                for(size_t j = 0; j < samples[i].n2D.size(); ++j) {
-                    for(size_t k = 0; k < samples[i].n2D[j]; ++k) {
+                for (size_t j = 0; j < samples[i].n2D.size(); ++j) {
+                    for (size_t k = 0; k < samples[i].n2D[j]; ++k) {
                         std::cout << "(" << samples[i].u2D[j][2 * k] << 
                             ", " << samples[i].u2D[j][2 * k + 1] << ") ";
                     }
@@ -267,7 +267,7 @@ namespace Goblin {
 
     Sample* Sampler::allocateSampleBuffer(size_t bufferSize) {
         Sample* samples = new Sample[bufferSize];
-        for(size_t i = 0; i < bufferSize; ++i) {
+        for (size_t i = 0; i < bufferSize; ++i) {
             samples[i].allocateQuota(mSampleQuota);
         }
         return samples;
@@ -276,8 +276,8 @@ namespace Goblin {
     void Sampler::stratifiedUniform1D(float* buffer, uint32_t n1D) {
         float strataSize = 1.0f / (float)n1D;
         float subStrataSize = strataSize / mSamplesPerPixel;
-        for(uint32_t i = 0; i < n1D; ++i) {
-            for(int j = 0; j < mSamplesPerPixel; ++j) {
+        for (uint32_t i = 0; i < n1D; ++i) {
+            for (int j = 0; j < mSamplesPerPixel; ++j) {
                 float nOffset = mJitter ? j + mRNG->randomFloat() : j + 0.5f;
                 int index = i * mSamplesPerPixel + j;
                 buffer[index] = i * strataSize + nOffset * subStrataSize;
@@ -289,10 +289,10 @@ namespace Goblin {
         int root = (int)sqrtf((float)n2D);
         float strataSize = 1.0f / root;
         float subStrataSize = strataSize / mXPerPixel;
-        for(uint32_t n = 0; n < n2D; ++n) {
+        for (uint32_t n = 0; n < n2D; ++n) {
             int uX = n % root;
             int uY = n / root;
-            for(int p = 0; p < mSamplesPerPixel; ++p) {
+            for (int p = 0; p < mSamplesPerPixel; ++p) {
                 int pX = p % mXPerPixel;
                 int pY = p / mXPerPixel;
                 float xOffset = mJitter ? pX + mRNG->randomFloat() : pX + 0.5f;
@@ -317,16 +317,16 @@ namespace Goblin {
     void CDF1D::init() {
         size_t n = mFunction.size();
         mDx = 1.0f / n;
-        mCount = n;
+        mCount = (int)n;
         mCDF.resize(n + 1);
         mCDF[0] = 0.0f;
         // accumulate up the integral
-        for(size_t i = 1; i < n + 1; ++i) {
+        for (size_t i = 1; i < n + 1; ++i) {
             mCDF[i] = mCDF[i - 1] + (mFunction[i - 1] * mDx);
         }
         mIntegral = mCDF[n];
         // normalize CDF with integral
-        for(size_t i = 1; i < n + 1; ++i) {
+        for (size_t i = 1; i < n + 1; ++i) {
             mCDF[i] /= mIntegral;
         }
     }
@@ -335,7 +335,7 @@ namespace Goblin {
         vector<float>::iterator lowBound;
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
         int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
-        if(pdf) {
+        if (pdf) {
             *pdf = (mFunction[offset] / mIntegral) * mDx;
         }
         return offset;
@@ -346,10 +346,10 @@ namespace Goblin {
         lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
         int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
         float d = (u - mCDF[offset]) / (mCDF[offset + 1] - mCDF[offset]);
-        if(pdf) {
+        if (pdf) {
             *pdf = mFunction[offset] / mIntegral;
         }
-        if(index) {
+        if (index) {
             *index = offset;
         }
         return (static_cast<float>(offset) + d) / mFunction.size();
@@ -358,7 +358,7 @@ namespace Goblin {
 
     CDF2D::CDF2D(const float* f2D, int width, int height) {
         vector<float> rowIntegrals;
-        for(int i = 0; i < height; ++i) {
+        for (int i = 0; i < height; ++i) {
             CDF1D* colCDF = new CDF1D(f2D + i * width, width);
             rowIntegrals.push_back(colCDF->mIntegral);
             mConditionalDist.push_back(colCDF);
@@ -367,7 +367,7 @@ namespace Goblin {
     }
 
     CDF2D::~CDF2D() {
-        for(size_t i = 0; i < mConditionalDist.size(); ++i) {
+        for (size_t i = 0; i < mConditionalDist.size(); ++i) {
             delete mConditionalDist[i];
             mConditionalDist[i] = NULL;
         }
@@ -383,7 +383,7 @@ namespace Goblin {
         // the conditional pdf under the condition that we pick row from above
         float pdfCol;
         float u = mConditionalDist[row]->sampleContinuous(u1, &pdfCol);
-        if(pdf) {
+        if (pdf) {
             *pdf = pdfRow * pdfCol;
         }
         return Vector2(u, v);
@@ -396,7 +396,7 @@ namespace Goblin {
             0, mConditionalDist[row]->mCount - 1);
         float integral = 
             mMarginalDist->mIntegral * mConditionalDist[row]->mIntegral;
-        if(integral == 0.0f) {
+        if (integral == 0.0f) {
             return 0.0f;
         }
         float pdf = mMarginalDist->mFunction[row] * 
@@ -568,8 +568,8 @@ namespace Goblin {
         float x = 2.0f * u1 - 1.0f;
         float y = 2.0f * u2 - 1.0f;
 
-        if(x + y > 0) {
-            if(x > y) {
+        if (x + y > 0) {
+            if (x > y) {
                 // right quarter of square
                 r = x;
                 theta = 0.25f * PI * (y / x);
@@ -580,7 +580,7 @@ namespace Goblin {
                 theta = 0.25f * PI * (2.0f - x / y);
             }
         } else {
-            if(x < y) {
+            if (x < y) {
                 // left quarter of square
                 r = -x;
                 // (pi / 4) * (y / x) + pi
@@ -589,7 +589,7 @@ namespace Goblin {
                 // down quarter of square
                 r = -y;
                 // x and y may both be 0
-                if(y != 0.0f) {
+                if (y != 0.0f) {
                     // (-pi / 4) * (x / y) + (3pi / 2)
                     theta = 0.25f * PI * (6.0f - x / y);
                 } else {
