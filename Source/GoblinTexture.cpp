@@ -714,8 +714,8 @@ namespace Goblin{
 
     Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
         const SceneCache& sceneCache) const {
-        Color c = params.getColor("color", Color::Magenta);
-        return new ConstantTexture<Color>(c);
+        Vector3 c = params.getVector3("color");
+        return new ConstantTexture<Color>(Color(c[0], c[1], c[2]));
     }
 
     Texture<Color>* ColorCheckboardTextureCreator::create(

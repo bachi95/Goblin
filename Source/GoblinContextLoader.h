@@ -13,35 +13,12 @@
 #include "GoblinVolume.h"
 
 namespace Goblin {
-    class PropertyTree;
     class ParamSet;
 
     class ContextLoader {
     public:
         ContextLoader();
         RenderContext* load(const std::string& filename);
-    private:
-        RendererPtr parseRenderer(const PropertyTree& pt);
-
-        Filter* parseFilter(const PropertyTree& pt);
-
-        Film* parseFilm(const PropertyTree& pt, Filter* filter);
-
-        CameraPtr parseCamera(const PropertyTree& pt, Film* film,
-            SceneCache* sceneCache);
-
-        VolumeRegion* parseVolume(const PropertyTree& pt,
-            SceneCache* sceneCache);
-
-        void parseGeometry(const PropertyTree& pt, SceneCache* sceneCache);
-
-        void parseTexture(const PropertyTree& pt, SceneCache* sceneCache);
-
-        void parseMaterial(const PropertyTree& pt, SceneCache* sceneCache);
-
-        void parsePrimitive(const PropertyTree& pt, SceneCache* sceneCache);
-
-        void parseLight(const PropertyTree& pt, SceneCache* sceneCache);
 
     private:
         std::unique_ptr<Factory<Filter, const ParamSet&> > mFilterFactory;

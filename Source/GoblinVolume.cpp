@@ -341,16 +341,19 @@ namespace Goblin {
 
     VolumeRegion* HomogeneousVolumeCreator::create(
         const ParamSet& params, const SceneCache& sceneCache) const {
-        Color attenuation = params.getColor("attenuation");
-        Color albedo = params.getColor("albedo");
-        Color emission = params.getColor("emission");
+        Vector3 attenuation = params.getVector3("attenuation");
+        Vector3 albedo = params.getVector3("albedo");
+        Vector3 emission = params.getVector3("emission");
         float g = params.getFloat("g", 0.0f);
         int sampleNum = params.getInt("sample_num", 5);
         Vector3 vMin = params.getVector3("box_min");
         Vector3 vMax = params.getVector3("box_max");
         BBox b(vMin, vMax);
         Transform toWorld = getTransform(params);
-        return new HomogeneousVolumeRegion(attenuation, albedo, emission,
+        return new HomogeneousVolumeRegion(
+			Color(attenuation[0], attenuation[1], attenuation[2]),
+			Color(albedo[0], albedo[1], albedo[2]),
+			Color(emission[0], emission[1], emission[2]),
             g, sampleNum, b, toWorld);
     }
 
@@ -368,13 +371,14 @@ namespace Goblin {
                 BBox(Vector3(-1, -1, -1), Vector3(1, 1, 1)), &d);
         }
 
-        Color albedo = params.getColor("albedo");
+        Vector3 albedo = params.getVector3("albedo");
         float g = params.getFloat("g", 0.0f);
         float stepSize = params.getFloat("step_size", 0.1f);
         int sampleNum = params.getInt("sample_num", 5);
         BBox b = densityGrid->getBBox();
         Transform toWorld = getTransform(params);
-        return new HeterogeneousVolumeRegion(densityGrid, albedo, g,
+        return new HeterogeneousVolumeRegion(densityGrid,
+			Color(albedo[0], albedo[1], albedo[2]), g,
             stepSize, sampleNum, b, toWorld);
     }
 }
