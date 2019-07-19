@@ -10,86 +10,86 @@
 #include <vector>
 
 namespace Goblin {
-    class CDF1D;
-    class Ray;
-    class VolumeRegion;
+class CDF1D;
+class Ray;
+class VolumeRegion;
 
-    class Scene {
-    public:
-        Scene(const PrimitivePtr& root, const CameraPtr& camera,
-            const vector<Light*>& lights, VolumeRegion* volumeRegion);
+class Scene {
+public:
+    Scene(const PrimitivePtr& root, const CameraPtr& camera,
+        const vector<Light*>& lights, VolumeRegion* volumeRegion);
 
-        ~Scene();
+    ~Scene();
 
-        const CameraPtr getCamera() const;
+    const CameraPtr getCamera() const;
 
-        const vector<Light*>& getLights() const;
+    const vector<Light*>& getLights() const;
 
-        const VolumeRegion* getVolumeRegion() const;
+    const VolumeRegion* getVolumeRegion() const;
 
-        void collectRenderList(RenderList& rList);
+    void collectRenderList(RenderList& rList);
 
-        bool intersect(const Ray& ray, IntersectFilter f = NULL) const;
+    bool intersect(const Ray& ray, IntersectFilter f = NULL) const;
 
-        bool intersect(const Ray& ray, float* epsilon, 
-            Intersection* intersection, IntersectFilter f = NULL) const;
+    bool intersect(const Ray& ray, float* epsilon, 
+        Intersection* intersection, IntersectFilter f = NULL) const;
 
-        Color evalEnvironmentLight(const Ray& ray) const;
+    Color evalEnvironmentLight(const Ray& ray) const;
 
-        void getBoundingSphere(Vector3* center, float* radius) const;
+    void getBoundingSphere(Vector3* center, float* radius) const;
 
-        const Light* sampleLight(float u, float* pdf) const;
+    const Light* sampleLight(float u, float* pdf) const;
 
-    private:
-        PrimitivePtr mAggregate;
-        CameraPtr mCamera;
-        vector<Light*> mLights;
-        VolumeRegion* mVolumeRegion;
-        CDF1D* mPowerDistribution;
-    };
+private:
+    PrimitivePtr mAggregate;
+    CameraPtr mCamera;
+    vector<Light*> mLights;
+    VolumeRegion* mVolumeRegion;
+    CDF1D* mPowerDistribution;
+};
 
-    class SceneCache {
-    public:
-        SceneCache(const std::string& sceneRoot);
-        void addGeometry(const string& name, const Geometry* g);
-        void addPrimitive(const string& name, const Primitive* p);
-        void addMaterial(const string& name, const MaterialPtr& m);
-        void addFloatTexture(const string& name, const FloatTexturePtr& t);
-        void addColorTexture(const string& name, const ColorTexturePtr& t);
-        void addAreaLight(const string& name, const AreaLight* l);
-        void addInstance(const Primitive* i);
-        void addLight(Light* l);
-        const Geometry* getGeometry(const string& name) const;
-        const Primitive* getPrimitive(const string& name) const;
-        const MaterialPtr& getMaterial(const string& name) const;
-        const FloatTexturePtr& getFloatTexture(const string& name) const;
-        const ColorTexturePtr& getColorTexture(const string& name) const;
-        const AreaLight* getAreaLight(const string& name) const;
-        const PrimitiveList& getInstances() const;
-        const vector<Light*>& getLights() const;
-        string resolvePath(const string& filename) const;
+class SceneCache {
+public:
+    SceneCache(const std::string& sceneRoot);
+    void addGeometry(const string& name, const Geometry* g);
+    void addPrimitive(const string& name, const Primitive* p);
+    void addMaterial(const string& name, const MaterialPtr& m);
+    void addFloatTexture(const string& name, const FloatTexturePtr& t);
+    void addColorTexture(const string& name, const ColorTexturePtr& t);
+    void addAreaLight(const string& name, const AreaLight* l);
+    void addInstance(const Primitive* i);
+    void addLight(Light* l);
+    const Geometry* getGeometry(const string& name) const;
+    const Primitive* getPrimitive(const string& name) const;
+    const MaterialPtr& getMaterial(const string& name) const;
+    const FloatTexturePtr& getFloatTexture(const string& name) const;
+    const ColorTexturePtr& getColorTexture(const string& name) const;
+    const AreaLight* getAreaLight(const string& name) const;
+    const PrimitiveList& getInstances() const;
+    const vector<Light*>& getLights() const;
+    string resolvePath(const string& filename) const;
 
-    private:
-        void initDefault();
+private:
+    void initDefault();
 
-        typedef map<string, const Geometry*> GeometryMap;
-        typedef map<string, const Primitive*> PrimitiveMap;
-        typedef map<string, MaterialPtr> MaterialMap;
-        typedef map<string, ColorTexturePtr> ColorTextureMap;
-        typedef map<string, FloatTexturePtr> FloatTextureMap;
-        typedef map<string, const AreaLight*> AreaLightMap;
+    typedef map<string, const Geometry*> GeometryMap;
+    typedef map<string, const Primitive*> PrimitiveMap;
+    typedef map<string, MaterialPtr> MaterialMap;
+    typedef map<string, ColorTexturePtr> ColorTextureMap;
+    typedef map<string, FloatTexturePtr> FloatTextureMap;
+    typedef map<string, const AreaLight*> AreaLightMap;
 
-        GeometryMap mGeometryMap;
-        PrimitiveMap mPrimitiveMap;
-        MaterialMap mMaterialMap;
-        FloatTextureMap mFloatTextureMap;
-        ColorTextureMap mColorTextureMap;
-        AreaLightMap mAreaLightMap;
-        PrimitiveList mInstances;
-        vector<Light*> mLights;
-        std::string mSceneRoot;
-        string mErrorCode;
-    };
+    GeometryMap mGeometryMap;
+    PrimitiveMap mPrimitiveMap;
+    MaterialMap mMaterialMap;
+    FloatTextureMap mFloatTextureMap;
+    ColorTextureMap mColorTextureMap;
+    AreaLightMap mAreaLightMap;
+    PrimitiveList mInstances;
+    vector<Light*> mLights;
+    std::string mSceneRoot;
+    string mErrorCode;
+};
 
 }
 

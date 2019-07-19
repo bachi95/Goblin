@@ -4,21 +4,21 @@
 #include "GoblinScene.h"
 
 namespace Goblin {
-    class RenderContext {
-    public:
-        RenderContext(RendererPtr renderer, ScenePtr scene):
-          mRenderer(renderer), mScene(scene) {}
-        void render();
+class RenderContext {
+public:
+    RenderContext(RendererPtr renderer, ScenePtr scene):
+        mRenderer(renderer), mScene(scene) {}
+    void render();
 
-    public:
-        RendererPtr mRenderer;
-        ScenePtr mScene;
-    };
+public:
+    RendererPtr mRenderer;
+    ScenePtr mScene;
+};
 
-    inline void RenderContext::render() {
-        mRenderer->preprocess(mScene);
-        mRenderer->render(mScene);
-    }
+inline void RenderContext::render() {
+    mRenderer->preprocess(mScene);
+    mRenderer->render(mScene);
+}
 }
 
 #endif //GOBLIN_RENDER_CONTEXT_H

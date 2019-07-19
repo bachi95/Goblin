@@ -491,4 +491,4 @@ RenderContext* ContextLoader::load(const string& filename) {
     return ctx;
 }
 
-}
+} // namespace Goblin
