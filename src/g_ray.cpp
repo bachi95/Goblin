@@ -6,20 +6,22 @@ using namespace Goblin;
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        cout << "Usage: g_ray scene.json" << endl;
+        std::cout << "Usage: g_ray scene.json" << std::endl;
         return 0;
     }
     std::unique_ptr<RenderContext> renderContext(
         ContextLoader().load(argv[1]));
     if (renderContext) {
-        cout << "\nsuccessfully loaded scene, start rendering...\n";
+		std::cout << "\nsuccessfully loaded scene, start rendering..." <<
+			std::endl;
         time_t beforeRender;
         time(&beforeRender);
         renderContext->render();
         time_t afterRender;
         time(&afterRender);
         double seconds = difftime(afterRender, beforeRender);
-        cout << "render complete in " << seconds << " seconds!" << endl;
+        std::cout << "render complete in " << seconds << " seconds!" <<
+			std::endl;
     }
     return 0;
 }
