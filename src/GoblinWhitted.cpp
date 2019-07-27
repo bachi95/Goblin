@@ -48,17 +48,17 @@ void WhittedRenderer::querySampleQuota(const ScenePtr& scene,
         SampleQuota* sampleQuota) {
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     } 
     if (mBSDFSampleIndexes) {
         delete [] mBSDFSampleIndexes;
-        mBSDFSampleIndexes = NULL;
+        mBSDFSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
-    const vector<Light*>& lights = scene->getLights();
+    const std::vector<Light*>& lights = scene->getLights();
     mLightSampleIndexes = new LightSampleIndex[lights.size()];
     mBSDFSampleIndexes = new BSDFSampleIndex[lights.size()];
     for (size_t i = 0; i < lights.size(); ++i) {
@@ -71,7 +71,7 @@ void WhittedRenderer::querySampleQuota(const ScenePtr& scene,
     mBSSRDFSampleIndex = BSSRDFSampleIndex(sampleQuota, mBssrdfSampleNum);
 }
 
-Renderer* WhittedRendererCreator::create(const ParamSet& params) const {
+Renderer* createWhitted(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int maxRayDepth = params.getInt("max_ray_depth", 5);

@@ -53,11 +53,11 @@ MIPMap<T>::MIPMap(T* image, int w, int h, float maxAniso):
     // start building the mipmap
     mPyramid.push_back(new ImageBuffer<T>(image, mWidth, mHeight));
     mLevelsNum = floorInt(
-        max(log2((float)mWidth), log2((float)mHeight))) + 1;
+		std::max(log2((float)mWidth), log2((float)mHeight))) + 1;
     for (int i = 1; i < mLevelsNum; ++i) {
         const ImageBuffer<T>* buffer = mPyramid[i - 1];
-        int resizedW = max(1, buffer->width >> 1);
-        int resizedH = max(1, buffer->height >> 1);
+        int resizedW = std::max(1, buffer->width >> 1);
+        int resizedH = std::max(1, buffer->height >> 1);
         T* resizedBuffer = resizeImage(buffer->image, 
             buffer->width, buffer->height,
             resizedW, resizedH);
@@ -74,7 +74,7 @@ template<typename T>
 MIPMap<T>::~MIPMap() {
     for (size_t i = 0; i < mPyramid.size(); ++i) {
         delete mPyramid[i];
-        mPyramid[i] = NULL;
+        mPyramid[i] = nullptr;
     }
     mPyramid.clear();
 }
@@ -85,12 +85,12 @@ T MIPMap<T>::lookup(const TextureCoordinate& tc,
     if (f == FilterNone) {
         return lookupNearest(tc.st[0], tc.st[1], m);
     } else if (f == FilterBilinear) {
-        float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
-            max(fabs(tc.dsdy), fabs(tc.dtdy)));
+        float width = std::max(std::max(fabs(tc.dsdx), fabs(tc.dtdx)),
+			std::max(fabs(tc.dsdy), fabs(tc.dtdy)));
         return lookupBilinear(tc.st[0], tc.st[1], width, m);
     } else if (f == FilterTrilinear) {
-        float width = max(max(fabs(tc.dsdx), fabs(tc.dtdx)), 
-            max(fabs(tc.dsdy), fabs(tc.dtdy)));
+        float width = std::max(std::max(fabs(tc.dsdx), fabs(tc.dtdx)),
+			std::max(fabs(tc.dsdy), fabs(tc.dtdy)));
         return lookupTrilinear(tc.st[0], tc.st[1], width, m);
     } else if (f == FilterEWA) {
         return lookupEWA(tc, m);
@@ -107,7 +107,7 @@ T MIPMap<T>::lookupNearest(float s, float t, AddressMode m) const {
 template<typename T>
 T MIPMap<T>::lookupBilinear(float s, float t, float width,
     AddressMode m) const {
-    float level = mLevelsNum - 1 + log2(max(width, 1e-8f));
+    float level = mLevelsNum - 1 + log2(std::max(width, 1e-8f));
     int iLevel = roundInt(level);
     return lookup(iLevel, s, t, m);
 }
@@ -115,7 +115,7 @@ T MIPMap<T>::lookupBilinear(float s, float t, float width,
 template<typename T>
 T MIPMap<T>::lookupTrilinear(float s, float t, float width,
     AddressMode m) const {
-    float level = mLevelsNum - 1 + log2(max(width, 1e-8f));
+    float level = mLevelsNum - 1 + log2(std::max(width, 1e-8f));
     int iLevel = floorInt(level);
     if (iLevel < 0) {
         return lookup(0, s, t, m);
@@ -137,9 +137,9 @@ T MIPMap<T>::lookupEWA(const TextureCoordinate& tc, AddressMode m) const {
     float majorLength = sqrt(ds0 * ds0 + dt0 * dt0);
     float minorLength = sqrt(ds1 * ds1 + dt1 * dt1);
     if (majorLength < minorLength) {
-        swap(ds0, ds1);
-        swap(dt0, dt1);
-        swap(majorLength, minorLength);
+		std::swap(ds0, ds1);
+		std::swap(dt0, dt1);
+		std::swap(majorLength, minorLength);
     }
     // clamp the eccentricity to a reasonable number
     if (minorLength * mMaxAnisotropy < majorLength && minorLength > 0.0f) {
@@ -245,7 +245,7 @@ T MIPMap<T>::EWA(int level, float s, float t, float A, float B, float C,
             float r2 = A * ss * ss + B * ss * tt + C * tt * tt;
             if (r2 <= 1.0f) {
                 size_t lutIndex = (size_t)floorInt(r2 * EWA_LUT_SIZE);
-                float weight = EWALut[min(lutIndex, EWA_LUT_SIZE - 1)];
+                float weight = EWALut[std::min(lutIndex, EWA_LUT_SIZE - 1)];
                 result += weight * image->texel(is, it, m);
                 weightSum += weight;
             }
@@ -365,13 +365,13 @@ CheckboardTexture<T>::~CheckboardTexture() {
     if (mMapping) {
         delete mMapping;
     }
-    mMapping = NULL;
+    mMapping = nullptr;
 }
 
 static float integrateChecker(float x) {
     float xHalf = 0.5f * x;
     return floor(xHalf) + 
-        2.0f * max(xHalf - floor(xHalf) - 0.5f, 0.0f);
+        2.0f * std::max(xHalf - floor(xHalf) - 0.5f, 0.0f);
 }
 
 template<typename T>
@@ -384,8 +384,8 @@ T CheckboardTexture<T>::lookup(const Fragment& f) const {
         return (floorInt(s) + floorInt(t)) % 2 == 0 ?
             mT1->lookup(f) : mT2->lookup(f);
     }
-    float ds = max(fabs(tc.dsdx), fabs(tc.dsdy));
-    float dt = max(fabs(tc.dtdx), fabs(tc.dtdy));
+    float ds = std::max(fabs(tc.dsdx), fabs(tc.dsdy));
+    float dt = std::max(fabs(tc.dtdx), fabs(tc.dtdy));
     float s0 = s - ds;
     float s1 = s + ds;
     float t0 = t - dt;
@@ -428,7 +428,7 @@ template<typename T>
 std::map<TextureId, MIPMap<T>* > ImageTexture<T>::imageCache;
 
 template<typename T>
-ImageTexture<T>::ImageTexture(const string& filename, TextureMapping* m,
+ImageTexture<T>::ImageTexture(const std::string& filename, TextureMapping* m,
     FilterType filter, AddressMode address, 
     float gamma, ImageChannel channel, float maxAniso): 
     mMapping(m), mFilter(filter), mAddressMode(address) {
@@ -441,7 +441,7 @@ ImageTexture<T>::~ImageTexture() {
     if (mMapping) {
         delete mMapping;
     }
-    mMapping = NULL;
+    mMapping = nullptr;
 }
 
 template<typename T>
@@ -518,13 +518,13 @@ void ImageTexture<Color>::convertTexel(const Color& in, Color* out,
 
 
 float gaussian(float x, float w, float falloff = 2.0f) {
-    return max(0.0f, expf(-falloff * x * x) - expf(-falloff * w * w));
+    return std::max(0.0f, expf(-falloff * x * x) - expf(-falloff * w * w));
 }
 
 template<typename T>
 T* resizeImage(const T* srcBuffer, int srcWidth, int srcHeight,
     int dstWidth, int dstHeight) {
-    float filterWidth = floor(max(2.0f, max(
+    float filterWidth = floor(std::max(2.0f, std::max(
         (float)srcWidth/(float)dstWidth,
         (float)srcHeight/(float)dstHeight)));
     int nSamples = floorInt(filterWidth) * 2;
@@ -599,7 +599,7 @@ T* resizeImage(const T* srcBuffer, int srcWidth, int srcHeight,
 
 static TextureMapping* getTextureMapping(const ParamSet& params) {
     TextureMapping* m;
-    string type = params.getString("mapping", "uv");
+	std::string type = params.getString("mapping", "uv");
     if (type == "uv") {
         Vector2 scale = params.getVector2("scale", Vector2(1.0f, 1.0f));
         Vector2 offset = params.getVector2("offset", Vector2::Zero);
@@ -608,20 +608,24 @@ static TextureMapping* getTextureMapping(const ParamSet& params) {
         Transform toTex = getTransform(params);
         m = new SphericalMapping(toTex);
     } else {
-        cerr << "undefined mapping type " << type << endl;
+		std::cerr << "undefined mapping type " << type << std::endl;
         m = new UVMapping(Vector2(1.0f, 1.0f), Vector2::Zero);
     }
     return m;
 }
 
-Texture<float>* FloatConstantTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Texture<float>* createFloatConstantTexture(const ParamSet& params) {
     float f = params.getFloat("float", 0.5f);
     return new ConstantTexture<float>(f);
 }
 
-Texture<float>* FloatCheckboardTextureCreator::create(
-    const ParamSet& params, const SceneCache& sceneCache) const {
+Texture<Color>* createColorConstantTexture(const ParamSet& params) {
+	Vector3 c = params.getVector3("color");
+	return new ConstantTexture<Color>(Color(c[0], c[1], c[2]));
+}
+
+Texture<float>* createFloatCheckerboardTexture(
+    const ParamSet& params, const SceneCache& sceneCache) {
     TextureMapping* mapping = getTextureMapping(params);
     FloatTexturePtr T1 = sceneCache.getFloatTexture(
         params.getString("texture1"));
@@ -631,17 +635,37 @@ Texture<float>* FloatCheckboardTextureCreator::create(
     return new CheckboardTexture<float>(mapping, T1, T2, filter);
 }
 
-Texture<float>* FloatScaleTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string textureName = params.getString("texture");
-    string scaleName = params.getString("scale");
+Texture<Color>* createColorCheckerboardTexture(
+	const ParamSet& params, const SceneCache& sceneCache) {
+	TextureMapping* mapping = getTextureMapping(params);
+	ColorTexturePtr T1 = sceneCache.getColorTexture(
+		params.getString("texture1"));
+	ColorTexturePtr T2 = sceneCache.getColorTexture(
+		params.getString("texture2"));
+	bool filter = params.getBool("filter", false);
+	return new CheckboardTexture<Color>(mapping, T1, T2, filter);
+}
+
+Texture<float>* createFloatScaleTexture(const ParamSet& params,
+    const SceneCache& sceneCache) {
+	std::string textureName = params.getString("texture");
+	std::string scaleName = params.getString("scale");
     FloatTexturePtr s = sceneCache.getFloatTexture(scaleName);
     FloatTexturePtr t = sceneCache.getFloatTexture(textureName);
     return new ScaleTexture<float>(t, s);
 }
 
+Texture<Color>* createColorScaleTexture(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string textureName = params.getString("texture");
+	std::string scaleName = params.getString("scale");
+	FloatTexturePtr scale = sceneCache.getFloatTexture(scaleName);
+	ColorTexturePtr texture = sceneCache.getColorTexture(textureName);
+	return new ScaleTexture<Color>(texture, scale);
+}
+
 struct ImageTextureParams {
-    string filePath;
+	std::string filePath;
     TextureMapping* mapping;
     FilterType filter;
     AddressMode addressMode;
@@ -655,10 +679,10 @@ static ImageTextureParams getImageTextureParams(const ParamSet& params,
     ImageTextureParams ip;
     ip.mapping = getTextureMapping(params);
 
-    string filename = params.getString("file");
+	std::string filename = params.getString("file");
     ip.filePath = sceneCache.resolvePath(filename);
 
-    string filterStr = params.getString("filter", "nearest");
+	std::string filterStr = params.getString("filter", "nearest");
     if (filterStr == "nearest") {
         ip.filter = FilterNone;
     } else if (filterStr == "bilinear") {
@@ -668,11 +692,11 @@ static ImageTextureParams getImageTextureParams(const ParamSet& params,
     } else if (filterStr == "EWA") {
         ip.filter = FilterEWA;
     } else {
-        cerr << "unrecognize filter: " << filterStr << endl;
+		std::cerr << "unrecognize filter: " << filterStr << std::endl;
         ip.filter = FilterNone;
     }
 
-    string addressStr = params.getString("address", "repeat");
+	std::string addressStr = params.getString("address", "repeat");
     if (addressStr == "repeat") {
         ip.addressMode = AddressRepeat;
     } else if (addressStr == "clamp") {
@@ -680,13 +704,13 @@ static ImageTextureParams getImageTextureParams(const ParamSet& params,
     } else if (addressStr == "border") {
         ip.addressMode = AddressBorder;
     } else {
-        cerr << "unrecognize address mode: " << addressStr << endl;
+		std::cerr << "unrecognize address mode: " << addressStr << std::endl;
         ip.addressMode = AddressRepeat;
     }
 
     ip.gamma = params.getFloat("gamma", 1.0f);
 
-    string channelStr = params.getString("channel", "All");
+	std::string channelStr = params.getString("channel", "All");
     if (channelStr == "R") {
         ip.channel = ChannelR;
     } else if (channelStr == "G") {
@@ -698,48 +722,22 @@ static ImageTextureParams getImageTextureParams(const ParamSet& params,
     } else if (channelStr == "All") {
         ip.channel = ChannelAll;
     } else {
-        cerr << "unrecognize channel: " << channelStr << endl;
+		std::cerr << "unrecognize channel: " << channelStr << std::endl;
         ip.channel = ChannelAll;
     }
     ip.maxAnisotropy = params.getFloat("max_anisotropy", 10.0f);
     return ip;
 }
 
-Texture<float>* FloatImageTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Texture<float>* createFloatImageTexture(const ParamSet& params,
+    const SceneCache& sceneCache) {
     ImageTextureParams ip = getImageTextureParams(params, sceneCache);
     return new ImageTexture<float>(ip.filePath, ip.mapping, ip.filter,
         ip.addressMode, ip.gamma, ip.channel, ip.maxAnisotropy);
 }
 
-Texture<Color>* ColorConstantTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    Vector3 c = params.getVector3("color");
-    return new ConstantTexture<Color>(Color(c[0], c[1], c[2]));
-}
-
-Texture<Color>* ColorCheckboardTextureCreator::create(
-    const ParamSet& params, const SceneCache& sceneCache) const {
-    TextureMapping* mapping = getTextureMapping(params);
-    ColorTexturePtr T1 = sceneCache.getColorTexture(
-        params.getString("texture1"));
-    ColorTexturePtr T2 = sceneCache.getColorTexture(
-        params.getString("texture2"));
-    bool filter = params.getBool("filter", false);
-    return new CheckboardTexture<Color>(mapping, T1, T2, filter);
-}
-
-Texture<Color>* ColorScaleTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string textureName = params.getString("texture");
-    string scaleName = params.getString("scale");
-    FloatTexturePtr scale = sceneCache.getFloatTexture(scaleName);
-    ColorTexturePtr texture = sceneCache.getColorTexture(textureName);
-    return new ScaleTexture<Color>(texture, scale);
-}
-
-Texture<Color>* ColorImageTextureCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Texture<Color>* createColorImageTexture(const ParamSet& params,
+    const SceneCache& sceneCache) {
     ImageTextureParams ip = getImageTextureParams(params, sceneCache);
     return new ImageTexture<Color>(ip.filePath, ip.mapping, ip.filter,
         ip.addressMode, ip.gamma, ip.channel);

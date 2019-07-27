@@ -36,8 +36,8 @@ inline BBox::BBox():
 inline BBox::BBox(const Vector3& p): pMin(p), pMax(p) {}
 
 inline BBox::BBox(const Vector3& p1, const Vector3& p2):
-    pMin(min(p1.x, p2.x), min(p1.y, p2.y), min(p1.z, p2.z)),
-    pMax(max(p1.x, p2.x), max(p1.y, p2.y), max(p1.z, p2.z)) {}
+    pMin(std::min(p1.x, p2.x), std::min(p1.y, p2.y), std::min(p1.z, p2.z)),
+    pMax(std::max(p1.x, p2.x), std::max(p1.y, p2.y), std::max(p1.z, p2.z)) {}
 
 inline Vector3 BBox::center() const {
     return 0.5f * (pMin + pMax);

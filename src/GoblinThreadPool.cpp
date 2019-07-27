@@ -6,7 +6,7 @@ ThreadPool::ThreadPool(unsigned int coreNum,
     TLSManager* tlsManager):
     mTasksNum(0), mStartWork(false), mTLSManager(tlsManager) {
     mCoreNum = coreNum == 0 ?
-        getMaxThreadNum() : min(getMaxThreadNum(), coreNum);
+        getMaxThreadNum() : std::min(getMaxThreadNum(), coreNum);
 }
 
 
@@ -32,7 +32,7 @@ void ThreadPool::taskEntry() {
         mTLSManager->initialize(tlsPtr);
     }
     while(true) {
-        Task* task = NULL;
+        Task* task = nullptr;
         {
             std::lock_guard<std::mutex> lk(mTaskQueueMutex);
             if (mTasks.size() == 0) {
@@ -59,7 +59,7 @@ void ThreadPool::taskEntry() {
     }
 }
 
-void ThreadPool::enqueue(const vector<Task*>& tasks) {
+void ThreadPool::enqueue(const std::vector<Task*>& tasks) {
     if (mCoreNum == 1) {
         TLSPtr tlsPtr;
         mTLSManager->initialize(tlsPtr);

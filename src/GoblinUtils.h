@@ -15,20 +15,7 @@
 
 #include "GoblinVector.h"
 
-using namespace std;
-// VS2008 doesn't have stdint.h
-#if (defined _MSC_VER && _MSC_VER < 1500)
-typedef __int8 int8_t; 
-typedef unsigned __int8 uint8_t; 
-typedef __int16 int16_t; 
-typedef unsigned __int16 uint16_t;  
-typedef __int32 int32_t; 
-typedef unsigned __int32 uint32_t; 
-typedef __int64 int64_t; 
-typedef unsigned __int64 uint64_t;  
-#else 
 #include <stdint.h> 
-#endif
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <float.h>
@@ -40,17 +27,6 @@ typedef unsigned __int64 uint64_t;
 #endif // INFINITY
 
 namespace Goblin {
-using std::list;
-using std::vector;
-using std::string;
-using std::map;
-using std::min;
-using std::max;
-using std::swap;
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::pair;
 
 class Color;
 class Camera;
@@ -217,10 +193,8 @@ private:
     RNGImp* mRNGImp;
 };
 
-class NullType {};
-
 // get first N prime numbers sequence
-void getPrimes(size_t N, vector<uint32_t>& primes);
+void getPrimes(size_t N, std::vector<uint32_t>& primes);
 
 inline unsigned int getMaxThreadNum() {
 	return std::thread::hardware_concurrency();

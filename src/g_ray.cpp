@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     std::unique_ptr<RenderContext> renderContext(
-        ContextLoader().load(argv[1]));
+        ContextLoader::load(argv[1]));
     if (renderContext) {
 		std::cout << "\nsuccessfully loaded scene, start rendering..." <<
 			std::endl;

@@ -6,7 +6,7 @@
 #include "GoblinLight.h"
 
 namespace Goblin {
-vector<Model*> Model::refinedModels;
+std::vector<Model*> Model::refinedModels;
 
 Model::Model(const Geometry* geometry, const MaterialPtr& material,
     const AreaLight* areaLight, bool isCameraLens):
@@ -14,7 +14,7 @@ Model::Model(const Geometry* geometry, const MaterialPtr& material,
     mIsCameraLens(isCameraLens) {}
 
 bool Model::intersect(const Ray& ray, IntersectFilter f) const {
-    if (f != NULL && !f(this, ray)) {
+    if (f != nullptr && !f(this, ray)) {
         return false;
     }
     return mGeometry->intersect(ray);
@@ -22,7 +22,7 @@ bool Model::intersect(const Ray& ray, IntersectFilter f) const {
 
 bool Model::intersect(const Ray& ray, float* epsilon, 
     Intersection* intersection, IntersectFilter f) const {
-    if (f != NULL && !f(this, ray)) {
+    if (f != nullptr && !f(this, ray)) {
         return false;
     }
     bool hit = mGeometry->intersect(ray, epsilon, 
@@ -58,16 +58,16 @@ void Model::collectRenderList(RenderList& rList,
 }
 
 
-Primitive* ModelPrimitiveCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Primitive* createModel(const ParamSet& params,
+    const SceneCache& sceneCache) {
 
-    string geoName = params.getString("geometry");
+	std::string geoName = params.getString("geometry");
     const Geometry* geometry = sceneCache.getGeometry(geoName);
 
-    string materialName = params.getString("material");
+	std::string materialName = params.getString("material");
     MaterialPtr material = sceneCache.getMaterial(materialName);
 
-    const AreaLight* areaLight = NULL;
+    const AreaLight* areaLight = nullptr;
     if (params.hasString("area_light")) {
         areaLight = sceneCache.getAreaLight(params.getString("area_light"));
     }

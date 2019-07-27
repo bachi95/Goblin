@@ -115,8 +115,8 @@ Quaternion eulerToQuaternion(const Vector3& xyzAngle,
     } else if (rotationOrder == "zyx") {
         order = ZYX;
     } else {
-        cerr << "unrecognized rotation order " << rotationOrder <<
-            ", fall back to XYZ" << endl;
+		std::cerr << "unrecognized rotation order " << rotationOrder <<
+            ", fall back to XYZ" << std::endl;
     }
     return eulerToQuaternion(xyzAngle, order);
 }
@@ -139,7 +139,7 @@ Quaternion eulerToQuaternion(const Vector3& xyzAngle, RotationOrder order) {
     } else if (order == ZYX) {
         result = qx * qy * qz;
     } else {
-        cerr << "unrecognized rotation order, fall back to XYZ" << endl;
+		std::cerr << "unrecognized rotation order, fall back to XYZ" << std::endl;
         result = qz * qy * qx;
     }
     return result;

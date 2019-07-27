@@ -1,7 +1,6 @@
 #ifndef GOBLIN_DISK_H
 #define GOBLIN_DISK_H
 #include "GoblinGeometry.h"
-#include "GoblinFactory.h"
 
 namespace Goblin {
 class Disk : public Geometry {
@@ -54,12 +53,8 @@ inline const TriangleIndex* Disk::getFacePtr(size_t index) const {
 class ParamSet;
 class SceneCache;
 
-class DiskGeometryCreator :
-    public Creator<Geometry, const ParamSet&, const SceneCache&> {
-public:
-    Geometry* create(const ParamSet& params,
-        const SceneCache&sceneCache) const;
-};
+Geometry* createDisk(const ParamSet& params, const SceneCache& sceneCache);
+
 }
 
 #endif //GOBLIN_DISK_H

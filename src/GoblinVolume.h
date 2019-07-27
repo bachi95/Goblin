@@ -3,7 +3,6 @@
 
 #include "GoblinBBox.h"
 #include "GoblinColor.h"
-#include "GoblinFactory.h"
 #include "GoblinTransform.h"
 
 namespace Goblin {
@@ -136,19 +135,12 @@ inline float phaseHG(const Vector3& wi, const Vector3& wo, float g) {
 class ParamSet;
 class SceneCache;
 
-class HomogeneousVolumeCreator : public
-	Creator<VolumeRegion, const ParamSet&, const SceneCache&> {
-public:
-	VolumeRegion* create(const ParamSet& params,
-		const SceneCache& sceneCache) const;
-};
+VolumeRegion* createHomogeneousVolume(const ParamSet& params,
+	const SceneCache& sceneCache);
 
-class HeterogeneousVolumeCreator : public
-	Creator<VolumeRegion, const ParamSet&, const SceneCache&> {
-public:
-	VolumeRegion* create(const ParamSet& params,
-		const SceneCache& sceneCache) const;
-};
+VolumeRegion* createHeterogeneousVolume(const ParamSet& params,
+		const SceneCache& sceneCache);
+
 }
 
 #endif //GOBLIN_VOLUME_H

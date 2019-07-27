@@ -4,18 +4,18 @@
 #include "GoblinScene.h"
 
 namespace Goblin {
-vector<Primitive*> Primitive::allocatedPrimitives;
+std::vector<Primitive*> Primitive::allocatedPrimitives;
 
 Color Intersection::Le(const Vector3& outDirection) {
 	Vector3 ps = fragment.getPosition();
 	Vector3 ns = fragment.getNormal();
 	const AreaLight* areaLight = primitive->getAreaLight();
-	return areaLight == NULL ? 
+	return areaLight == nullptr ? 
 		Color::Black : areaLight->L(ps, ns, outDirection);
 }
 
 const Light* Intersection::getLight() const {
-	return primitive == NULL ? NULL : primitive->getAreaLight();
+	return primitive == nullptr ? nullptr : primitive->getAreaLight();
 }
 
 const MaterialPtr& Intersection::getMaterial() const {
@@ -27,7 +27,7 @@ bool Intersection::isCameraLens() const {
 }
 
 bool Intersection::isLight() const {
-	return primitive != NULL && primitive->getAreaLight() != NULL;
+	return primitive != nullptr && primitive->getAreaLight() != nullptr;
 }
 
 void Intersection::computeUVDifferential(const RayDifferential& ray) {
@@ -174,7 +174,7 @@ void Aggregate::collectRenderList(RenderList& rList,
 
 bool Aggregate::intersect(const Ray& ray, IntersectFilter f) const {
 	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-		if (f != NULL && !f(mRefinedPrimitives[i], ray)) {
+		if (f != nullptr && !f(mRefinedPrimitives[i], ray)) {
 			return false;
 		}
 		if (mRefinedPrimitives[i]->intersect(ray, f)) {
@@ -188,7 +188,7 @@ bool Aggregate::intersect(const Ray& ray, float* epsilon,
 	Intersection* intersection, IntersectFilter f) const {
 	bool hit = false;
 	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-		if (f != NULL && !f(mRefinedPrimitives[i], ray)) {
+		if (f != nullptr && !f(mRefinedPrimitives[i], ray)) {
 			return false;
 		}
 		if (mRefinedPrimitives[i]->intersect(ray, epsilon, 
@@ -199,15 +199,13 @@ bool Aggregate::intersect(const Ray& ray, float* epsilon,
 	return hit;
 }
 
-
 BBox Aggregate::getAABB() const {
 	return mAABB;
 }
 
-
-Primitive* InstancePrimitiveCreator::create(const ParamSet& params,
-	const SceneCache& sceneCache) const {
-	string primitiveName = params.getString("model");
+Primitive* createInstance(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string primitiveName = params.getString("model");
 	const Primitive* primitive = sceneCache.getPrimitive(primitiveName);
 	Transform toWorld = getTransform(params);
 	Primitive* instance = new InstancedPrimitive(toWorld, primitive);

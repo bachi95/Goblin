@@ -3,7 +3,6 @@
 
 #include "GoblinGeometry.h"
 #include "GoblinBBox.h"
-#include "GoblinFactory.h"
 #include "GoblinTriangle.h"
 
 #include <string>
@@ -38,7 +37,7 @@ private:
     float mArea;
     bool mHasNormal;
     bool mHasTexCoord;
-    mutable vector<Triangle> mRefinedMeshes;
+    mutable std::vector<Triangle> mRefinedMeshes;
     VertexList mVertices;
     TriangleList mTriangles;
 };
@@ -71,12 +70,8 @@ inline bool ObjMesh::hasTexCoord() const { return mHasTexCoord; }
 class ParamSet;
 class SceneCache;
 
-class MeshGeometryCreator : 
-    public Creator<Geometry, const ParamSet&, const SceneCache&> {
-public:
-    Geometry* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
+Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache);
+
 }
 
 #endif //GOBLIN_OBJ_MESH

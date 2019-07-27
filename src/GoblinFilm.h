@@ -3,7 +3,6 @@
 
 #include "GoblinColor.h"
 #include "GoblinDebugData.h"
-#include "GoblinFactory.h"
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
 
@@ -126,8 +125,8 @@ private:
     bool mToneMapping;
     float mBloomRadius;
     float mBloomWeight;
-    vector<pair<DebugLine, Color> > mDebugLines;
-    vector<pair<Vector2, Color> > mDebugPoints;
+    std::vector<std::pair<DebugLine, Color> > mDebugLines;
+    std::vector<std::pair<Vector2, Color> > mDebugPoints;
 };
 
 inline int Film::getXResolution() const { return mXRes; }
@@ -138,10 +137,8 @@ inline float Film::getInvXResolution() const { return mInvXRes; }
     
 inline float Film::getInvYResolution() const { return mInvYRes; }
 
-class ImageFilmCreator : public Creator<Film, const ParamSet&, Filter*> {
-public:
-    Film* create(const ParamSet& params, Filter* filter) const;
-};
+Film* createImageFilm(const ParamSet& params, Filter* filter);
+
 }
 
 #endif //GOBLIN_FILM_H

@@ -120,7 +120,7 @@ void LightTracer::splatFilmT1(const ScenePtr& scene, const Sample& sample,
         Vector3 wi;
         float pdfW;
         Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
-            &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            &wi, &pdfW, BSDFAll, nullptr, BSDFImportance);
         if (f == Color::Black || pdfW == 0.0f) {
             break;
         }
@@ -227,7 +227,7 @@ void LightTracer::splatFilmT0(const ScenePtr& scene, const Sample& sample,
         Vector3 wi;
         float pdfW;
         Color f = isect.getMaterial()->sampleBSDF(frag, wo, bs,
-            &wi, &pdfW, BSDFAll, NULL, BSDFImportance);
+            &wi, &pdfW, BSDFAll, nullptr, BSDFImportance);
         if (f == Color::Black || pdfW == 0.0f) {
             break;
         }
@@ -337,9 +337,9 @@ void LightTracer::render(const ScenePtr& scene) {
     SampleQuota sampleQuota;
     querySampleQuota(scene, &sampleQuota);
 
-    vector<SampleRange> sampleRanges;
+    std::vector<SampleRange> sampleRanges;
     getSampleRanges(film, sampleRanges);
-    vector<Task*> lightTraceTasks;
+    std::vector<Task*> lightTraceTasks;
     RenderProgress progress((int)sampleRanges.size());
     for (size_t i = 0; i < sampleRanges.size(); ++i) {
         lightTraceTasks.push_back(new LightTraceTask(this,
@@ -370,15 +370,15 @@ void LightTracer::querySampleQuota(const ScenePtr& scene,
 
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     }
     if (mBSDFSampleIndexes) {
         delete [] mBSDFSampleIndexes;
-        mBSDFSampleIndexes = NULL;
+        mBSDFSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
 
     mLightSampleIndexes = new LightSampleIndex[1];
@@ -391,7 +391,7 @@ void LightTracer::querySampleQuota(const ScenePtr& scene,
     }
 }
 
-Renderer* LightTracerCreator::create(const ParamSet& params) const {
+Renderer* createLightTracer(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int maxPathLength = params.getInt("max_path_length", 5);

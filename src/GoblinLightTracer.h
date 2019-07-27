@@ -1,7 +1,6 @@
 #ifndef GOBLIN_LIGHTTRACER_H
 #define GOBLIN_LIGHTTRACER_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 #include "GoblinPathVertex.h"
 #include "GoblinUtils.h"
@@ -17,7 +16,7 @@ public:
 
     Color Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,
-        RenderingTLS* tls = NULL) const;
+        RenderingTLS* tls = nullptr) const;
 
     void render(const ScenePtr& scene);
         
@@ -53,11 +52,8 @@ private:
     int mMaxPathLength;
 };
 
-class LightTracerCreator : public
-    Creator<Renderer, const ParamSet&> {
-public:
-    Renderer* create(const ParamSet &params) const;
-};
+Renderer* createLightTracer(const ParamSet &params);
+
 }
 
 #endif // GOBLIN_LIGHTTRACER_H

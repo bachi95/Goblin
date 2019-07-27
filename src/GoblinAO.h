@@ -1,7 +1,6 @@
 #ifndef GOBLIN_AO_H
 #define GOBLIN_AO_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 
 namespace Goblin {
@@ -21,11 +20,8 @@ private:
     SampleIndex mAOSampleIndex;
 };
 
-class AORendererCreator : public
-    Creator<Renderer , const ParamSet&> {
-public:
-    Renderer* create(const ParamSet& params) const;
-};
+Renderer* createAO(const ParamSet& params);
+
 }
 
 #endif //GOBLIN_AO_H

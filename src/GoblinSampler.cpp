@@ -39,8 +39,8 @@ void Sample::allocateQuota(const SampleQuota& quota) {
     uint32_t patternNum = 0;
     patternNum = (uint32_t)(n1D.size() + n2D.size());
     if (patternNum == 0) {
-        u1D = NULL;
-        u2D = NULL;
+        u1D = nullptr;
+        u2D = nullptr;
         return;
     }
     // allocate a chunk of float* buffer that can host all sample patterns
@@ -66,7 +66,7 @@ Sampler::Sampler(const SampleRange& sampleRange,
     mXStart(sampleRange.xStart), mXEnd(sampleRange.xEnd), 
     mYStart(sampleRange.yStart), mYEnd(sampleRange.yEnd),
     mCurrentX(sampleRange.xStart), mCurrentY(sampleRange.yStart),
-    mSampleBuffer(NULL), mJitter(true),
+    mSampleBuffer(nullptr), mJitter(true),
     mSampleQuota(sampleQuota), mRNG(rng) {
     int root;
     mSamplesPerPixel = roundToSquare(samplePerPixel, &root);
@@ -74,9 +74,9 @@ Sampler::Sampler(const SampleRange& sampleRange,
 }
 
 Sampler::~Sampler() {
-    if (mSampleBuffer != NULL) {
+    if (mSampleBuffer != nullptr) {
         delete [] mSampleBuffer;
-        mSampleBuffer = NULL;
+        mSampleBuffer = nullptr;
     }
 }
 
@@ -109,7 +109,7 @@ int Sampler::requestSamples(Sample* samples) {
     if (mCurrentY == mYEnd) {
         return 0;
     }
-    if (mSampleBuffer == NULL) {
+    if (mSampleBuffer == nullptr) {
         // 4(imageX, imageY, lensU1, lensU2) + 
         // quota size(extra requested 1/2D samples)
         size_t bufferSize = mSamplesPerPixel * (4 + mSampleQuota.size());
@@ -306,7 +306,7 @@ void Sampler::stratifiedUniform2D(float* buffer, uint32_t n2D) {
     }
 }
 
-CDF1D::CDF1D(const vector<float>& f1D): mFunction(f1D) {
+CDF1D::CDF1D(const std::vector<float>& f1D): mFunction(f1D) {
     init();
 }
 
@@ -332,9 +332,9 @@ void CDF1D::init() {
 }
 
 int CDF1D::sampleDiscrete(float u , float* pdf) {
-    vector<float>::iterator lowBound;
+    std::vector<float>::iterator lowBound;
     lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
-    int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
+    int offset = std::max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
     if (pdf) {
         *pdf = (mFunction[offset] / mIntegral) * mDx;
     }
@@ -342,9 +342,9 @@ int CDF1D::sampleDiscrete(float u , float* pdf) {
 }
 
 float CDF1D::sampleContinuous(float u, float* pdf, int* index) {
-    vector<float>::iterator lowBound;
+    std::vector<float>::iterator lowBound;
     lowBound = std::lower_bound(mCDF.begin(), mCDF.end(), u);
-    int offset = max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
+    int offset = std::max(0, static_cast<int>(lowBound - mCDF.begin() - 1));
     float d = (u - mCDF[offset]) / (mCDF[offset + 1] - mCDF[offset]);
     if (pdf) {
         *pdf = mFunction[offset] / mIntegral;
@@ -357,7 +357,7 @@ float CDF1D::sampleContinuous(float u, float* pdf, int* index) {
 
 
 CDF2D::CDF2D(const float* f2D, int width, int height) {
-    vector<float> rowIntegrals;
+    std::vector<float> rowIntegrals;
     for (int i = 0; i < height; ++i) {
         CDF1D* colCDF = new CDF1D(f2D + i * width, width);
         rowIntegrals.push_back(colCDF->mIntegral);
@@ -369,10 +369,10 @@ CDF2D::CDF2D(const float* f2D, int width, int height) {
 CDF2D::~CDF2D() {
     for (size_t i = 0; i < mConditionalDist.size(); ++i) {
         delete mConditionalDist[i];
-        mConditionalDist[i] = NULL;
+        mConditionalDist[i] = nullptr;
     }
     delete mMarginalDist;
-    mMarginalDist = NULL;
+    mMarginalDist = nullptr;
 }
     
 Vector2 CDF2D::sampleContinuous(float u1, float u2, float* pdf) {
@@ -448,7 +448,7 @@ void uniformSampleTriangle(float u1, float u2, float* u, float* v) {
     */
 Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax) {
     float cosTheta = 1.0f - u1 + u1 * cosThetaMax;
-    float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+    float sinTheta = sqrtf(std::max(0.0f, 1.0f - cosTheta * cosTheta));
     float phi = TWO_PI * u2;
     float z = cosTheta;
     float x = sinTheta * cos(phi);
@@ -459,7 +459,7 @@ Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax) {
 Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax,
     const Vector3& x, const Vector3& y, const Vector3& z) {
     float cosTheta = 1.0f - u1 + u1 * cosThetaMax;
-    float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+    float sinTheta = sqrtf(std::max(0.0f, 1.0f - cosTheta * cosTheta));
     float phi = TWO_PI * u2;
     return x * sinTheta * cos(phi) + 
         y * sinTheta * sin(phi) +
@@ -488,7 +488,7 @@ Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax,
     */
 Vector3 uniformSampleSphere(float u1, float u2) {
     float z = 1.0f - 2.0f * u1;
-    float sinTheta = sqrtf(max(0.0f, 1.0f - z * z));
+    float sinTheta = sqrtf(std::max(0.0f, 1.0f - z * z));
     float phi = TWO_PI * u2;
     float x = sinTheta * cos(phi);
     float y = sinTheta * sin(phi);
@@ -516,7 +516,7 @@ Vector3 uniformSampleSphere(float u1, float u2) {
     */
 Vector3 uniformSampleHemisphere(float u1, float u2) {
     float z = u1;
-    float sinTheta = sqrtf(max(0.0f, 1.0f - u1 * u1));
+    float sinTheta = sqrtf(std::max(0.0f, 1.0f - u1 * u1));
     float phi = TWO_PI * u2;
     float x = sinTheta * cos(phi);
     float y = sinTheta * sin(phi);
@@ -548,7 +548,7 @@ Vector3 uniformSampleHemisphere(float u1, float u2) {
     */
 Vector3 cosineSampleHemisphere(float u1, float u2) {
     float sinTheta = sqrtf(u1);
-    float cosTheta = sqrtf(max(0.0f, 1.0f - u1));
+    float cosTheta = sqrtf(std::max(0.0f, 1.0f - u1));
     float phi = TWO_PI * u2;
     float z = cosTheta;
     float x = sinTheta * cos(phi);

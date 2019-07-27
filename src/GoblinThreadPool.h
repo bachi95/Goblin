@@ -17,20 +17,20 @@ public:
 class ThreadPool {
 public:
     ThreadPool(unsigned int coreNum = 0,
-        TLSManager* tlsManager = NULL);
-    void enqueue(const vector<Task*>& tasks);
+        TLSManager* tlsManager = nullptr);
+    void enqueue(const std::vector<Task*>& tasks);
     void waitForAll();
     void cleanup();
 private:
     void initWorkers();
     void taskEntry();
 private:
-    vector<std::thread*> mWorkers;
+    std::vector<std::thread*> mWorkers;
     unsigned int mCoreNum;
 
     std::condition_variable mTasksCondition;
     std::mutex mTaskQueueMutex;
-    vector<Task*> mTasks;
+    std::vector<Task*> mTasks;
     size_t mTasksNum;
 
     std::condition_variable mStartCondition;

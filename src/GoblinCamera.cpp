@@ -20,9 +20,9 @@ Camera::Camera(const Vector3& position, const Quaternion& orientation,
 }
 
 Camera::~Camera() {
-    if (mFilm != NULL) {
+    if (mFilm != nullptr) {
         delete mFilm;
-        mFilm = NULL;
+        mFilm = nullptr;
     }
 }
 
@@ -374,8 +374,7 @@ bool OrthographicCamera::isDelta() const {
     return true;
 }
 
-Camera* PerspectiveCameraCreator::create(const ParamSet& params,
-    Film* film) const {
+Camera* createPerspectiveCamera(const ParamSet& params, Film* film) {
     Vector3 position = params.getVector3("position");
     Quaternion orientation = getQuaternion(params);
     float fov = params.getFloat("fov", 60.0f);
@@ -388,8 +387,7 @@ Camera* PerspectiveCameraCreator::create(const ParamSet& params,
 }
 
 
-Camera* OrthographicCameraCreator::create(const ParamSet& params,
-    Film* film) const {
+Camera* createOrthographicCamera(const ParamSet& params, Film* film) {
     Vector3 position = params.getVector3("position");
     Quaternion orientation = getQuaternion(params);
     float zn = params.getFloat("near_plane", 0.1f);

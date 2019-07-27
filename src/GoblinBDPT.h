@@ -1,7 +1,6 @@
 #ifndef GOBLIN_BDPT_H
 #define GOBLIN_BDPT_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 #include "GoblinPathVertex.h"
 #include "GoblinUtils.h"
@@ -18,7 +17,7 @@ public:
 
     Color Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,
-        RenderingTLS* tls = NULL) const;
+        RenderingTLS* tls = nullptr) const;
 
     void render(const ScenePtr& scene);
         
@@ -68,11 +67,8 @@ private:
     bool mDebugNoMIS;
 };
 
-class BDPTCreator : public
-    Creator<Renderer, const ParamSet&> {
-public:
-    Renderer* create(const ParamSet &params) const;
-};
+Renderer* createBDPT(const ParamSet &params);
+
 }
 
 #endif // GOBLIN_BDPT_H

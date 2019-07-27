@@ -22,7 +22,7 @@ RenderTask::RenderTask(Renderer* renderer, const CameraPtr& camera,
 RenderTask::~RenderTask() {
     if (mRNG) {
         delete mRNG;
-        mRNG = NULL;
+        mRNG = nullptr;
     }
 }
 
@@ -76,23 +76,23 @@ void RenderProgress::update() {
 }
 
 Renderer::Renderer(int samplePerPixel, int threadNum):
-    mLightSampleIndexes(NULL), mBSDFSampleIndexes(NULL),
-    mPickLightSampleIndexes(NULL),
+    mLightSampleIndexes(nullptr), mBSDFSampleIndexes(nullptr),
+    mPickLightSampleIndexes(nullptr),
     mSamplePerPixel(samplePerPixel),
     mThreadNum(threadNum) {}
 
 Renderer::~Renderer() {
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     }
     if (mBSDFSampleIndexes) {
         delete [] mBSDFSampleIndexes;
-        mBSDFSampleIndexes = NULL;
+        mBSDFSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
 }
 
@@ -102,9 +102,9 @@ void Renderer::render(const ScenePtr& scene) {
     SampleQuota sampleQuota;
     querySampleQuota(scene, &sampleQuota);
 
-    vector<SampleRange> sampleRanges;
+    std::vector<SampleRange> sampleRanges;
     getSampleRanges(film, sampleRanges);
-    vector<Task*> renderTasks;
+    std::vector<Task*> renderTasks;
     RenderProgress progress(static_cast<int>(sampleRanges.size()));
     for (size_t i = 0; i < sampleRanges.size(); ++i) {
         renderTasks.push_back(new RenderTask(this, 
@@ -280,8 +280,8 @@ Color Renderer::Lsubsurface(const ScenePtr& scene,
     const MaterialPtr& material = 
         intersection.primitive->getMaterial();
     const BSSRDF* bssrdf = material->getBSSRDF();
-    const vector<Light*>& lights = scene->getLights();
-    if (bssrdf == NULL || lights.size() == 0) {
+    const std::vector<Light*>& lights = scene->getLights();
+    if (bssrdf == nullptr || lights.size() == 0) {
         return Color(0.0f);
     }
     const Fragment& fragment = intersection.fragment;
@@ -311,7 +311,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
             float pickLightPdf;
             const Light* light = scene->sampleLight(pickLightSample,
                 &pickLightPdf);
-            if (light != NULL && pickLightPdf != 0.0f) {
+            if (light != nullptr && pickLightPdf != 0.0f) {
                 LightSample lsEqui(rng);
                 // fisrt pick a light pivot position
                 Vector3 nLight;
@@ -412,7 +412,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
             float pickLightPdf;
             const Light* light = scene->sampleLight(pickLightSample,
                 &pickLightPdf);
-            if (light != NULL && pickLightPdf != 0.0f) {
+            if (light != nullptr && pickLightPdf != 0.0f) {
                 Ray shadowRay;
                 Vector3 wi;
                 float lightPdf;
@@ -448,7 +448,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
 Color Renderer::transmittance(const ScenePtr& scene, 
     const Ray& ray, const RNG& rng) const {
     const VolumeRegion* volume = scene->getVolumeRegion();
-    if (volume == NULL) {
+    if (volume == nullptr) {
         return Color(1.0f);
     }
     return volume->transmittance(ray, rng);
@@ -463,7 +463,7 @@ Color Renderer::singleSampleLd(const ScenePtr& scene, const Ray& ray,
     BSDFType type) const {
     float pdf;
     const Light* light = scene->sampleLight(pickLightSample, &pdf);
-    if (light == NULL || pdf == 0.0f) {
+    if (light == nullptr || pdf == 0.0f) {
         return Color::Black;
     }
     Color Ld = estimateLd(scene, -ray.d, epsilon, intersection,
@@ -478,7 +478,7 @@ Color Renderer::multiSampleLd(const ScenePtr& scene, const Ray& ray,
     BSDFSampleIndex* bsdfSampleIndexes,
     BSDFType type) const {
     Color totalLd = Color::Black;
-    const vector<Light*>& lights = scene->getLights();
+    const std::vector<Light*>& lights = scene->getLights();
     for (size_t i = 0; i < lights.size(); ++i) {
         Color Ld = Color::Black;
         uint32_t samplesNum = lightSampleIndexes[i].samplesNum;
@@ -486,7 +486,7 @@ Color Renderer::multiSampleLd(const ScenePtr& scene, const Ray& ray,
             const Light* light = lights[i];
             LightSample ls(rng);
             BSDFSample bs(rng);
-            if (lightSampleIndexes != NULL && bsdfSampleIndexes != NULL) {
+            if (lightSampleIndexes != nullptr && bsdfSampleIndexes != nullptr) {
                 ls = LightSample(sample, lightSampleIndexes[i], (uint32_t)n);
                 bs = BSDFSample(sample, bsdfSampleIndexes[i], (uint32_t)n);
             }
@@ -568,7 +568,7 @@ Color Renderer::singleSampleIrradiance(const ScenePtr& scene,
     const LightSample& lightSample, float pickLightSample) const {
     float pdf;
     const Light* light = scene->sampleLight(pickLightSample, &pdf);
-    if (light == NULL || pdf == 0.0f) {
+    if (light == nullptr || pdf == 0.0f) {
         return Color::Black;
     }
     Color irradiance = estimateIrradiance(scene, epsilon, intersection,
@@ -648,7 +648,7 @@ Color Renderer::specularRefract(const ScenePtr& scene,
 }
 
 void Renderer::getSampleRanges(const Film* film,
-    vector<SampleRange>& sampleRanges) const {
+    std::vector<SampleRange>& sampleRanges) const {
     SampleRange fullRange;
     film->getSampleRange(fullRange);
     int step = 8;
@@ -656,9 +656,9 @@ void Renderer::getSampleRanges(const Film* film,
         for (int x = fullRange.xStart; x < fullRange.xEnd; x += step) {
             SampleRange subSampleRange;
             subSampleRange.xStart = x;
-            subSampleRange.xEnd = min(x + step, fullRange.xEnd);
+            subSampleRange.xEnd = std::min(x + step, fullRange.xEnd);
             subSampleRange.yStart = y;
-            subSampleRange.yEnd = min(y + step, fullRange.yEnd);
+            subSampleRange.yEnd = std::min(y + step, fullRange.yEnd);
             sampleRanges.push_back(subSampleRange);
         }
     }
@@ -669,7 +669,7 @@ void Renderer::drawDebugData(const DebugData& debugData,
     Film* film = camera->getFilm();
     // if there is any debug data, transform it to screen space
     // and inject to image tile
-    const vector<pair<Ray, Color> >& debugRays = debugData.getRays();
+    const std::vector<std::pair<Ray, Color> >& debugRays = debugData.getRays();
     for (size_t i = 0; i < debugRays.size(); ++i) {
         const Ray& r = debugRays[i].first;
         Vector3 sWorld = r.o;
@@ -680,7 +680,7 @@ void Renderer::drawDebugData(const DebugData& debugData,
             DebugLine(Vector2(sScreen.x, sScreen.y),
             Vector2(eScreen.x, eScreen.y)), debugRays[i].second);
     }
-    const vector<pair<Vector3, Color> >& debugPoints = 
+    const std::vector<std::pair<Vector3, Color> >& debugPoints =
         debugData.getPoints();
     for (size_t i = 0; i < debugPoints.size(); ++i) {
         Vector3 pScreen = camera->worldToScreen(debugPoints[i].first);

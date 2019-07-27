@@ -28,8 +28,8 @@ public:
     // (includes the 4 extra dimensions for pixel(2) and lens(2)
     size_t getDimension() const { return size() + 4; }
 
-    vector<uint32_t> n1D;
-    vector<uint32_t> n2D;
+    std::vector<uint32_t> n1D;
+    std::vector<uint32_t> n2D;
 };
 
 
@@ -42,29 +42,29 @@ public:
     float imageX, imageY;
     // used to sample lens for DOF
     float lensU1, lensU2;
-    vector<uint32_t> n1D;
-    vector<uint32_t> n2D;
+    std::vector<uint32_t> n1D;
+    std::vector<uint32_t> n2D;
     float** u1D;
     float** u2D;
 };
 
 inline Sample::Sample():
     imageX(0.0f), imageY(0.0f), lensU1(0.0f), lensU2(0.0f), 
-    u1D(NULL), u2D(NULL) {
+    u1D(nullptr), u2D(nullptr) {
     n1D.clear();
     n2D.clear();
 }
 
 inline Sample::~Sample() {
     // release u1D/u2D
-    if (u1D != NULL) {
+    if (u1D != nullptr) {
         // release the float buffer that u1D/u2D point to
-        if (u1D[0] != NULL) {
+        if (u1D[0] != nullptr) {
             delete [] u1D[0];
-            u1D[0] = NULL;
+            u1D[0] = nullptr;
         }
         delete [] u1D;
-        u1D = NULL;
+        u1D = nullptr;
     }
 }
 
@@ -122,15 +122,15 @@ private:
     */
 class CDF1D {
 public:
-    CDF1D(const vector<float>& f1D);
+    CDF1D(const std::vector<float>& f1D);
     CDF1D(const float* f1D, int n);
-    int sampleDiscrete(float u, float* pdf = NULL);
-    float sampleContinuous(float u, float* pdf = NULL, int *index = NULL);
+    int sampleDiscrete(float u, float* pdf = nullptr);
+    float sampleContinuous(float u, float* pdf = nullptr, int *index = nullptr);
 private:
     void init();
 private:
-    vector<float> mFunction;
-    vector<float> mCDF;
+    std::vector<float> mFunction;
+    std::vector<float> mCDF;
     float mIntegral;
     float mDx;
     int mCount;
@@ -141,11 +141,11 @@ class CDF2D {
 public:
     CDF2D(const float* f2D, int width, int height);
     ~CDF2D();
-    Vector2 sampleContinuous(float u1, float u2, float* pdf = NULL);
+    Vector2 sampleContinuous(float u1, float u2, float* pdf = nullptr);
     float pdf(float u, float v);
 private:
     CDF1D* mMarginalDist;
-    vector<CDF1D*> mConditionalDist;
+    std::vector<CDF1D*> mConditionalDist;
 };
 
 template<typename T>
@@ -153,7 +153,7 @@ void shuffle(T* buffer, uint32_t num, uint32_t dim, RNG* rng) {
     for (uint32_t n = 0; n < num; ++n) {
         size_t toShuffle = rng->randomUInt() % num;
         for (uint32_t d = 0; d < dim; ++d) {
-            swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
+			std::swap(buffer[n * dim + d], buffer[toShuffle * dim + d]);
         }
     }
 }
@@ -347,9 +347,9 @@ public:
     void sample(Sample* s, uint64_t n, RNG* rng) const;
 
 private:
-    vector<uint32_t> mPermutedTable;
-    vector<uint32_t> mPrimes;
-    vector<size_t> mTableIndexes;
+    std::vector<uint32_t> mPermutedTable;
+	std::vector<uint32_t> mPrimes;
+    std::vector<size_t> mTableIndexes;
 };
 }
 

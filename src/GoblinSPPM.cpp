@@ -54,7 +54,7 @@ private:
     int mCurrentIteration;
     const SampleRange& mSampleRange;
     const PermutedHalton& mHalton;
-    vector<uint64_t> mHaltonStartID;
+    std::vector<uint64_t> mHaltonStartID;
     RNG mRNG;
 };
 
@@ -88,14 +88,14 @@ struct PhotonCache {
 class PhotonTraceTLS : public ThreadLocalStorage {
 public:
     PhotonTraceTLS(const SampleQuota& sampleQuota, size_t threadID,
-        vector<PhotonCache>& photonCache):
+        std::vector<PhotonCache>& photonCache):
         mThreadID(threadID), mPhotonCache(photonCache),
         mEmittedPhotons(0) {
         mSample.allocateQuota(sampleQuota);
     }
     Sample mSample;
     size_t mThreadID;
-    vector<PhotonCache>& mPhotonCache;
+    std::vector<PhotonCache>& mPhotonCache;
     uint64_t mEmittedPhotons;
 };
 
@@ -103,8 +103,8 @@ public:
 class PhotonTraceTLSManager : public TLSManager {
 public:
     PhotonTraceTLSManager(const SampleQuota& sampleQuota,
-        vector<PixelData>& pixelData,
-        vector<vector<PhotonCache> >& photonCache,
+        std::vector<PixelData>& pixelData,
+        std::vector<std::vector<PhotonCache> >& photonCache,
         uint64_t* emittedPhotons):
         mSampleQuota(sampleQuota), mNextThreadID(0), mPixelData(pixelData),
         mPhotonCache(photonCache), mEmittedPhotons(emittedPhotons) {}
@@ -124,7 +124,7 @@ public:
             std::lock_guard<std::mutex> lk(mSyncTLSMutex);
             PhotonTraceTLS* photonTraceTLS =
                 static_cast<PhotonTraceTLS*>(tlsPtr.get());
-            vector<PhotonCache>& photonCache =
+            std::vector<PhotonCache>& photonCache =
                 photonTraceTLS->mPhotonCache;
             for (size_t i = 0; i < mPixelData.size(); ++i) {
                 if (mPixelData[i].throughput == Color::Black) {
@@ -143,8 +143,8 @@ private:
     std::mutex mSyncTLSMutex;
     const SampleQuota& mSampleQuota;
     size_t mNextThreadID;
-    vector<PixelData>& mPixelData;
-    vector<vector<PhotonCache> >& mPhotonCache;
+    std::vector<PixelData>& mPixelData;
+    std::vector<std::vector<PhotonCache>>& mPhotonCache;
     uint64_t* mEmittedPhotons;
 };
 
@@ -198,18 +198,18 @@ class SpatialHashGrids {
 public:
     SpatialHashGrids(const ImageRect& filmRect);
 
-    void rebuild(vector<PixelData>& pixelData);
+    void rebuild(std::vector<PixelData>& pixelData);
 
     bool worldToGrid(const Vector3& p,
         uint32_t* x, uint32_t* y, uint32_t* z) const;
 
-    const vector<PixelData*>* getGrid(const Vector3& p) const;
+    const std::vector<PixelData*>* getGrid(const Vector3& p) const;
 
 private:
     uint32_t hash(uint32_t x, uint32_t y, uint32_t z) const;
 
 private:
-    vector<vector<PixelData*> > mGrids;
+    std::vector<std::vector<PixelData*> > mGrids;
     BBox mGridsBBox;
     int mXRes;
     int mYRes;
@@ -223,9 +223,9 @@ SpatialHashGrids::SpatialHashGrids(const ImageRect& filmRect):
     mXRes(filmRect.xCount), mYRes(filmRect.yCount),
     mHashSize(filmRect.pixelNum()), mInvGridLength(1.0f) {}
 
-void SpatialHashGrids::rebuild(vector<PixelData>& pixelData) {
+void SpatialHashGrids::rebuild(std::vector<PixelData>& pixelData) {
     for (size_t i = 0; i < mGrids.size(); ++i) {
-        vector<PixelData*>().swap(mGrids[i]);
+        std::vector<PixelData*>().swap(mGrids[i]);
     }
     BBox gridsBBox;
     float maxRadius = PixelData::sInvalidRadius;
@@ -286,11 +286,11 @@ bool SpatialHashGrids::worldToGrid(const Vector3& p,
     return (*x >= 0) && (*y >= 0) && (*z >= 0);
 }
 
-const vector<PixelData*>* SpatialHashGrids::getGrid(
+const std::vector<PixelData*>* SpatialHashGrids::getGrid(
     const Vector3& p) const {
     uint32_t x, y, z;
     if (!worldToGrid(p, &x, &y, &z)) {
-        return NULL;
+        return nullptr;
     }
     return &mGrids[hash(x, y, z)];
 }
@@ -307,7 +307,7 @@ uint32_t SpatialHashGrids::hash(uint32_t x, uint32_t y, uint32_t z) const {
 SPPM::SPPM(int samplePerPixel, int threadNum, int maxPathLength,
     float initialRadius):
     Renderer(samplePerPixel, threadNum),
-    mMaxPathLength(maxPathLength), mHashGrids(NULL),
+    mMaxPathLength(maxPathLength), mHashGrids(nullptr),
     mInitialRadius(initialRadius) {
     if (mInitialRadius <= 0.0f &&
         !isEqual(mInitialRadius, PixelData::sInvalidRadius)) {
@@ -315,7 +315,7 @@ SPPM::SPPM(int samplePerPixel, int threadNum, int maxPathLength,
     }
 }
 
-SPPM::~SPPM() { delete mHashGrids; mHashGrids = NULL; }
+SPPM::~SPPM() { delete mHashGrids; mHashGrids = nullptr; }
 
 Color SPPM::Li(const ScenePtr& scene, const RayDifferential& ray,
     const Sample& sample, const RNG& rng,
@@ -389,12 +389,12 @@ void SPPM::rayTracePass(const ScenePtr& scene, const Sample& sample,
 }
 
 void SPPM::photonTracePass(const ScenePtr& scene, const Sample&sample,
-    vector<PhotonCache>& photonCache) {
+    std::vector<PhotonCache>& photonCache) {
     // pick up a light
     float pickSample = sample.u1D[mPickLightSampleIndexes[0].offset][0];
     float pickLightPdf;
     const Light* light = scene->sampleLight(pickSample, &pickLightPdf);
-    if (light == NULL ||pickLightPdf == 0.0f) {
+    if (light == nullptr ||pickLightPdf == 0.0f) {
         return;
     }
     // sample a photon from light (position, direction)
@@ -427,8 +427,8 @@ void SPPM::photonTracePass(const ScenePtr& scene, const Sample&sample,
         const Vector3& p = fragment.getPosition();
         if (pathLength > 1) {
             // hash p to corresponding grid
-            const vector<PixelData*>* grid = mHashGrids->getGrid(p);
-            if (grid != NULL) {
+            const std::vector<PixelData*>* grid = mHashGrids->getGrid(p);
+            if (grid != nullptr) {
                 for (size_t i = 0; i < grid->size(); ++i) {
                     const PixelData* pixelData = (*grid)[i];
                     const Vector3& pixelPos =
@@ -475,12 +475,12 @@ void SPPM::render(const ScenePtr& scene) {
     int yStart = filmRect.yStart;
     int yEnd = yStart + filmRect.yCount;
     int tileWidth = 64;
-    vector<SampleRange> sampleRanges;
+    std::vector<SampleRange> sampleRanges;
     for (int y = yStart; y < yEnd; y += tileWidth) {
         for (int x = xStart; x < xEnd; x += tileWidth) {
             sampleRanges.push_back(SampleRange(
-                x, min(x + tileWidth, xEnd),
-                y, min(y + tileWidth, yEnd)));
+                x, std::min(x + tileWidth, xEnd),
+                y, std::min(y + tileWidth, yEnd)));
         }
     }
     RNG rng;
@@ -497,7 +497,7 @@ void SPPM::render(const ScenePtr& scene) {
     }
     mHashGrids = new SpatialHashGrids(filmRect);
     // init RayTraceTask
-    vector<Task*> rayTraceTasks(sampleRanges.size());
+    std::vector<Task*> rayTraceTasks(sampleRanges.size());
     for (size_t i = 0; i < rayTraceTasks.size(); ++i) {
         rayTraceTasks[i] = new RayTraceTask(
             this, scene, sampleRanges[i], rayTraceHalton);
@@ -505,14 +505,14 @@ void SPPM::render(const ScenePtr& scene) {
     // init HaltonSampler for PhotonTraceTask
     PermutedHalton photonTraceHalton(sampleQuota.getDimension(), &rng);
     // init PhotonTraceTask
-    vector<Task*> photonTraceTasks(mThreadNum);
-    size_t taskPhotonSamples = max(filmRect.pixelNum() / mThreadNum, 1);
+    std::vector<Task*> photonTraceTasks(mThreadNum);
+    size_t taskPhotonSamples = std::max(filmRect.pixelNum() / mThreadNum, 1);
     for (size_t i = 0 ; i < photonTraceTasks.size(); ++i) {
         photonTraceTasks[i] = new PhotonTraceTask(
             this, scene, photonTraceHalton,
             i * taskPhotonSamples, taskPhotonSamples);
     }
-    vector<vector<PhotonCache> > photonChaches(mThreadNum);
+    std::vector<std::vector<PhotonCache> > photonChaches(mThreadNum);
     for (size_t i = 0; i < photonChaches.size(); ++i) {
         photonChaches[i].resize(filmRect.pixelNum());
     }
@@ -605,15 +605,15 @@ void SPPM::querySampleQuota(const ScenePtr& scene,
 
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     }
     if (mBSDFSampleIndexes) {
         delete [] mBSDFSampleIndexes;
-        mBSDFSampleIndexes = NULL;
+        mBSDFSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
     // for direct lighting sampling
     mLightSampleIndexes = new LightSampleIndex[1];
@@ -628,7 +628,7 @@ void SPPM::querySampleQuota(const ScenePtr& scene,
     }
 }
 
-Renderer* SPPMCreator::create(const ParamSet& params) const {
+Renderer* createSPPM(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int maxPathLength = params.getInt("max_path_length", 5);

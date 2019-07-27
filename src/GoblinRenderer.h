@@ -58,7 +58,7 @@ public:
 
     virtual Color Li(const ScenePtr& scene, const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        RenderingTLS* tls = NULL) const = 0;
+        RenderingTLS* tls = nullptr) const = 0;
 
     // volume in scatter and emission contribution
     Color Lv(const ScenePtr& scene, const Ray& ray, const RNG& rng) const;
@@ -66,7 +66,7 @@ public:
     Color Lsubsurface(const ScenePtr& scene,
         const Intersection& intersection, const Vector3& wo,
         const Sample& sample, const BSSRDFSampleIndex* bssrdfSampleIndex,
-        RenderingTLS* tls = NULL) const;
+        RenderingTLS* tls = nullptr) const;
 
     // volume transmittance alone the ray
     Color transmittance(const ScenePtr& scene, const Ray& ray,
@@ -84,8 +84,8 @@ protected:
     Color multiSampleLd(const ScenePtr& scene, const Ray& ray,
         float epsilon, const Intersection& intersection, 
         const Sample& sample, const RNG& rng,
-        LightSampleIndex* lightSampleIndexes = NULL,
-        BSDFSampleIndex* bsdfSampleIndexes = NULL,
+        LightSampleIndex* lightSampleIndexes = nullptr,
+        BSDFSampleIndex* bsdfSampleIndexes = nullptr,
         BSDFType type = BSDFAll) const;
 
     Color estimateLd(const ScenePtr& scene, const Vector3& wo,
@@ -112,7 +112,7 @@ protected:
         const Sample& sample, const RNG& rng) const;
 
     void getSampleRanges(const Film* film,
-        vector<SampleRange>& sampleRanges) const;
+        std::vector<SampleRange>& sampleRanges) const;
 
     void drawDebugData(const DebugData& debugData,
         const CameraPtr& camera) const;
@@ -124,12 +124,12 @@ private:
     Color LbssrdfSingle(const ScenePtr& scene, const Fragment& fragment, 
         const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
-        RenderingTLS* tls = NULL) const;
+        RenderingTLS* tls = nullptr) const;
 
     Color LbssrdfDiffusion(const ScenePtr& scene, const Fragment& fragment, 
         const BSSRDF* bssrdf, const Vector3& wo, const Sample& sample, 
         const BSSRDFSampleIndex* bssrdfSampleIndex,
-        RenderingTLS* tls = NULL ) const;
+        RenderingTLS* tls = nullptr ) const;
 
 
 protected:

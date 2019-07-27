@@ -5,7 +5,6 @@
 #include "GoblinUtils.h"
 #include "GoblinVector.h"
 #include "GoblinTransform.h"
-#include "GoblinFactory.h"
 
 namespace Goblin {
 class Fragment;
@@ -39,7 +38,7 @@ struct TextureCoordinate {
 template<typename T>
 struct ImageBuffer {
     ImageBuffer(T* i, int w, int h): image(i), width(w), height(h) {}
-    ~ImageBuffer() { delete [] image; image = NULL; }
+    ~ImageBuffer() { delete [] image; image = nullptr; }
     T texel(int s, int t, AddressMode addressMode) const;
     T* image;
     int width, height;
@@ -74,10 +73,10 @@ private:
     int mLevelsNum;
     int mWidth, mHeight;
     float mMaxAnisotropy;
-    vector<ImageBuffer<T>* > mPyramid;
+    std::vector<ImageBuffer<T>* > mPyramid;
 
     static const size_t EWA_LUT_SIZE = 128;
-    static vector<float> EWALut;
+    static std::vector<float> EWALut;
 };
 
 template<typename T>
@@ -170,9 +169,9 @@ private:
 };
 
 struct TextureId {
-    TextureId(const string& f, float g, ImageChannel c, float maxAniso): 
+    TextureId(const std::string& f, float g, ImageChannel c, float maxAniso):
         filename(f), gamma(g), channel(c), maxAnisotropy(maxAniso) {}
-    string filename;
+	std::string filename;
     float gamma;
     ImageChannel channel;
     float maxAnisotropy;
@@ -193,7 +192,7 @@ inline bool TextureId::operator<(const TextureId & rhs) const {
 template<typename T>
 class ImageTexture : public Texture<T> {
 public:
-    ImageTexture(const string& filename, TextureMapping* m, 
+    ImageTexture(const std::string& filename, TextureMapping* m, 
         FilterType filter = FilterNone,
         AddressMode address= AddressRepeat, float gamma = 1.0f,
         ImageChannel channel = ChannelAll, float maxAnisotropy = 10.0f);
@@ -225,68 +224,23 @@ void ImageTexture<T>::clearImageCache() {
 class ParamSet;
 class SceneCache;
 
-class FloatConstantTextureCreator : public 
-    Creator<Texture<float> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<float>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
+Texture<float>* createFloatConstantTexture(const ParamSet&);
+Texture<Color>* createColorConstantTexture(const ParamSet&);
 
+Texture<float>* createFloatCheckerboardTexture(const ParamSet& params,
+	const SceneCache& sceneCache);
+Texture<Color>* createColorCheckerboardTexture(const ParamSet& params,
+	const SceneCache& sceneCache);
 
-class FloatCheckboardTextureCreator : public 
-    Creator<Texture<float> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<float>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
+Texture<float>* createFloatScaleTexture(const ParamSet& params,
+	const SceneCache& sceneCache);
+Texture<Color>* createColorScaleTexture(const ParamSet& params,
+	const SceneCache& sceneCache);
 
-
-class FloatScaleTextureCreator : public 
-    Creator<Texture<float> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<float>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
-
-
-class FloatImageTextureCreator : public 
-    Creator<Texture<float> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<float>* create(const ParamSet& params, 
-        const SceneCache&) const;
-};
-
-
-class ColorConstantTextureCreator : public 
-    Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<Color>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
-
-
-class ColorCheckboardTextureCreator : public 
-    Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<Color>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
-
-
-class ColorScaleTextureCreator : public 
-    Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<Color>* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
-
-
-class ColorImageTextureCreator : public 
-    Creator<Texture<Color> , const ParamSet&, const SceneCache&> {
-public:
-    Texture<Color>* create(const ParamSet& params, 
-        const SceneCache&) const;
-};
+Texture<float>* createFloatImageTexture(const ParamSet& params, 
+    const SceneCache&);
+Texture<Color>* createColorImageTexture(const ParamSet& params,
+	const SceneCache&);
 
 
 template<typename T>

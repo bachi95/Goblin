@@ -27,10 +27,10 @@ FilterTable::FilterTable(const Filter* filter):
 }
      
 float FilterTable::evaluate(float x, float y) const {
-    int iy = min(
+    int iy = std::min(
         floorInt(fabs(FILTER_TABLE_WIDTH * y / mFilterWidth.y)),
         FILTER_TABLE_WIDTH - 1);
-    int ix = min(
+    int ix = std::min(
         floorInt(fabs(FILTER_TABLE_WIDTH * x / mFilterWidth.x)),
         FILTER_TABLE_WIDTH - 1);
     return mTable[iy * FILTER_TABLE_WIDTH + ix];
@@ -38,7 +38,7 @@ float FilterTable::evaluate(float x, float y) const {
 
 ImageTile::ImageTile(const ImageRect& tileRect,
     const FilterTable& cachedFilter):
-    mTileRect(tileRect), mPixels(NULL),
+    mTileRect(tileRect), mPixels(nullptr),
     mCachedFilter(cachedFilter) {
     mPixels = new Pixel[mTileRect.xCount * mTileRect.yCount];
 }
@@ -46,7 +46,7 @@ ImageTile::ImageTile(const ImageRect& tileRect,
 ImageTile::~ImageTile() {
     if (mPixels) {
         delete [] mPixels;
-        mPixels = NULL;
+        mPixels = nullptr;
     }
 }
 
@@ -60,8 +60,8 @@ void ImageTile::getTileRange(int* xStart, int *xEnd,
 
 void ImageTile::addSample(float imageX, float imageY, const Color& L) {
     if (L.isNaN()) {
-        cout << "sample ("<< imageX << " " << imageY
-            << ") generate NaN point, discard this sample" << endl;
+		std::cout << "sample ("<< imageX << " " << imageY
+            << ") generate NaN point, discard this sample" << std::endl;
         return;
     }
     // transform continuous space sample to discrete space
@@ -73,10 +73,10 @@ void ImageTile::addSample(float imageX, float imageY, const Color& L) {
     int x1 = floorInt(dImageX + filterWidth.x);
     int y0 = ceilInt(dImageY - filterWidth.y);
     int y1 = floorInt(dImageY + filterWidth.y);
-    x0 = max(x0, mTileRect.xStart);
-    x1 = min(x1, mTileRect.xStart + mTileRect.xCount - 1);
-    y0 = max(y0, mTileRect.yStart);
-    y1 = min(y1, mTileRect.yStart + mTileRect.yCount - 1);
+    x0 = std::max(x0, mTileRect.xStart);
+    x1 = std::min(x1, mTileRect.xStart + mTileRect.xCount - 1);
+    y0 = std::max(y0, mTileRect.yStart);
+    y1 = std::min(y1, mTileRect.yStart + mTileRect.yCount - 1);
 
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
@@ -100,9 +100,9 @@ Film::Film(int xRes, int yRes, const float crop[4],
     memcpy(mCrop, crop, 4 * sizeof(float));
 
     mXStart = ceilInt(mXRes * mCrop[0]);
-    mXCount = max(1, ceilInt(mXRes * mCrop[1]) - mXStart);
+    mXCount = std::max(1, ceilInt(mXRes * mCrop[1]) - mXStart);
     mYStart = ceilInt(mYRes * mCrop[2]);
-    mYCount = max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
+    mYCount = std::max(1, ceilInt(mYRes * mCrop[3]) - mYStart);
 
     mPixels = new Pixel[mXRes * mYRes];
 
@@ -111,13 +111,13 @@ Film::Film(int xRes, int yRes, const float crop[4],
 }
     
 Film::~Film() {
-    if (mPixels != NULL) {
+    if (mPixels != nullptr) {
         delete[] mPixels;
-        mPixels = NULL;
+        mPixels = nullptr;
     }
-    if (mFilter != NULL) {
+    if (mFilter != nullptr) {
         delete mFilter;
-        mFilter = NULL;
+        mFilter = nullptr;
     }
 }
 
@@ -162,7 +162,7 @@ void Film::scaleImage(float scale) {
 }
 
 void Film::writeImage(bool normalize) {
-    Color* colors = new Color[mXRes * mYRes];
+    std::vector<Color> colors(mXRes * mYRes);
     for (int y = 0; y < mYRes; ++y) {
         for (int x = 0; x < mXRes; ++x) {
             int index = mXRes * y + x;
@@ -173,50 +173,48 @@ void Film::writeImage(bool normalize) {
     }
 
     // draw debug info
-    cout << "drawing debug info: " << endl;
+	std::cout << "drawing debug info: " << std::endl;
     for (size_t i = 0; i < mDebugLines.size(); ++i) {
         const DebugLine& line = mDebugLines[i].first;
-        drawLine(line.first, line.second, colors,
+        drawLine(line.first, line.second, colors.data(),
             mXRes, mYRes, mDebugLines[i].second);
     }
     for (size_t i = 0; i < mDebugPoints.size(); ++i) {
-        drawPoint(mDebugPoints[i].first, colors, mXRes, mYRes,
+        drawPoint(mDebugPoints[i].first, colors.data(), mXRes, mYRes,
             mDebugPoints[i].second, 1);
     }
 
-    cout << "write image to : " << mFilename << endl;
+	std::cout << "write image to : " << mFilename << std::endl;
     if (mBloomRadius > 0.0f && mBloomWeight > 0.0f) {
-        Goblin::bloom(colors, mXRes, mYRes, mBloomRadius, mBloomWeight);
+        Goblin::bloom(colors.data(), mXRes, mYRes, mBloomRadius, mBloomWeight);
     }
-    Goblin::writeImage(mFilename, colors, mXRes, mYRes, mToneMapping);
-    delete [] colors;
+    Goblin::writeImage(mFilename, colors.data(), mXRes, mYRes, mToneMapping);
 }
 
 void Film::addDebugLine(const DebugLine& l, const Color& c) {
-    mDebugLines.push_back(pair<DebugLine, Color>(l, c));
+    mDebugLines.push_back(std::pair<DebugLine, Color>(l, c));
 }
 
 void Film::addDebugPoint(const Vector2& p, const Color& c) {
-    mDebugPoints.push_back(pair<Vector2, Color>(p, c));
+    mDebugPoints.push_back(std::pair<Vector2, Color>(p, c));
 }
 
-Film* ImageFilmCreator::create(const ParamSet& params,
-    Filter* filter) const {
-    Vector2 res = params.getVector2("resolution", Vector2(640, 480));
-    int xRes = static_cast<int>(res.x);
-    int yRes = static_cast<int>(res.y);
+Film* createImageFilm(const ParamSet& params, Filter* filter) {
+	Vector2 res = params.getVector2("resolution", Vector2(640, 480));
+	int xRes = static_cast<int>(res.x);
+	int yRes = static_cast<int>(res.y);
 
-    Vector4 windowCrop = params.getVector4("crop", Vector4(0, 1, 0, 1));
-    float crop[4];
-    for (int i = 0; i < 4; ++i) {
-        crop[i] = windowCrop[i];
-    }
-    string filePath = params.getString("file", "goblin.png");
-    bool toneMapping = params.getBool("tone_mapping");
-    float bloomRadius = params.getFloat("bloom_radius");
-    float bloomWeight = params.getFloat("bloom_weight");
-    return new Film(xRes, yRes, crop, filter, filePath,
-        toneMapping, bloomRadius, bloomWeight);
+	Vector4 windowCrop = params.getVector4("crop", Vector4(0, 1, 0, 1));
+	float crop[4];
+	for (int i = 0; i < 4; ++i) {
+		crop[i] = windowCrop[i];
+	}
+	std::string filePath = params.getString("file", "goblin.exr");
+	bool toneMapping = params.getBool("tone_mapping");
+	float bloomRadius = params.getFloat("bloom_radius");
+	float bloomWeight = params.getFloat("bloom_weight");
+	return new Film(xRes, yRes, crop, filter, filePath,
+		toneMapping, bloomRadius, bloomWeight);
 }
 
 } // namespace Goblin

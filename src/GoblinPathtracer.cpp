@@ -3,7 +3,7 @@
 
 namespace Goblin {
 static bool isOpaque(const Primitive* p, const Ray& r) {
-    return !(p->getMaterial()->getType() & BSDFNull);
+    return !(p->getMaterial()->getType() & BSDFnullptr);
 }
     
 static bool notOpaque(const Primitive* p, const Ray& r) {
@@ -36,7 +36,7 @@ Color PathTracer::evalAttenuation(const ScenePtr& scene,
         Vector3 wi;
         float pdf;
         throughput *= material->sampleBSDF(fragment, wo, bs, 
-            &wi, &pdf, BSDFNull);
+            &wi, &pdf, BSDFnullptr);
         if (throughput == Color::Black) {
             break;
         }
@@ -50,7 +50,7 @@ Color PathTracer::evalAttenuation(const ScenePtr& scene,
 Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray, 
     const Sample& sample, const RNG& rng,
     RenderingTLS* tls) const {
-    const vector<Light*>& lights = scene->getLights();
+    const std::vector<Light*>& lights = scene->getLights();
     if (lights.size() == 0) {
         return Color(0.0f);
     }
@@ -70,7 +70,7 @@ Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
         &mBSSRDFSampleIndex, tls);
 
     RayDifferential currentRay = ray;
-    vector<Ray> debugRays;
+    std::vector<Ray> debugRays;
     Color throughput(1.0f);
     bool firstBounce = true;
     for (int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
@@ -119,7 +119,7 @@ Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
         if (f != Color::Black && bsdfPdf > 0.0f) {
             // this sample steps on an index-matched BSDF
             // should punch through it with attenuation accounted
-            if (sampledType == BSDFNull) {
+            if (sampledType == BSDFnullptr) {
                 throughput *= (f / bsdfPdf);
                 currentRay = RayDifferential(p, wi, epsilon);
                 if (!scene->intersect(currentRay, &epsilon, &intersection)) {
@@ -182,15 +182,15 @@ void PathTracer::querySampleQuota(const ScenePtr& scene,
         SampleQuota* sampleQuota) {
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     }
     if (mBSDFSampleIndexes) {
         delete [] mBSDFSampleIndexes;
-        mBSDFSampleIndexes = NULL;
+        mBSDFSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
 
     int bounces = mMaxRayDepth;
@@ -207,7 +207,7 @@ void PathTracer::querySampleQuota(const ScenePtr& scene,
         mBssrdfSampleNum);
 }
 
-Renderer* PathTracerCreator::create(const ParamSet& params) const {
+Renderer* createPathTracer(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int maxRayDepth = params.getInt("max_ray_depth", 5);

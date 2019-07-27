@@ -2,9 +2,9 @@
 #define GOBLIN_CAMERA_H
 
 #include "GoblinMatrix.h"
+#include "GoblinParamSet.h"
 #include "GoblinVector.h"
 #include "GoblinQuaternion.h"
-#include "GoblinFactory.h"
 
 namespace Goblin {
 class Film;
@@ -30,11 +30,11 @@ public:
         RayDifferential* ray) const = 0;
 
     virtual Vector3 samplePosition(const Sample& sample,
-        Vector3* surfaceNormal, float* pdfArea = NULL) const = 0;
+        Vector3* surfaceNormal, float* pdfArea = nullptr) const = 0;
 
     virtual Vector3 sampleDirection(const Sample& sample,
         const Vector3& pCamera, float *We,
-        float* pdfW = NULL) const = 0;
+        float* pdfW = nullptr) const = 0;
 
     // get the pdf (measured in area) this particular point
     // on camera lens is sampled
@@ -185,10 +185,10 @@ public:
     float generateRay(const Sample& sample, RayDifferential* ray) const;
 
     Vector3 samplePosition(const Sample& sample,
-        Vector3* surfaceNormal, float* pdfArea = NULL) const;
+        Vector3* surfaceNormal, float* pdfArea = nullptr) const;
 
     Vector3 sampleDirection(const Sample& sample,
-        const Vector3& pCamera, float* We, float* pdfW = NULL) const;
+        const Vector3& pCamera, float* We, float* pdfW = nullptr) const;
 
     float pdfPosition(const Vector3& p) const;
 
@@ -217,10 +217,10 @@ public:
     float generateRay(const Sample& sample, RayDifferential* ray) const;
 
     Vector3 samplePosition(const Sample& sample,
-        Vector3* surfaceNormal, float* pdfArea = NULL) const;
+        Vector3* surfaceNormal, float* pdfArea = nullptr) const;
 
     Vector3 sampleDirection(const Sample& sample,
-        const Vector3& pCamera, float* We, float* pdfW = NULL) const;
+        const Vector3& pCamera, float* We, float* pdfW = nullptr) const;
 
     float pdfPosition(const Vector3& p) const;
 
@@ -236,19 +236,10 @@ private:
     float mFilmHeight;
 };
 
+Camera* createPerspectiveCamera(const ParamSet& params, Film* film);
 
-class PerspectiveCameraCreator :
-    public Creator<Camera, const ParamSet&, Film*> {
-public:
-    Camera* create(const ParamSet& params, Film* film) const;
-};
+Camera* createOrthographicCamera(const ParamSet& params, Film* film);
 
-
-class OrthographicCameraCreator :
-    public Creator<Camera, const ParamSet&, Film*> {
-public:
-    Camera* create(const ParamSet& params, Film* film) const;
-};
 }
 
 #endif //GOBLIN_CAMERA_H

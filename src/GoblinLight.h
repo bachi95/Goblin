@@ -2,7 +2,6 @@
 #define GOBLIN_LIGHT_H
 
 #include "GoblinColor.h"
-#include "GoblinFactory.h"
 #include "GoblinGeometry.h"
 #include "GoblinMaterial.h"
 #include "GoblinParamSet.h"
@@ -259,7 +258,7 @@ public:
 
 private:
     GeometryList mGeometries;
-    vector<float> mGeometriesArea;
+    std::vector<float> mGeometriesArea;
     float mSumArea;
     CDF1D* mAreaDistribution;
 };
@@ -314,7 +313,7 @@ private:
 
 class ImageBasedLight : public Light {
 public:
-    ImageBasedLight(const string& radianceMap, const Color& filter,
+    ImageBasedLight(const std::string& radianceMap, const Color& filter,
         const Quaternion& orientation = Quaternion::Identity,
         uint32_t samplesNum = 1);
 
@@ -359,44 +358,21 @@ private:
     int mSampleMIPLevel;
 };
 
-class PointLightCreator : public
-    Creator<Light , const ParamSet&, const SceneCache&> {
-public:
-    Light* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
 
+Light* createPointLight(const ParamSet& params,
+    const SceneCache& sceneCache);
 
-class DirectionalLightCreator : public
-    Creator<Light , const ParamSet&, const SceneCache&> {
-public:
-    Light* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Light* createDirectionalLight(const ParamSet& params,
+    const SceneCache& sceneCache);
 
+Light* createSpotLight(const ParamSet& params,
+	const SceneCache& sceneCache);
 
-class SpotLightCreator : public
-    Creator<Light , const ParamSet&, const SceneCache&> {
-public:
-    Light* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Light* createAreaLight(const ParamSet& params,
+    const SceneCache& sceneCache);
 
-
-class AreaLightCreator : public
-    Creator<Light , const ParamSet&, const SceneCache&> {
-public:
-    Light* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
-
-
-class ImageBasedLightCreator : public
-    Creator<Light , const ParamSet&, const SceneCache&> {
-public:
-    Light* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Light* createImageBasedLight(const ParamSet& params,
+    const SceneCache& sceneCache);
 
 }
 #endif //GOBLIN_LIGHT_H

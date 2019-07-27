@@ -307,11 +307,10 @@ void ObjMesh::recalculateArea() {
     }
 }
 
-
-Geometry* MeshGeometryCreator::create(const ParamSet& params, 
-    const SceneCache& sceneCache) const {
-    string filename = params.getString("file");
-    string filePath = sceneCache.resolvePath(filename);
+Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache) {
+	std::string filename = params.getString("file");
+	std::string filePath = sceneCache.resolvePath(filename);
     return new ObjMesh(filePath);
 }
+
 }

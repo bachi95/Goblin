@@ -17,26 +17,20 @@ typedef std::uniform_int<uint32_t> UInt32Dist;
 class RNGImp {
 public:
     RNGImp();
-    ~RNGImp();
     float randomFloat() const;
     uint32_t randomUInt() const;
 private:
-    RNGType* mEngine;
-    RealDist* mRealDist;
-    UInt32Dist* mUInt32Dist;
+    std::unique_ptr<RNGType> mEngine;
+    std::unique_ptr<RealDist> mRealDist;
+    std::unique_ptr<UInt32Dist> mUInt32Dist;
 };
 
-RNGImp::RNGImp() {
-    mEngine = new RNGType(static_cast<uint32_t>(rand()));
-    mRealDist = new std::uniform_real<float>(0.0f, 1.0f);
-    mUInt32Dist = new std::uniform_int<uint32_t>(
-		0, numeric_limits<uint32_t>::max());
-}
-
-RNGImp::~RNGImp() {
-    delete mEngine;
-    delete mRealDist;
-    delete mUInt32Dist;
+RNGImp::RNGImp():
+    mEngine(new RNGType(static_cast<uint32_t>(rand()))),
+    mRealDist(new std::uniform_real<float>(0.0f, 1.0f)),
+    mUInt32Dist(new std::uniform_int<uint32_t>(
+		0, std::numeric_limits<uint32_t>::max()))
+{
 }
 
 float RNGImp::randomFloat() const {
@@ -54,7 +48,7 @@ RNG::RNG() {
 RNG::~RNG() {
     if (mRNGImp) {
         delete mRNGImp;
-        mRNGImp = NULL;
+        mRNGImp = nullptr;
     }
 }
 
@@ -83,7 +77,7 @@ Quaternion getQuaternion(const ParamSet& params) {
     Quaternion result;
     if (params.hasVector3("euler")) {
         Vector3 xyz = params.getVector3("euler", Vector3::Zero);
-        string order = params.getString("rotation_order", "xyz");
+		std::string order = params.getString("rotation_order", "xyz");
         result = eulerToQuaternion(xyz, order);
     } else {
         Vector4 q = params.getVector4("orientation", Vector4(1, 0, 0, 0));
@@ -207,7 +201,7 @@ void drawPoint(const Vector2& p, Color* buffer, int xRes, int yRes,
     }
 }
 
-void getPrimes(size_t N, vector<uint32_t>& primes) {
+void getPrimes(size_t N, std::vector<uint32_t>& primes) {
     primes.clear();
     if (N > 0) {
         primes.reserve(N);
