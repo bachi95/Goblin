@@ -1,7 +1,6 @@
 #ifndef GOBLIN_SPHERE_H
 #define GOBLIN_SPHERE_H
 #include "GoblinGeometry.h"
-#include "GoblinFactory.h"
 
 namespace Goblin {
 class Sphere : public Geometry {
@@ -59,12 +58,8 @@ inline const TriangleIndex* Sphere::getFacePtr(size_t index) const {
 class ParamSet;
 class SceneCache;
 
-class SphereGeometryCreator : 
-    public Creator<Geometry, const ParamSet&, const SceneCache&> {
-public:
-    Geometry* create(const ParamSet& params, 
-        const SceneCache& sceneCache) const;
-};
+Geometry* createSphere(const ParamSet& params, const SceneCache& sceneCache);
+
 }
 
 #endif //GOBLIN_SHPERE_H

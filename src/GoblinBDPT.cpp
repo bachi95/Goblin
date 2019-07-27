@@ -63,18 +63,18 @@ BDPT::BDPT(int samplePerPixel, int threadNum,
     int maxPathLength, int debugS, int debugT, bool debugNoMIS):
     Renderer(samplePerPixel, threadNum),
     mTotalSamplesNum(0), mMaxPathLength(maxPathLength),
-    mLightPathSampleIndexes(NULL), mEyePathSampleIndexes(NULL),
+    mLightPathSampleIndexes(nullptr), mEyePathSampleIndexes(nullptr),
     mDebugS(debugS), mDebugT(debugT), mDebugNoMIS(debugNoMIS)
     {}
 
 BDPT::~BDPT() {
     if (mLightPathSampleIndexes) {
         delete [] mLightPathSampleIndexes;
-        mLightPathSampleIndexes = NULL;
+        mLightPathSampleIndexes = nullptr;
     }
     if (mEyePathSampleIndexes) {
         delete [] mEyePathSampleIndexes;
-        mEyePathSampleIndexes = NULL;
+        mEyePathSampleIndexes = nullptr;
     }
 }
 
@@ -92,7 +92,7 @@ void BDPT::evalContribution(const ScenePtr& scene,
     std::vector<BDPTMISNode>& misNodes,
     ImageTile* tile) const {
     // construct path randomwalk from light
-    const vector<Light*>& lights = scene->getLights();
+    const std::vector<Light*>& lights = scene->getLights();
     if (lights.size() == 0) {
         return;
     }
@@ -535,9 +535,9 @@ void BDPT::render(const ScenePtr& scene) {
     SampleQuota sampleQuota;
     querySampleQuota(scene, &sampleQuota);
 
-    vector<SampleRange> sampleRanges;
+    std::vector<SampleRange> sampleRanges;
     getSampleRanges(film, sampleRanges);
-    vector<Task*> bdptTasks;
+    std::vector<Task*> bdptTasks;
     RenderProgress progress(static_cast<int>(sampleRanges.size()));
     for (size_t i = 0; i < sampleRanges.size(); ++i) {
         bdptTasks.push_back(new BDPTTask(this,
@@ -567,19 +567,19 @@ void BDPT::querySampleQuota(const ScenePtr& scene,
 
     if (mLightSampleIndexes) {
         delete [] mLightSampleIndexes;
-        mLightSampleIndexes = NULL;
+        mLightSampleIndexes = nullptr;
     }
     if (mLightPathSampleIndexes) {
         delete [] mLightPathSampleIndexes;
-        mLightPathSampleIndexes = NULL;
+        mLightPathSampleIndexes = nullptr;
     }
     if (mEyePathSampleIndexes) {
         delete [] mEyePathSampleIndexes;
-        mEyePathSampleIndexes = NULL;
+        mEyePathSampleIndexes = nullptr;
     }
     if (mPickLightSampleIndexes) {
         delete [] mPickLightSampleIndexes;
-        mPickLightSampleIndexes = NULL;
+        mPickLightSampleIndexes = nullptr;
     }
 
     mLightSampleIndexes = new LightSampleIndex[1];
@@ -597,7 +597,7 @@ void BDPT::querySampleQuota(const ScenePtr& scene,
         mEyePathSampleIndexes[i] = BSDFSampleIndex(sampleQuota, 1);
     }
 
-    const vector<Light*>& lights = scene->getLights();
+    const std::vector<Light*>& lights = scene->getLights();
     std::vector<float> lightPowers;
     size_t maxLightId = 0;
     float totalPower = 0.0f;
@@ -618,7 +618,7 @@ void BDPT::querySampleQuota(const ScenePtr& scene,
     }
 }
 
-Renderer* BDPTCreator::create(const ParamSet& params) const {
+Renderer* createBDPT(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int maxPathLength = params.getInt("max_path_length", 5);

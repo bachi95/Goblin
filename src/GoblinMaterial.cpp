@@ -18,7 +18,7 @@ BSDFSampleIndex::BSDFSampleIndex(SampleQuota* sampleQuota,
     SampleIndex twoDIndex = sampleQuota->requestTwoDQuota(requestNum);
     // theoretically this two should be the same...
     // this is just a paranoid double check
-    samplesNum = min(oneDIndex.sampleNum, twoDIndex.sampleNum);
+    samplesNum = std::min(oneDIndex.sampleNum, twoDIndex.sampleNum);
     componentIndex = oneDIndex.offset;
     directionIndex = twoDIndex.offset;
 }
@@ -313,7 +313,7 @@ float Material::specularReflectDieletric(const Fragment& fragment,
     float et = etat;
     bool entering = cosi > 0.0f;
     if (!entering) {
-        swap(ei, et);
+		std::swap(ei, et);
         n = -n;
         cosi = -cosi;
     }
@@ -353,7 +353,7 @@ float Material::specularRefract(const Fragment& fragment,
     float ei = etai;
     bool entering = coso > 0.0f;
     if (!entering) {
-        swap(ei, et);
+		std::swap(ei, et);
         n = -n;
         coso = -coso;
     }
@@ -373,7 +373,7 @@ float Material::specularRefract(const Fragment& fragment,
         */
     float eta = et / ei;
     *wi = normalize(n * (eta * coso -
-        sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - coso * coso)))) -
+        sqrt(std::max(0.0f, 1.0f - eta * eta * (1.0f - coso * coso)))) -
         eta * wo);
     /*
         * see Veach 97 Chapter 5: The Sources of Non-Symmetric Scattering
@@ -390,12 +390,12 @@ float Material::specularRefract(const Fragment& fragment,
 float Material::fresnelDieletric(float cosi, float etai, 
     float etat) {
     cosi = clamp(cosi, -1.0f, 1.0f);
-    float sint = (etai / etat) * sqrt(max(0.0f, 1.0f - cosi * cosi));
+    float sint = (etai / etat) * sqrt(std::max(0.0f, 1.0f - cosi * cosi));
     // total reflection
     if (sint >= 1.0f) {
         return 1.0f;
     }
-    float cost = sqrt(max(0.0f, 1 - sint * sint));
+    float cost = sqrt(std::max(0.0f, 1 - sint * sint));
     cosi = fabs(cosi);
 
     float rParl = ((etat * cosi) - (etai * cost)) /
@@ -429,7 +429,7 @@ Vector3 specularRefract(const Vector3& wo, const Vector3& n,
     float eta = etai / etat;
     float cosi = absdot(n, wo);
     return normalize(n * (eta * cosi - 
-        sqrt(max(0.0f, 1.0f - eta * eta * (1.0f - cosi * cosi)))) - 
+        sqrt(std::max(0.0f, 1.0f - eta * eta * (1.0f - cosi * cosi)))) -
         eta * wo);
 }
 
@@ -555,7 +555,7 @@ Color BlinnMaterial::bsdf(const Fragment& fragment, const Vector3& wo,
             pow(cosh, exp);
         float woDotWh = absdot(wo, wh);
         // geometry attenuation term
-        float G = min(1.0f, min(2.0f * cosh * coso / woDotWh, 
+        float G = std::min(1.0f, std::min(2.0f * cosh * coso / woDotWh,
             2.0f * cosh * cosi / woDotWh));
         // fresnel factor
         float F = 1.0f;
@@ -604,7 +604,7 @@ Color BlinnMaterial::sampleBSDF(const Fragment& fragment,
     float u2 = bsdfSample.uDirection[1];
     float exp = mExp->lookup(fragment);
     float cosTheta = pow(u1, 1.0f / (exp + 1.0f));
-    float sinTheta = sqrtf(max(0.0f, 1.0f - cosTheta * cosTheta));
+    float sinTheta = sqrtf(std::max(0.0f, 1.0f - cosTheta * cosTheta));
     float phi = u2 * TWO_PI; 
 
     Vector3 whLocal(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
@@ -746,7 +746,7 @@ Color SubsurfaceMaterial::sampleBSDF(const Fragment& fragment,
 
 Color MaskMaterial::bsdf(const Fragment& fragment, const Vector3& wo,
     const Vector3& wi, BSDFType type, BSDFMode mode) const {
-    if (type == BSDFNull) {
+    if (type == BSDFnullptr) {
         return Color::Black;
     } else {
         float alpha = mAlphaMask->lookup(fragment);
@@ -758,9 +758,9 @@ Color MaskMaterial::sampleBSDF(const Fragment& fragment,
     const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi,
     float* pdf, BSDFType type, BSDFType* sampledType,
     BSDFMode mode) const {
-    bool sampleAlpha = matchType(type, BSDFNull);
+    bool sampleAlpha = matchType(type, BSDFnullptr);
     // if this request ask us to evaluate masked material
-    bool sampleMasked = type != BSDFNull;
+    bool sampleMasked = type != BSDFnullptr;
 
     Color result(0.0f);
     *pdf = 0.0f;
@@ -776,7 +776,7 @@ Color MaskMaterial::sampleBSDF(const Fragment& fragment,
             *wi = -normalize(wo);
             *pdf = 1.0f - maskedProb;
             if (sampledType) {
-                *sampledType = BSDFNull;
+                *sampledType = BSDFnullptr;
             }
         }
     } else if (sampleMasked) {
@@ -787,7 +787,7 @@ Color MaskMaterial::sampleBSDF(const Fragment& fragment,
         *wi = -normalize(wo);
         *pdf = 1.0f;
         if (sampledType) {
-            *sampledType = BSDFNull;
+            *sampledType = BSDFnullptr;
         }
     }
     return result;
@@ -795,9 +795,9 @@ Color MaskMaterial::sampleBSDF(const Fragment& fragment,
 
 float MaskMaterial::pdf(const Fragment& fragment, const Vector3& wo, 
     const Vector3& wi, BSDFType type) const {
-    bool sampleAlpha = matchType(type, BSDFNull);
+    bool sampleAlpha = matchType(type, BSDFnullptr);
     // if this request ask us to evaluate masked material
-    bool sampleMasked = type != BSDFNull;
+    bool sampleMasked = type != BSDFnullptr;
     float pdf = 0.0f;
     if (sampleMasked && sampleAlpha) {
         pdf = mAlphaMask->lookup(fragment) * 
@@ -823,19 +823,18 @@ static BumpShaders getBumpShaders(const ParamSet& params,
     return BumpShaders(bump, normal);
 }
 
-Material* LambertMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string textureName = params.getString("Kd");
+Material* createLambertMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string textureName = params.getString("Kd");
     ColorTexturePtr Kd = sceneCache.getColorTexture(textureName);
     BumpShaders bump = getBumpShaders(params, sceneCache);
     return new LambertMaterial(Kd, bump);
 }
 
-
-Material* BlinnMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string glossyTextureName = params.getString("Kg");
-    string expTextureName = params.getString("exponent");
+Material* createBlinnMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string glossyTextureName = params.getString("Kg");
+	std::string expTextureName = params.getString("exponent");
     ColorTexturePtr Kg = 
         sceneCache.getColorTexture(glossyTextureName);
     FloatTexturePtr exp = 
@@ -854,11 +853,10 @@ Material* BlinnMaterialCreator::create(const ParamSet& params,
     return material;
 }
 
-
-Material* TransparentMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string reflectTextureName = params.getString("Kr");
-    string refractTextureName = params.getString("Kt");
+Material* createTransparentMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string reflectTextureName = params.getString("Kr");
+	std::string refractTextureName = params.getString("Kt");
     ColorTexturePtr Kr = 
         sceneCache.getColorTexture(reflectTextureName);
     ColorTexturePtr Kt = 
@@ -868,10 +866,9 @@ Material* TransparentMaterialCreator::create(const ParamSet& params,
     return new TransparentMaterial(Kr, Kt, index, bump);
 }
 
-
-Material* MirrorMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string reflectTextureName = params.getString("Kr");
+Material* createMirrorMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string reflectTextureName = params.getString("Kr");
     ColorTexturePtr Kr = 
         sceneCache.getColorTexture(reflectTextureName);
     // use aluminium by default
@@ -881,9 +878,8 @@ Material* MirrorMaterialCreator::create(const ParamSet& params,
     return new MirrorMaterial(Kr, index, absorption, bump);
 }
 
-
-Material* SubsurfaceMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Material* createSubsurfaceMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
 
     float index = params.getFloat("index", 1.5f);
     float g = params.getFloat("g", 0.0f);
@@ -930,15 +926,14 @@ Material* SubsurfaceMaterialCreator::create(const ParamSet& params,
     }
 }
 
-
-Material* MaskMaterialCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Material* createMaskMaterial(const ParamSet& params,
+	const SceneCache& sceneCache) {
     FloatTexturePtr alphaMask;
     if (params.hasString("alpha")) {
         alphaMask = sceneCache.getFloatTexture(params.getString("alpha"));
     } else {
         alphaMask = FloatTexturePtr(new ConstantTexture<float>(1.0f));
-        cout << "no feed in alpha" << endl;
+		std::cout << "no feed in alpha" << std::endl;
     }
     ColorTexturePtr transparentColor;
     if (params.hasString("transparent_color")) {
@@ -947,10 +942,11 @@ Material* MaskMaterialCreator::create(const ParamSet& params,
     } else {
         transparentColor = ColorTexturePtr(
             new ConstantTexture<Color>(Color::White));
-        cout << "no feed in tr color" << endl;
+		std::cout << "no feed in tr color" << std::endl;
     }
     MaterialPtr material = 
         sceneCache.getMaterial(params.getString("material"));
     return new MaskMaterial(alphaMask, transparentColor, material);
 }
+
 }

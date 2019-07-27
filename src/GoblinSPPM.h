@@ -1,7 +1,6 @@
 #ifndef GOBLIN_SPPM_H
 #define GOBLIN_SPPM_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 #include "GoblinUtils.h"
 
@@ -63,7 +62,7 @@ public:
 
     Color Li(const ScenePtr& scene, const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        RenderingTLS* tls = NULL) const;
+        RenderingTLS* tls = nullptr) const;
 
     void render(const ScenePtr& scene);
 
@@ -73,20 +72,17 @@ public:
         int pixelX, int pixelY);
 
     void photonTracePass(const ScenePtr& scene, const Sample& sample,
-        vector<PhotonCache>& photonCache);
+        std::vector<PhotonCache>& photonCache);
 
 private:
     int mMaxPathLength;
-    vector<PixelData> mPixelData;
+    std::vector<PixelData> mPixelData;
     SpatialHashGrids* mHashGrids;
     float mInitialRadius;
 };
 
-class SPPMCreator : public
-    Creator<Renderer, const ParamSet&> {
-public:
-    Renderer* create(const ParamSet &params) const;
-};
+Renderer* createSPPM(const ParamSet &params);
+
 }
 
 #endif // GOBLIN_SPPM_H

@@ -2,17 +2,25 @@
 #include "GoblinBBox.h"
 #include "GoblinBDPT.h"
 #include "GoblinBVH.h"
+#include "GoblinCamera.h"
 #include "GoblinDisk.h"
+#include "GoblinFilter.h"
+#include "GoblinFilm.h"
 #include "GoblinLightTracer.h"
 #include "GoblinModel.h"
 #include "GoblinObjMesh.h"
 #include "GoblinAO.h"
 #include "GoblinPathtracer.h"
+#include "GoblinPrimitive.h"
 #include "GoblinRenderer.h"
+#include "GoblinRenderContext.h"
+#include "GoblinScene.h"
 #include "GoblinSphere.h"
 #include "GoblinSPPM.h"
-#include "GoblinWhitted.h"
+#include "GoblinTexture.h"
 #include "GoblinUtils.h"
+#include "GoblinVolume.h"
+#include "GoblinWhitted.h"
 
 #include <fstream>
 #include "json.hpp"
@@ -56,122 +64,7 @@ static void parseParamSet(const json& jsonContext, ParamSet* params) {
 	}
 }
 
-ContextLoader::ContextLoader():
-    mFilterFactory(new Factory<Filter, const ParamSet&>()),
-    mFilmFactory(new Factory<Film, const ParamSet&, Filter*>()),
-    mCameraFactory(new Factory<Camera, const ParamSet&, Film*>()),
-    mRendererFactory(new Factory<Renderer, const ParamSet&>()),
-    mVolumeFactory(
-        new Factory<VolumeRegion, const ParamSet&, const SceneCache&>()),
-    mGeometryFactory(
-        new Factory<Geometry, const ParamSet&, const SceneCache&>()),
-    mFloatTextureFactory(
-        new Factory<Texture<float>, const ParamSet&, const SceneCache&>()),
-    mColorTextureFactory(
-        new Factory<Texture<Color>, const ParamSet&, const SceneCache&>()),
-    mMaterialFactory(
-        new Factory<Material, const ParamSet&, const SceneCache&>()),
-    mPrimitiveFactory(
-        new Factory<Primitive, const ParamSet&, const SceneCache&>()),
-    mLightFactory(
-        new Factory<Light, const ParamSet&, const SceneCache&>()) {
-
-    // filter
-    mFilterFactory->registerCreator("box", new BoxFilterCreator);
-    mFilterFactory->registerCreator("triangle", new TriangleFilterCreator);
-    mFilterFactory->registerCreator("gaussian", new GaussianFilterCreator);
-    mFilterFactory->registerCreator("mitchell", new MitchellFilterCreator);
-    mFilterFactory->setDefault("gaussian");
-    // film
-    mFilmFactory->registerCreator("image", new ImageFilmCreator);
-    mFilmFactory->setDefault("image");
-    // camera
-    mCameraFactory->registerCreator("perspective",
-        new PerspectiveCameraCreator);
-    mCameraFactory->registerCreator("orthographic",
-        new OrthographicCameraCreator);
-    mCameraFactory->setDefault("perspective");
-    // renderer
-    mRendererFactory->registerCreator("ao",
-        new AORendererCreator);
-    mRendererFactory->registerCreator("whitted",
-        new WhittedRendererCreator);
-    mRendererFactory->registerCreator("path_tracing",
-        new PathTracerCreator);
-    mRendererFactory->registerCreator("light_tracing",
-        new LightTracerCreator);
-    mRendererFactory->registerCreator("bdpt",
-        new BDPTCreator);
-    mRendererFactory->registerCreator("sppm",
-        new SPPMCreator);
-    mRendererFactory->setDefault("path_tracing");
-    // volume
-    mVolumeFactory->registerCreator("homogeneous",
-        new HomogeneousVolumeCreator);
-    mVolumeFactory->registerCreator("heterogeneous",
-        new HeterogeneousVolumeCreator);
-    mVolumeFactory->setDefault("homogeneous");
-    // geometry
-    mGeometryFactory->registerCreator("sphere", new SphereGeometryCreator);
-    mGeometryFactory->registerCreator("disk", new DiskGeometryCreator);
-    mGeometryFactory->registerCreator("mesh", new MeshGeometryCreator);
-    mGeometryFactory->setDefault("sphere");
-    // texture
-    mFloatTextureFactory->registerCreator("constant",
-        new FloatConstantTextureCreator);
-    mFloatTextureFactory->registerCreator("checkboard",
-        new FloatCheckboardTextureCreator);
-    mFloatTextureFactory->registerCreator("scale",
-        new FloatScaleTextureCreator);
-    mFloatTextureFactory->registerCreator("image",
-        new FloatImageTextureCreator);
-    mFloatTextureFactory->setDefault("constant");
-
-    mColorTextureFactory->registerCreator("constant",
-        new ColorConstantTextureCreator);
-    mColorTextureFactory->registerCreator("checkboard",
-        new ColorCheckboardTextureCreator);
-    mColorTextureFactory->registerCreator("scale",
-        new ColorScaleTextureCreator);
-    mColorTextureFactory->registerCreator("image",
-        new ColorImageTextureCreator);
-    mColorTextureFactory->setDefault("constant");
-    // material
-    mMaterialFactory->registerCreator("lambert",
-        new LambertMaterialCreator);
-    mMaterialFactory->registerCreator("blinn",
-        new BlinnMaterialCreator);
-    mMaterialFactory->registerCreator("transparent",
-        new TransparentMaterialCreator);
-    mMaterialFactory->registerCreator("mirror",
-        new MirrorMaterialCreator);
-    mMaterialFactory->registerCreator("subsurface",
-        new SubsurfaceMaterialCreator);
-    mMaterialFactory->registerCreator("mask",
-        new MaskMaterialCreator);
-    mMaterialFactory->setDefault("lambert");
-    // primitive
-    mPrimitiveFactory->registerCreator("model",
-        new ModelPrimitiveCreator);
-    mPrimitiveFactory->registerCreator("instance",
-        new InstancePrimitiveCreator);
-    mPrimitiveFactory->setDefault("model");
-    // light
-    mLightFactory->registerCreator("point",
-        new PointLightCreator);
-    mLightFactory->registerCreator("directional",
-        new DirectionalLightCreator);
-    mLightFactory->registerCreator("spot",
-        new SpotLightCreator);
-    mLightFactory->registerCreator("area",
-        new AreaLightCreator);
-    mLightFactory->registerCreator("ibl",
-        new ImageBasedLightCreator);
-    mLightFactory->setDefault("point");
-}
-
-static RendererPtr createRenderer(Factory<Renderer, const ParamSet&>& factory,
-	const json& jsonContext) {
+static RendererPtr createRenderer(const json& jsonContext) {
 	std::cout << "render_setting" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet setting;
@@ -181,11 +74,24 @@ static RendererPtr createRenderer(Factory<Renderer, const ParamSet&>& factory,
 	}
 	std::string method = setting.getString("render_method", "path_tracing");
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
-	return RendererPtr(factory.create(method, setting));
+	if (method == "ao") {
+		return RendererPtr(createAO(setting));
+	} else if (method == "whitted") {
+		return RendererPtr(createWhitted(setting));
+	} else if (method == "path_tracing") {
+		return RendererPtr(createPathTracer(setting));
+	} else if (method == "light_tracing") {
+		return RendererPtr(createLightTracer(setting));
+	} else if (method == "bdpt") {
+		return RendererPtr(createBDPT(setting));
+	} else if (method == "sppm") {
+		return RendererPtr(createSPPM(setting));
+	} else {
+		return RendererPtr(createPathTracer(setting));
+	}
 }
 
-static Filter* createFilter(Factory<Filter, const ParamSet&>& factory,
-	const json& jsonContext) {
+static Filter* createFilter(const json& jsonContext) {
 	std::cout << "filter" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet filterParams;
@@ -195,11 +101,21 @@ static Filter* createFilter(Factory<Filter, const ParamSet&>& factory,
 	}
 	std::string type = filterParams.getString("type");
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
-	return factory.create(type, filterParams);
+	if (type == "box") {
+		return createBoxFilter(filterParams);
+	} else if (type == "triangle") {
+		return createTriangleFilter(filterParams);
+	} else if (type == "gaussian") {
+		return createGaussianFilter(filterParams);
+	} else if (type == "mitchell") {
+		return createMitchellFilter(filterParams);
+	} else {
+		return createGaussianFilter(filterParams);
+	}
 }
 
-static Film* createFilm(Factory<Film, const ParamSet&, Filter*>& factory,
-	const json& jsonContext, Filter* filter) {
+static Film* createFilm(const json& jsonContext,
+	const std::string& defaultOutputPath) {
 	std::cout << "film" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet filmParams;
@@ -207,14 +123,15 @@ static Film* createFilm(Factory<Film, const ParamSet&, Filter*>& factory,
 	if (it != jsonContext.end()) {
 		parseParamSet(it.value(), &filmParams);
 	}
-	std::string type = filmParams.getString("type");
+	if (!filmParams.hasString("file")) {
+		filmParams.setString("file", defaultOutputPath);
+	}
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
-	return factory.create(type, filmParams, filter);
+	return createImageFilm(filmParams, createFilter(jsonContext));
 }
 
-static CameraPtr createCamera(Factory<Camera, const ParamSet&, Film*>& cameraFactory,
-	Factory<Primitive, const ParamSet&, const SceneCache&>& primitiveFactory,
-	const json& jsonContext, Film* film, SceneCache* sceneCache) {
+static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
+	const std::string& defaultOutputPath) {
 	std::cout << "camera" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet cameraParams;
@@ -242,22 +159,28 @@ static CameraPtr createCamera(Factory<Camera, const ParamSet&, Film*>& cameraFac
 		std::string materialName = type + "_lens_material";
 		sceneCache->addMaterial(materialName, mtl);
 		modelParams.setString("material", materialName);
-		const Primitive* model(primitiveFactory.create("model",
-			modelParams, *sceneCache));
+		const Primitive* model(createModel(modelParams, *sceneCache));
 		std::string modelName = type + "_lens_model";
 		sceneCache->addPrimitive(modelName, model);
 		cameraParams.setString("model", modelName);
-		const Primitive* instance(primitiveFactory.create("instance",
-			cameraParams, *sceneCache));
+		const Primitive* instance(createInstance(cameraParams, *sceneCache));
 		sceneCache->addInstance(instance);
 	}
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
-	return CameraPtr(cameraFactory.create(type, cameraParams, film));
+	if (type == "perspective") {
+		return CameraPtr(createPerspectiveCamera(cameraParams,
+			createFilm(jsonContext, defaultOutputPath)));
+	} else if (type == "orthographic") {
+		return CameraPtr(createOrthographicCamera(cameraParams,
+			createFilm(jsonContext, defaultOutputPath)));
+	} else {
+		return CameraPtr(createPerspectiveCamera(cameraParams,
+			createFilm(jsonContext, defaultOutputPath)));
+	}
 }
 
-static VolumeRegion* createVolume(
-	Factory<VolumeRegion, const ParamSet&, const SceneCache&>& factory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static VolumeRegion* createVolume(const json& jsonContext,
+	SceneCache* sceneCache) {
 	std::cout << "volume" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet volumeParams;
@@ -268,12 +191,16 @@ static VolumeRegion* createVolume(
 		return nullptr;
 	}
 	std::string type = volumeParams.getString("type");
-	return factory.create(type, volumeParams, *sceneCache);
+	if (type == "homogeneous") {
+		return createHomogeneousVolume(volumeParams, *sceneCache);
+	} else if (type == "heterogeneous") {
+		return createHeterogeneousVolume(volumeParams, *sceneCache);
+	} else {
+		return createHomogeneousVolume(volumeParams, *sceneCache);
+	}
 }
 
-static void createGeometries(
-	Factory<Geometry, const ParamSet&, const SceneCache&>& factory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static void createGeometries(const json& jsonContext, SceneCache* sceneCache) {
 	json::const_iterator it = jsonContext.find("geometries");
 	if (it != jsonContext.end()) {
 		const json& geometriesList = it.value();
@@ -287,8 +214,16 @@ static void createGeometries(
 			parseParamSet(geometryContext, &geometryParams);
 			std::string type = geometryParams.getString("type");
 			std::string name = geometryParams.getString("name");
-			Geometry* geometry(factory.create(type, geometryParams,
-				*sceneCache));
+			Geometry* geometry = nullptr;
+			if (type == "sphere") {
+				geometry = createSphere(geometryParams, *sceneCache);
+			} else if (type == "mesh") {
+				geometry = createPolygonMesh(geometryParams, *sceneCache);
+			} else if (type == "disk") {
+				geometry = createDisk(geometryParams, *sceneCache);
+			} else {
+				geometry = createSphere(geometryParams, *sceneCache);
+			}
 			geometry->init();
 			std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
 			std::cout << "face num: " << geometry->getFaceNum() << std::endl;
@@ -302,10 +237,7 @@ static void createGeometries(
 	}
 }
 
-static void createTextures(
-	Factory<Texture<float>, const ParamSet&, const SceneCache&>& floatTextureFactory,
-	Factory<Texture<Color>, const ParamSet&, const SceneCache&>& colorTextureFactory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static void createTextures(const json& jsonContext, SceneCache* sceneCache) {
 	json::const_iterator it = jsonContext.find("textures");
 	if (it != jsonContext.end()) {
 		const json& texturesList = it.value();
@@ -321,12 +253,44 @@ static void createTextures(
 			std::string name = textureParams.getString("name");
 			std::string textureFormat = textureParams.getString("format", "color");
 			if (textureFormat == "float") {
-				FloatTexturePtr texture(floatTextureFactory.create(type,
-					textureParams, *sceneCache));
+				FloatTexturePtr texture;
+				if (type == "constant") {
+					texture.reset(createFloatConstantTexture(textureParams));
+				} else if (type == "checkerboard") {
+					texture.reset(createFloatCheckerboardTexture(
+						textureParams, *sceneCache));
+				} else if (type == "scale") {
+					texture.reset(createFloatScaleTexture(
+						textureParams, *sceneCache));
+				} else if (type == "image") {
+					texture.reset(createFloatImageTexture(
+						textureParams, *sceneCache));
+				} else {
+					texture.reset(createFloatConstantTexture(
+						textureParams));
+				}
 				sceneCache->addFloatTexture(name, texture);
 			} else if (textureFormat == "color") {
-				ColorTexturePtr texture(colorTextureFactory.create(type,
-					textureParams, *sceneCache));
+				ColorTexturePtr texture;
+				if (type == "constant") {
+					texture.reset(createColorConstantTexture(textureParams));
+				}
+				else if (type == "checkerboard") {
+					texture.reset(createColorCheckerboardTexture(
+						textureParams, *sceneCache));
+				}
+				else if (type == "scale") {
+					texture.reset(createColorScaleTexture(
+						textureParams, *sceneCache));
+				}
+				else if (type == "image") {
+					texture.reset(createColorImageTexture(
+						textureParams, *sceneCache));
+				}
+				else {
+					texture.reset(createColorConstantTexture(
+						textureParams));
+				}
 				sceneCache->addColorTexture(name, texture);
 			} else {
 				std::cerr << "unrecognize texture format" <<
@@ -336,9 +300,7 @@ static void createTextures(
 	}
 }
 
-static void createMaterials(
-	Factory<Material, const ParamSet&, const SceneCache&>& factory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static void createMaterials(const json& jsonContext, SceneCache* sceneCache) {
 	json::const_iterator it = jsonContext.find("materials");
 	if (it != jsonContext.end()) {
 		const json& materialsList = it.value();
@@ -352,17 +314,36 @@ static void createMaterials(
 			parseParamSet(materialContext, &materialParams);
 			std::string type = materialParams.getString("type");
 			std::string name = materialParams.getString("name");
-			MaterialPtr material(factory.create(type, materialParams,
-				*sceneCache));
+			MaterialPtr material;
+			if (type == "lambert") {
+				material.reset(createLambertMaterial(materialParams,
+					*sceneCache));
+			} else if (type == "blinn") {
+				material.reset(createBlinnMaterial(materialParams,
+					*sceneCache));
+			} else if (type == "transparent") {
+				material.reset(createTransparentMaterial(materialParams,
+					*sceneCache));
+			} else if (type == "mirror") {
+				material.reset(createMirrorMaterial(materialParams,
+					*sceneCache));
+			} else if (type == "subsurface") {
+				material.reset(createSubsurfaceMaterial(materialParams,
+					*sceneCache));
+			} else if (type == "mask") {
+				material.reset(createMaskMaterial(materialParams,
+					*sceneCache));
+			} else {
+				material.reset(createLambertMaterial(materialParams,
+					*sceneCache));
+			}
 			sceneCache->addMaterial(name, material);
 			std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 		}
 	}
 }
 
-static void createPrimitives(
-	Factory<Primitive, const ParamSet&, const SceneCache&>& factory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static void createPrimitives(const json& jsonContext, SceneCache* sceneCache) {
 	json::const_iterator it = jsonContext.find("primitives");
 	if (it != jsonContext.end()) {
 		const json& primitivesList = it.value();
@@ -376,8 +357,14 @@ static void createPrimitives(
 			parseParamSet(primitiveContext, &primitiveParams);
 			std::string type = primitiveParams.getString("type");
 			std::string name = primitiveParams.getString("name");
-			const Primitive* primitive = factory.create(type,
-				primitiveParams, *sceneCache);
+			Primitive* primitive = nullptr;
+			if (type == "model") {
+				primitive = createModel(primitiveParams, *sceneCache);
+			} else if (type == "instance") {
+				primitive = createInstance(primitiveParams, *sceneCache);
+			} else {
+				primitive = createModel(primitiveParams, *sceneCache);
+			}
 			sceneCache->addPrimitive(name, primitive);
 			BBox bbox = primitive->getAABB();
 			std::cout << "BBox min: " << bbox.pMin << std::endl;
@@ -391,10 +378,7 @@ static void createPrimitives(
 	}
 }
 
-static void createLights(
-	Factory<Light, const ParamSet&, const SceneCache&>& lightFactory,
-	Factory<Primitive, const ParamSet&, const SceneCache&>& primitiveFactory,
-	const json& jsonContext, SceneCache* sceneCache) {
+static void createLights(const json& jsonContext, SceneCache* sceneCache) {
 	json::const_iterator it = jsonContext.find("lights");
 	if (it != jsonContext.end()) {
 		const json& lightsList = it.value();
@@ -409,7 +393,20 @@ static void createLights(
 			std::string type = lightParams.getString("type");
 			std::string name = lightParams.getString("name");
 
-			Light* light = lightFactory.create(type, lightParams, *sceneCache);
+			Light* light = nullptr;
+			if (type == "point") {
+				light = createPointLight(lightParams, *sceneCache);
+			} else if (type == "directional") {
+				light = createDirectionalLight(lightParams, *sceneCache);
+			} else if (type == "spot") {
+				light = createSpotLight(lightParams, *sceneCache);
+			} else if (type == "area") {
+				light = createAreaLight(lightParams, *sceneCache);
+			} else if (type == "ibl") {
+				light = createImageBasedLight(lightParams, *sceneCache);
+			} else {
+				light = createPointLight(lightParams, *sceneCache);
+			}
 			sceneCache->addLight(light);
 			if (type == "area") {
 				// we need to push this geometry into scene so that it can
@@ -421,19 +418,17 @@ static void createLights(
 					lightParams.getString("geometry"));
 				ColorTexturePtr black(new ConstantTexture<Color>(Color::Black));
 				MaterialPtr mtl(new LambertMaterial(black));
-				string materialName = type + "_" + name + "_material";
+				std::string materialName = type + "_" + name + "_material";
 				sceneCache->addMaterial(materialName, mtl);
 				modelParams.setString("material", materialName);
 				const AreaLight* areaLight = static_cast<AreaLight*>(light);
 				sceneCache->addAreaLight(name, areaLight);
 				modelParams.setString("area_light", name);
-				const Primitive* model(primitiveFactory.create("model",
-					modelParams, *sceneCache));
-				string modelName = type + "_" + name + "_model";
+				const Primitive* model(createModel(modelParams, *sceneCache));
+				std::string modelName = type + "_" + name + "_model";
 				sceneCache->addPrimitive(modelName, model);
 				lightParams.setString("model", modelName);
-				const Primitive* instance(primitiveFactory.create("instance",
-					lightParams, *sceneCache));
+				const Primitive* instance(createInstance(lightParams, *sceneCache));
 				sceneCache->addInstance(instance);
 			}
 			std::cout << std::string(sDelimiterWidth, '-') << std::endl;
@@ -441,7 +436,7 @@ static void createLights(
 	}
 }
 
-RenderContext* ContextLoader::load(const string& filename) {
+RenderContext* ContextLoader::load(const std::string& filename) {
 	std::ifstream jsonFileStream(filename);
 	if (!jsonFileStream.is_open()) {
 		std::cerr << "error reading scene file: " << filename << std::endl;
@@ -467,20 +462,28 @@ RenderContext* ContextLoader::load(const string& filename) {
 		}
 	}
     SceneCache sceneCache(sceneDir);
+	std::size_t extensionIndex = filename.find_last_of('.');
+	// figure out a default output path
+	std::string defaultOutputPath;
+	if (extensionIndex != std::string::npos &&
+		extensionIndex < (filename.length() - 1) &&
+		filename[extensionIndex + 1] != '/' &&
+		filename[extensionIndex + 1] != '\\') {
+		defaultOutputPath = filename.substr(0, extensionIndex) +
+			std::string(".exr");
+	} else {
+		defaultOutputPath = filename + std::string(".exr");
+	}
 
-	RendererPtr renderer = createRenderer(*mRendererFactory, jsonContext);
-	Filter* filter = createFilter(*mFilterFactory, jsonContext);
-	Film* film = createFilm(*mFilmFactory, jsonContext, filter);
-	CameraPtr camera = createCamera(*mCameraFactory, *mPrimitiveFactory,
-		jsonContext, film, &sceneCache);
-	VolumeRegion* volume = createVolume(*mVolumeFactory,
-		jsonContext, &sceneCache);
-	createGeometries(*mGeometryFactory, jsonContext, &sceneCache);
-	createTextures(*mFloatTextureFactory, *mColorTextureFactory,
-		jsonContext, &sceneCache);
-	createMaterials(*mMaterialFactory, jsonContext, &sceneCache);
-	createPrimitives(*mPrimitiveFactory, jsonContext, &sceneCache);
-	createLights(*mLightFactory, *mPrimitiveFactory, jsonContext, &sceneCache);
+	RendererPtr renderer = createRenderer(jsonContext);
+	CameraPtr camera = createCamera(
+		jsonContext, &sceneCache, defaultOutputPath);
+	VolumeRegion* volume = createVolume(jsonContext, &sceneCache);
+	createGeometries(jsonContext, &sceneCache);
+	createTextures(jsonContext, &sceneCache);
+	createMaterials(jsonContext, &sceneCache);
+	createPrimitives(jsonContext, &sceneCache);
+	createLights(jsonContext, &sceneCache);
 
     PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
         1, "equal_count"));

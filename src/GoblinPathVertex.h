@@ -11,14 +11,14 @@ namespace Goblin {
 class PathVertex{
 public:
     PathVertex(): throughput(0.0f),
-        light(NULL), material(NULL), pdfForward(0.0f), pdfBackward(0.0f),
+        light(nullptr), material(nullptr), pdfForward(0.0f), pdfBackward(0.0f),
         isCameraLens(false), isSpecular(false), G(0.0f) {}
 
     PathVertex(const Color& t, const Vector3& p, const Vector3& n,
         const Light* l, float pForward = 0.0f, float pBackward = 0.0f):
         throughput(t),
         fragment(p, n, Vector2::Zero, Vector3::Zero, Vector3::Zero),
-        light(l), material(NULL),
+        light(l), material(nullptr),
         pdfForward(pForward), pdfBackward(pBackward),
         isCameraLens(false), isSpecular(false), G(0.0f) {}
 
@@ -27,7 +27,7 @@ public:
         float pBackward = 0.0f):
         throughput(t),
         fragment(p, n, Vector2::Zero, Vector3::Zero, Vector3::Zero),
-        light(NULL), material(NULL),
+        light(nullptr), material(nullptr),
         pdfForward(pForward), pdfBackward(pBackward),
         isCameraLens(true), isSpecular(false), G(0.0f) {}
 
@@ -47,7 +47,7 @@ public:
     }
 
     bool isLight() const {
-        return light != NULL;
+        return light != nullptr;
     }
 
     const Light* getLight() const {

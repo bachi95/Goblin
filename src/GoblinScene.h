@@ -17,22 +17,22 @@ class VolumeRegion;
 class Scene {
 public:
     Scene(const PrimitivePtr& root, const CameraPtr& camera,
-        const vector<Light*>& lights, VolumeRegion* volumeRegion);
+        const std::vector<Light*>& lights, VolumeRegion* volumeRegion);
 
     ~Scene();
 
     const CameraPtr getCamera() const;
 
-    const vector<Light*>& getLights() const;
+    const std::vector<Light*>& getLights() const;
 
     const VolumeRegion* getVolumeRegion() const;
 
     void collectRenderList(RenderList& rList);
 
-    bool intersect(const Ray& ray, IntersectFilter f = NULL) const;
+    bool intersect(const Ray& ray, IntersectFilter f = nullptr) const;
 
     bool intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection, IntersectFilter f = NULL) const;
+        Intersection* intersection, IntersectFilter f = nullptr) const;
 
     Color evalEnvironmentLight(const Ray& ray) const;
 
@@ -43,7 +43,7 @@ public:
 private:
     PrimitivePtr mAggregate;
     CameraPtr mCamera;
-    vector<Light*> mLights;
+    std::vector<Light*> mLights;
     VolumeRegion* mVolumeRegion;
     CDF1D* mPowerDistribution;
 };
@@ -51,33 +51,33 @@ private:
 class SceneCache {
 public:
     SceneCache(const std::string& sceneRoot);
-    void addGeometry(const string& name, const Geometry* g);
-    void addPrimitive(const string& name, const Primitive* p);
-    void addMaterial(const string& name, const MaterialPtr& m);
-    void addFloatTexture(const string& name, const FloatTexturePtr& t);
-    void addColorTexture(const string& name, const ColorTexturePtr& t);
-    void addAreaLight(const string& name, const AreaLight* l);
+    void addGeometry(const std::string& name, const Geometry* g);
+    void addPrimitive(const std::string& name, const Primitive* p);
+    void addMaterial(const std::string& name, const MaterialPtr& m);
+    void addFloatTexture(const std::string& name, const FloatTexturePtr& t);
+    void addColorTexture(const std::string& name, const ColorTexturePtr& t);
+    void addAreaLight(const std::string& name, const AreaLight* l);
     void addInstance(const Primitive* i);
     void addLight(Light* l);
-    const Geometry* getGeometry(const string& name) const;
-    const Primitive* getPrimitive(const string& name) const;
-    const MaterialPtr& getMaterial(const string& name) const;
-    const FloatTexturePtr& getFloatTexture(const string& name) const;
-    const ColorTexturePtr& getColorTexture(const string& name) const;
-    const AreaLight* getAreaLight(const string& name) const;
+    const Geometry* getGeometry(const std::string& name) const;
+    const Primitive* getPrimitive(const std::string& name) const;
+    const MaterialPtr& getMaterial(const std::string& name) const;
+    const FloatTexturePtr& getFloatTexture(const std::string& name) const;
+    const ColorTexturePtr& getColorTexture(const std::string& name) const;
+    const AreaLight* getAreaLight(const std::string& name) const;
     const PrimitiveList& getInstances() const;
-    const vector<Light*>& getLights() const;
-    string resolvePath(const string& filename) const;
+    const std::vector<Light*>& getLights() const;
+	std::string resolvePath(const std::string& filename) const;
 
 private:
     void initDefault();
 
-    typedef map<string, const Geometry*> GeometryMap;
-    typedef map<string, const Primitive*> PrimitiveMap;
-    typedef map<string, MaterialPtr> MaterialMap;
-    typedef map<string, ColorTexturePtr> ColorTextureMap;
-    typedef map<string, FloatTexturePtr> FloatTextureMap;
-    typedef map<string, const AreaLight*> AreaLightMap;
+    typedef std::map<std::string, const Geometry*> GeometryMap;
+    typedef std::map<std::string, const Primitive*> PrimitiveMap;
+    typedef std::map<std::string, MaterialPtr> MaterialMap;
+    typedef std::map<std::string, ColorTexturePtr> ColorTextureMap;
+    typedef std::map<std::string, FloatTexturePtr> FloatTextureMap;
+    typedef std::map<std::string, const AreaLight*> AreaLightMap;
 
     GeometryMap mGeometryMap;
     PrimitiveMap mPrimitiveMap;
@@ -86,9 +86,9 @@ private:
     ColorTextureMap mColorTextureMap;
     AreaLightMap mAreaLightMap;
     PrimitiveList mInstances;
-    vector<Light*> mLights;
+    std::vector<Light*> mLights;
     std::string mSceneRoot;
-    string mErrorCode;
+	std::string mErrorCode;
 };
 
 }

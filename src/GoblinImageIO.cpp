@@ -11,7 +11,7 @@
 
 namespace Goblin {
 
-static Color* loadImageEXR(const string& filename,
+static Color* loadImageEXR(const std::string& filename,
     int *width, int *height) {
 	static_assert(sizeof(Color) == 4 * sizeof(float),
 		"loadImageEXR assumes class Color in float4 rgba memory format");
@@ -32,7 +32,7 @@ static Color* loadImageEXR(const string& filename,
 	}
 }
 
-static bool writeImageEXR(const string& filename, const Color* colorBuffer,
+static bool writeImageEXR(const std::string& filename, const Color* colorBuffer,
     int width, int height) {
 
 	EXRHeader header;
@@ -97,7 +97,7 @@ static bool writeImageEXR(const string& filename, const Color* colorBuffer,
 	return true;
 }
 
-static bool writeImagePPM(const string& filename, const Color* colorBuffer,
+static bool writeImagePPM(const std::string& filename, const Color* colorBuffer,
 	int width, int height, float gamma = 2.2f) {
 	FILE* fp;
 	errno_t err = fopen_s(&fp, filename.c_str(), "w");
@@ -125,32 +125,32 @@ static bool writeImagePPM(const string& filename, const Color* colorBuffer,
 	return true;
 }
 
-Color* loadImage(const string& filename, int *width, int *height) {
+Color* loadImage(const std::string& filename, int *width, int *height) {
     size_t extOffset = filename.rfind(".");
 
-    if (extOffset == string::npos) {
+    if (extOffset == std::string::npos) {
         std::cerr << "error loading image " << filename <<
             " :unrecognized file format" << std::endl;
-        return NULL;
+        return nullptr;
     }
-    string ext = filename.substr(extOffset);
+	std::string ext = filename.substr(extOffset);
     if (ext == ".exr" || ext == ".EXR") {
         return loadImageEXR(filename, width, height);
     } else {
         // TODO .tiff .tga
         std::cerr << "error loading image " << filename <<
             " :unsupported format " << ext << std::endl;
-        return NULL;
+        return nullptr;
     }
 }
  
-bool writeImage(const string& filename, Color* colorBuffer,
+bool writeImage(const std::string& filename, Color* colorBuffer,
         int width, int height, bool doToneMapping) {
     size_t extOffset = filename.rfind(".");
-    if (extOffset == string::npos) {
+    if (extOffset == std::string::npos) {
         return writeImagePPM(filename + ".ppm", colorBuffer, width, height);
     }
-    string ext = filename.substr(extOffset);
+	std::string ext = filename.substr(extOffset);
     if (ext == ".ppm" || ext == ".PPM") {
         if (doToneMapping) {
             toneMapping(colorBuffer, width, height);
@@ -172,26 +172,26 @@ void bloom(Color* colorBuffer, int width, int height,
         return;
     }
     // build up filter lookup table
-    int filterWidth = ceilInt(bloomRadius * max(width, height)) / 2;
-    float* filter = new float[filterWidth * filterWidth];
+    int filterWidth = ceilInt(bloomRadius * std::max(width, height)) / 2;
+    std::unique_ptr<float[]> filter(new float[filterWidth * filterWidth]);
     for (int y = 0; y < filterWidth; ++y) {
         for (int x = 0; x < filterWidth; ++x) {
             float d = sqrtf((float)(x * x + y * y)) / (float)filterWidth;
-            filter[y * filterWidth + x] = powf(max(0.0f, 1.0f - d), 4.0f);
+            filter[y * filterWidth + x] = powf(std::max(0.0f, 1.0f - d), 4.0f);
         }
     }
 
-    Color* bloomResult = new Color[width * height];
+    std::unique_ptr<Color[]> bloomResult(new Color[width * height]);
     for (int i = 0; i < width * height; ++i) {
         bloomResult[i] = Color::Black;
     }
     // apply filter result to result layer
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            int x0 = max(0, x - filterWidth + 1);
-            int x1 = min(x + filterWidth - 1, width - 1);
-            int y0 = max(0, y - filterWidth + 1);
-            int y1 = min(y + filterWidth - 1, height - 1);
+            int x0 = std::max(0, x - filterWidth + 1);
+            int x1 = std::min(x + filterWidth - 1, width - 1);
+            int y0 = std::max(0, y - filterWidth + 1);
+            int y1 = std::min(y + filterWidth - 1, height - 1);
             int index = y * width + x;
             float weightSum = 0.0f;
             for (int py = y0; py <= y1; ++py) {
@@ -216,8 +216,6 @@ void bloom(Color* colorBuffer, int width, int height,
         colorBuffer[i] = (1.0f - bloomWeight) * colorBuffer[i] +
             bloomWeight * bloomResult[i];
     }
-    delete [] filter;
-    delete [] bloomResult;
 }
 
 // based on Reinhard. E Siggraph 02

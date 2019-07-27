@@ -27,7 +27,7 @@ TriangleFilter::TriangleFilter(float xWidth, float yWidth):
     Filter(xWidth, yWidth) {}
 
 float TriangleFilter::evaluate(float x, float y) const {
-    return  max(0.0f, mXWidth - fabsf(x)) * max(0.0f, mYWidth - fabsf(y));
+    return  std::max(0.0f, mXWidth - fabsf(x)) * std::max(0.0f, mYWidth - fabsf(y));
 }
 
 float TriangleFilter::getNormalizeTerm() const {
@@ -64,7 +64,7 @@ float GaussianFilter::getNormalizeTerm() const {
 }
 
 float GaussianFilter::gaussian(float v, float expbase) const {
-    return max(0.0f, expf(-mAlpha * v * v) - expbase);
+    return std::max(0.0f, expf(-mAlpha * v * v) - expbase);
 }
 
 MitchellFilter::MitchellFilter(float xWidth, float yWidth,

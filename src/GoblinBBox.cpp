@@ -3,20 +3,20 @@
 
 namespace Goblin {
 BBox BBox::expand(const Vector3& p) {
-    pMin = Vector3(min(pMin.x, p.x), min(pMin.y, p.y), min(pMin.z, p.z));
-    pMax = Vector3(max(pMax.x, p.x), max(pMax.y, p.y), max(pMax.z, p.z));
+    pMin = Vector3(std::min(pMin.x, p.x), std::min(pMin.y, p.y), std::min(pMin.z, p.z));
+    pMax = Vector3(std::max(pMax.x, p.x), std::max(pMax.y, p.y), std::max(pMax.z, p.z));
     return *this;
 }
 
 BBox BBox::expand(const BBox& b) {
     pMin = Vector3(
-        min(pMin.x, b.pMin.x),
-        min(pMin.y, b.pMin.y),
-        min(pMin.z, b.pMin.z));
+		std::min(pMin.x, b.pMin.x),
+		std::min(pMin.y, b.pMin.y),
+		std::min(pMin.z, b.pMin.z));
     pMax = Vector3(
-        max(pMax.x, b.pMax.x),
-        max(pMax.y, b.pMax.y),
-        max(pMax.z, b.pMax.z));
+		std::max(pMax.x, b.pMax.x),
+		std::max(pMax.y, b.pMax.y),
+		std::max(pMax.z, b.pMax.z));
     return *this;
 }
 
@@ -42,7 +42,7 @@ bool BBox::intersect(const Ray& ray) const {
         float tFar = (pMax[i] - ray.o[i]) * invDir;
         // ray might travel in/away
         if (tNear > tFar) {
-            swap(tNear, tFar);
+			std::swap(tNear, tFar);
         }
         t0 = (tNear > t0) ? tNear : t0;
         t1 = (tFar < t1) ? tFar : t1;
@@ -62,7 +62,7 @@ bool BBox::intersect(const Ray& ray, float* tMin, float* tMax) const {
         float tFar = (pMax[i] - ray.o[i]) * invDir;
         // ray might travel in/away
         if (tNear > tFar) {
-            swap(tNear, tFar);
+			std::swap(tNear, tFar);
         }
         t0 = (tNear > t0) ? tNear : t0;
         t1 = (tFar < t1) ? tFar : t1;

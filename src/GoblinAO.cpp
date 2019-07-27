@@ -42,7 +42,7 @@ void AORenderer::querySampleQuota(const ScenePtr& scene,
     mAOSampleIndex = sampleQuota->requestTwoDQuota(mAOSampleNum);
 }
 
-Renderer* AORendererCreator::create(const ParamSet& params) const {
+Renderer* createAO(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
     int aoSampleNum = params.getInt("ao_sample_num", 25);

@@ -2,7 +2,6 @@
 #define GOBLIN_MATERIAL_H
 
 #include "GoblinColor.h"
-#include "GoblinFactory.h"
 #include "GoblinTexture.h"
 #include "GoblinUtils.h"
 
@@ -22,9 +21,9 @@ enum BSDFType {
     BSDFGlossy = 1 << 3,
     BSDFSpecular = 1 << 4,
     // alpha masking material
-    BSDFNull = 1 << 5,
+    BSDFnullptr = 1 << 5,
     BSDFAll = BSDFReflection | BSDFTransmission |
-        BSDFDiffuse | BSDFGlossy | BSDFSpecular | BSDFNull
+        BSDFDiffuse | BSDFGlossy | BSDFSpecular | BSDFnullptr
 };
 
 enum BSDFMode {
@@ -144,7 +143,7 @@ public:
     virtual Color sampleBSDF(const Fragment& fragment,
         const Vector3& wo, const BSDFSample& bsdfSample, Vector3* wi,
         float* pdf, BSDFType type = BSDFAll,
-        BSDFType* sampledType = NULL,
+        BSDFType* sampledType = nullptr,
         BSDFMode mode = BSDFRadiance) const = 0;
 
     virtual float pdf(const Fragment& fragment,
@@ -194,7 +193,7 @@ inline bool Material::matchType(BSDFType type, BSDFType toMatch) const {
 }
 
 inline const BSSRDF* Material::getBSSRDF() const {
-    return NULL;
+    return nullptr;
 }
 
 inline BSDFType Material::getType() const {
@@ -368,8 +367,6 @@ public:
         float eta, float g,
         const BumpShaders& bumpShaders = BumpShaders());
 
-    ~SubsurfaceMaterial();
-
     Color bsdf(const Fragment& fragment, const Vector3& wo,
         const Vector3& wi, BSDFType type, BSDFMode mode) const;
 
@@ -386,29 +383,24 @@ public:
 private:
     ColorTexturePtr mReflectFactor;
     float mEta;
-    BSSRDF* mBSSRDF;
+    BSSRDF mBSSRDF;
 };
 
 inline SubsurfaceMaterial::SubsurfaceMaterial(
     const ColorTexturePtr& absorb, const ColorTexturePtr& scatterPrime,
     const ColorTexturePtr& Kr, float eta, float g,
     const BumpShaders& bumpShaders):
-    Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta) {
-    mBSSRDF = new BSSRDF(absorb, scatterPrime, eta, g);
+    Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta),
+    mBSSRDF(absorb, scatterPrime, eta, g)
+{
 }
 
 inline SubsurfaceMaterial::SubsurfaceMaterial(const Color& Kd,
     const Color& diffuseMeanFreePath, const ColorTexturePtr& Kr,
     float eta, float g, const BumpShaders& bumpShaders):
-    Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta) {
-    mBSSRDF = new BSSRDF(Kd, diffuseMeanFreePath, eta, g);
-}
-
-inline SubsurfaceMaterial::~SubsurfaceMaterial() {
-    if (mBSSRDF != NULL) {
-        delete mBSSRDF;
-        mBSSRDF = NULL;
-    }
+    Material(BSDFAll, bumpShaders), mReflectFactor(Kr), mEta(eta),
+    mBSSRDF(Kd, diffuseMeanFreePath, eta, g)
+{
 }
 
 inline Color SubsurfaceMaterial::bsdf(const Fragment& fragment,
@@ -423,7 +415,7 @@ inline float SubsurfaceMaterial::pdf(const Fragment& fragment,
 }
 
 inline const BSSRDF* SubsurfaceMaterial::getBSSRDF() const {
-    return mBSSRDF;
+    return &mBSSRDF;
 }
 
 
@@ -456,7 +448,7 @@ private:
 inline MaskMaterial::MaskMaterial(const FloatTexturePtr& alphaMask,
     const ColorTexturePtr& transparentColor,
     const MaterialPtr& maskedMaterial):
-    Material(BSDFType(maskedMaterial->getType() | BSDFNull),
+    Material(BSDFType(maskedMaterial->getType() | BSDFnullptr),
     BumpShaders()), mAlphaMask(alphaMask),
     mTransparentColor(transparentColor),
     mMaskedMaterial(maskedMaterial) {}
@@ -465,53 +457,24 @@ inline void MaskMaterial::perturb(Fragment* fragment) const {
     mMaskedMaterial->perturb(fragment);
 }
 
-
-class LambertMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
-
+Material* createLambertMaterial(const ParamSet& params,
+    const SceneCache& sceneCache);
     
-class BlinnMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Material* createBlinnMaterial(const ParamSet& params,
+	const SceneCache& sceneCache);
 
+Material* createTransparentMaterial(const ParamSet& params,
+    const SceneCache& sceneCache);
 
-class TransparentMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Material* createMirrorMaterial(const ParamSet& params,
+    const SceneCache& sceneCache);
 
+Material* createSubsurfaceMaterial(const ParamSet& params,
+    const SceneCache& sceneCache);
 
-class MirrorMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
+Material* createMaskMaterial(const ParamSet& params,
+	const SceneCache& sceneCache);
 
-
-class SubsurfaceMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
-
-
-class MaskMaterialCreator : public
-    Creator<Material , const ParamSet&, const SceneCache&> {
-public:
-    Material* create(const ParamSet& params,
-        const SceneCache& sceneCache) const;
-};
 }
 
 #endif //GOBLIN_MATERIAL_H

@@ -67,7 +67,7 @@ enum VolumeEncoding {
 //              where (xpos, ypos, zpos, chan) denotes the lookup location.
 struct VolHeader
 {
-    bool isValid(std::string* msg = NULL) const {
+    bool isValid(std::string* msg = nullptr) const {
         if (mSignature[0] != 'V' ||
             mSignature[1] != 'O' ||
             mSignature[2] != 'L') {
@@ -219,8 +219,8 @@ private:
     std::vector<float> mVoxelData;
 };
 
-VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = NULL) {
-    VolumeGrid* result = NULL;
+VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = nullptr) {
+    VolumeGrid* result = nullptr;
     std::ifstream stream(filePath.c_str(), std::ios::in | std::ios::binary);
     if (stream.is_open()) {
         std::streampos begin = stream.tellg();
@@ -255,7 +255,7 @@ VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = NULL) 
 }
 
 bool writeVolFile(const std::string& filePath,
-    const VolumeGrid* volumeGrid, std::string* error = NULL) {
+    const VolumeGrid* volumeGrid, std::string* error = nullptr) {
     bool result = false;
     std::ofstream stream(filePath.c_str(), std::ios::out | std::ios::binary);
     if (stream.is_open()) {
@@ -270,7 +270,7 @@ bool writeVolFile(const std::string& filePath,
             nFloat * sizeof(float));
         result = true;
     } else {
-        if (error != NULL){
+        if (error != nullptr){
             *error = "fail to open vol file ";
         }
     }
@@ -288,7 +288,7 @@ HeterogeneousVolumeRegion::HeterogeneousVolumeRegion(
 HeterogeneousVolumeRegion::~HeterogeneousVolumeRegion() {
     if (mDensity) {
         delete mDensity;
-        mDensity = NULL;
+        mDensity = nullptr;
     }
 }
 
@@ -297,7 +297,7 @@ void HeterogeneousVolumeRegion::eval(const Vector3& p,
     Vector3 pLocal = mToWorld.invertPoint(p);
     bool inside = mLocalRegion.contain(pLocal);
     if (inside) {
-        attenuation = (mDensity != NULL) ?
+        attenuation = (mDensity != nullptr) ?
             mDensity->eval(pLocal) : Color(0.0f);
         scatter = attenuation * mAlbedo;
         emission = Color(0.0f);
@@ -312,7 +312,7 @@ Color HeterogeneousVolumeRegion::getAttenuation(const Vector3& p) const {
     Vector3 pLocal = mToWorld.invertPoint(p);
     bool inside = mLocalRegion.contain(pLocal);
     if (inside) {
-        return (mDensity != NULL) ? mDensity->eval(pLocal) : Color(0.0f);
+        return (mDensity != nullptr) ? mDensity->eval(pLocal) : Color(0.0f);
     } else {
         return Color(0.0f);
     }
@@ -339,8 +339,8 @@ Color HeterogeneousVolumeRegion::transmittance(const Ray& ray,
     return Color(exp(-tau.r), exp(-tau.g), exp(-tau.b));
 }
 
-VolumeRegion* HomogeneousVolumeCreator::create(
-    const ParamSet& params, const SceneCache& sceneCache) const {
+VolumeRegion* createHomogeneousVolume(
+    const ParamSet& params, const SceneCache& sceneCache) {
     Vector3 attenuation = params.getVector3("attenuation");
     Vector3 albedo = params.getVector3("albedo");
     Vector3 emission = params.getVector3("emission");
@@ -357,13 +357,13 @@ VolumeRegion* HomogeneousVolumeCreator::create(
         g, sampleNum, b, toWorld);
 }
 
-VolumeRegion* HeterogeneousVolumeCreator::create(
-    const ParamSet& params, const SceneCache& sceneCache) const {
+VolumeRegion* createHeterogeneousVolume(
+    const ParamSet& params, const SceneCache& sceneCache) {
     std::string densityPath = sceneCache.resolvePath(
         params.getString("density_grid"));
     std::string error;
     VolumeGrid* densityGrid = loadVolFile(densityPath, &error);
-    if (densityGrid == NULL) {
+    if (densityGrid == nullptr) {
         std::cerr << error << std::endl;
         // construct a one entry default VolumeGid as fallback
         float d = 1.0f;

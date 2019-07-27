@@ -1,7 +1,6 @@
 #ifndef GOBLIN_WHITTED_H
 #define GOBLIN_WHITTED_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 
 namespace Goblin {
@@ -21,11 +20,8 @@ private:
     int mBssrdfSampleNum;
 };
 
-class WhittedRendererCreator : public 
-    Creator<Renderer , const ParamSet&> {
-public:
-    Renderer* create(const ParamSet& params) const;
-};
+Renderer* createWhitted(const ParamSet& params);
+
 }
 
 #endif //GOBLIN_WHITTED_H

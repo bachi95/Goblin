@@ -9,10 +9,10 @@
 namespace Goblin {
 
 Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
-    const vector<Light*>& lights, VolumeRegion* volumeRegion):
+    const std::vector<Light*>& lights, VolumeRegion* volumeRegion):
     mAggregate(root), mCamera(camera), mLights(lights), 
-    mVolumeRegion(volumeRegion), mPowerDistribution(NULL) {
-    vector<float> lightPowers;
+    mVolumeRegion(volumeRegion), mPowerDistribution(nullptr) {
+    std::vector<float> lightPowers;
     for (size_t i = 0; i < lights.size(); ++i) {
         lightPowers.push_back(
             lights[i]->power(*this).luminance());
@@ -23,15 +23,15 @@ Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
 Scene::~Scene() {        
     for (size_t i = 0; i < mLights.size(); ++i) {
         delete mLights[i];
-        mLights[i] = NULL;
+        mLights[i] = nullptr;
     }
     if (mVolumeRegion) {
         delete mVolumeRegion;
-        mVolumeRegion = NULL;
+        mVolumeRegion = nullptr;
     }
     if (mPowerDistribution) {
         delete mPowerDistribution;
-        mPowerDistribution = NULL;
+        mPowerDistribution = nullptr;
     }
     Geometry::clearGeometryCache();
     Primitive::clearAllocatedPrimitives();
@@ -48,7 +48,7 @@ void Scene::getBoundingSphere(Vector3* center, float* radius) const {
     mAggregate->getAABB().getBoundingSphere(center, radius);
 }
 
-const vector<Light*>& Scene::getLights() const {
+const std::vector<Light*>& Scene::getLights() const {
     return mLights;
 }
 
@@ -85,7 +85,7 @@ void Scene::collectRenderList(RenderList& rList) {
 const Light* Scene::sampleLight(float u, float* pdf) const {
     if (mLights.size() == 0) {
         *pdf = 0.0f;
-        return NULL;
+        return nullptr;
     }
     int lightIndex = mPowerDistribution->sampleDiscrete(u, pdf);
     return mLights[lightIndex];
@@ -111,41 +111,40 @@ void SceneCache::initDefault() {
     ParamSet modelParams;
     modelParams.setString("geometry", mErrorCode);
     modelParams.setString("material", mErrorCode);
-    const Primitive* errorPrimitive = 
-        ModelPrimitiveCreator().create(modelParams, *this);
+    const Primitive* errorPrimitive = createModel(modelParams, *this);
     addPrimitive(mErrorCode, errorPrimitive);
-    addAreaLight(mErrorCode, NULL);
+    addAreaLight(mErrorCode, nullptr);
 }
 
-void SceneCache::addGeometry(const string& name, const Geometry* g) {
-    std::pair<string, const Geometry*> pair(name, g);
+void SceneCache::addGeometry(const std::string& name, const Geometry* g) {
+    std::pair<std::string, const Geometry*> pair(name, g);
     mGeometryMap.insert(pair); 
 }
 
-void SceneCache::addPrimitive(const string& name, const Primitive* p) {
-    std::pair<string, const Primitive*> pair(name, p);
+void SceneCache::addPrimitive(const std::string& name, const Primitive* p) {
+    std::pair<std::string, const Primitive*> pair(name, p);
     mPrimitiveMap.insert(pair); 
 }
 
-void SceneCache::addMaterial(const string& name, const MaterialPtr& m) {
-    std::pair<string, MaterialPtr> pair(name, m);
+void SceneCache::addMaterial(const std::string& name, const MaterialPtr& m) {
+    std::pair<std::string, MaterialPtr> pair(name, m);
     mMaterialMap.insert(pair); 
 }
 
-void SceneCache::addFloatTexture(const string& name, 
+void SceneCache::addFloatTexture(const std::string& name,
     const FloatTexturePtr& t) {
-    std::pair<string, FloatTexturePtr> pair(name, t);
+    std::pair<std::string, FloatTexturePtr> pair(name, t);
     mFloatTextureMap.insert(pair); 
 }
 
-void SceneCache::addAreaLight(const string& name, const AreaLight* l) {
-    std::pair<string, const AreaLight*> pair(name, l);
+void SceneCache::addAreaLight(const std::string& name, const AreaLight* l) {
+    std::pair<std::string, const AreaLight*> pair(name, l);
     mAreaLightMap.insert(pair); 
 }
 
-void SceneCache::addColorTexture(const string& name, 
+void SceneCache::addColorTexture(const std::string& name,
     const ColorTexturePtr& t) {
-    std::pair<string, ColorTexturePtr> pair(name, t);
+    std::pair<std::string, ColorTexturePtr> pair(name, t);
     mColorTextureMap.insert(pair); 
 }
 
@@ -157,7 +156,7 @@ void SceneCache::addLight(Light* l) {
     mLights.push_back(l);
 }
 
-const Geometry* SceneCache::getGeometry(const string& name) const {
+const Geometry* SceneCache::getGeometry(const std::string& name) const {
     GeometryMap::const_iterator it = mGeometryMap.find(name);
     if (it == mGeometryMap.end()) {
         std::cerr << "Geometry " << name << " not defined!\n";
@@ -166,7 +165,7 @@ const Geometry* SceneCache::getGeometry(const string& name) const {
     return it->second;
 }
 
-const Primitive* SceneCache::getPrimitive(const string& name) const {
+const Primitive* SceneCache::getPrimitive(const std::string& name) const {
     PrimitiveMap::const_iterator it = mPrimitiveMap.find(name);
     if (it == mPrimitiveMap.end()) {
         std::cerr << "Primitive " << name << " not defined!\n";
@@ -175,7 +174,7 @@ const Primitive* SceneCache::getPrimitive(const string& name) const {
     return it->second;
 }
 
-const MaterialPtr& SceneCache::getMaterial(const string& name) const {
+const MaterialPtr& SceneCache::getMaterial(const std::string& name) const {
     MaterialMap::const_iterator it = mMaterialMap.find(name);
     if (it == mMaterialMap.end()) {
         std::cerr << "Material " << name << " not defined!\n";
@@ -185,7 +184,7 @@ const MaterialPtr& SceneCache::getMaterial(const string& name) const {
 }
 
 const FloatTexturePtr& SceneCache::getFloatTexture(
-    const string& name) const {
+    const std::string& name) const {
     FloatTextureMap::const_iterator it = 
         mFloatTextureMap.find(name);
     if (it == mFloatTextureMap.end()) {
@@ -196,7 +195,7 @@ const FloatTexturePtr& SceneCache::getFloatTexture(
 }
 
 const ColorTexturePtr& SceneCache::getColorTexture(
-    const string& name) const {
+    const std::string& name) const {
     ColorTextureMap::const_iterator it = mColorTextureMap.find(name);
     if (it == mColorTextureMap.end()) {
         std::cerr << "Texture " << name << " not defined!\n";
@@ -205,7 +204,7 @@ const ColorTexturePtr& SceneCache::getColorTexture(
     return it->second;
 }
 
-const AreaLight* SceneCache::getAreaLight(const string& name) const {
+const AreaLight* SceneCache::getAreaLight(const std::string& name) const {
     AreaLightMap::const_iterator it = mAreaLightMap.find(name);
     if (mAreaLightMap.find(name) == mAreaLightMap.end()) {
         std::cerr << "Area Light " << name << " not defined!\n";
@@ -218,11 +217,11 @@ const PrimitiveList& SceneCache::getInstances() const {
     return mInstances;
 }
 
-const vector<Light*>& SceneCache::getLights() const {
+const std::vector<Light*>& SceneCache::getLights() const {
     return mLights;
 }
 
-string SceneCache::resolvePath(const string& filename) const {
+std::string SceneCache::resolvePath(const std::string& filename) const {
     if (filename[0] == '/' || filename[1] == ':') {
 		// absolute path
         return filename;

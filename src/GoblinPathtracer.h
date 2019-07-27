@@ -1,7 +1,6 @@
 #ifndef GOBLIN_PATHTRACER_H
 #define GOBLIN_PATHTRACER_H
 
-#include "GoblinFactory.h"
 #include "GoblinRenderer.h"
 
 namespace Goblin {
@@ -25,11 +24,8 @@ private:
     int mBssrdfSampleNum;
 };
 
-class PathTracerCreator : public 
-    Creator<Renderer , const ParamSet&> {
-public:
-    Renderer* create(const ParamSet& params) const;
-};
+Renderer* createPathTracer(const ParamSet& params);
+
 }
 
 #endif //GOBLIN_PATHTRACER_H

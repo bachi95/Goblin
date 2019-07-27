@@ -125,8 +125,7 @@ void Disk::buildSlices() {
 	}
 }
 
-Geometry* DiskGeometryCreator::create(const ParamSet& params,
-	const SceneCache& sceneCache) const {
+Geometry* createDisk(const ParamSet& params, const SceneCache& sceneCache) {
 	float radius = params.getFloat("radius", 1.0f);
 	return new Disk(radius);
 }

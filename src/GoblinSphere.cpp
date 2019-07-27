@@ -5,7 +5,7 @@
 #include "GoblinSampler.h"
 #include "GoblinScene.h"
 
-using namespace Goblin;
+namespace Goblin {
 
 Sphere::Sphere(float r, size_t numSlices, size_t numStacks):
     mRadius(r), 
@@ -126,7 +126,7 @@ Vector3 Sphere::sample(const Vector3& p, float u1, float u2,
     coordinateAxises(zAxis, &xAxis, &yAxis);
     
     float sinThetaMax2 = squaredRadius / squaredDistance;
-    float cosThetaMax = sqrt(max(0.0f, 1.0f - sinThetaMax2));
+    float cosThetaMax = sqrt(std::max(0.0f, 1.0f - sinThetaMax2));
 
     Ray ray(p, 
         uniformSampleCone(u1, u2, cosThetaMax, xAxis, yAxis, zAxis), 1e-3f);
@@ -152,7 +152,7 @@ float Sphere::pdf(const Vector3& p, const Vector3& wi) const {
     }
     // outside the sphere, use cone pdf 
     float sinThetaMax2 = squaredRadius / squaredDistance;
-    float cosThetaMax = sqrt(max(0.0f, 1.0f - sinThetaMax2));
+    float cosThetaMax = sqrt(std::max(0.0f, 1.0f - sinThetaMax2));
     return uniformConePdf(cosThetaMax);
 }
 
@@ -240,9 +240,9 @@ void Sphere::buildStacks() {
     }
 }
 
-
-Geometry* SphereGeometryCreator::create(const ParamSet& params, 
-    const SceneCache& sceneCache) const {
+Geometry* createSphere(const ParamSet& params, const SceneCache& sceneCache) {
     float radius = params.getFloat("radius", 1.0f);
     return new Sphere(radius);
+}
+
 }

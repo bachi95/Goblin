@@ -14,7 +14,7 @@ LightSampleIndex::LightSampleIndex(SampleQuota* sampleQuota,
     SampleIndex twoDIndex = sampleQuota->requestTwoDQuota(requestNum);
     // theoretically this two should be the same...
     // this is just a paranoid double check
-    samplesNum = min(oneDIndex.sampleNum, twoDIndex.sampleNum);
+    samplesNum = std::min(oneDIndex.sampleNum, twoDIndex.sampleNum);
     componentIndex = oneDIndex.offset;
     geometryIndex = twoDIndex.offset;
 }
@@ -291,7 +291,7 @@ float SpotLight::falloff(const Vector3& w) const {
 }
 
 GeometrySet::GeometrySet(const Geometry* geometry):
-    mSumArea(0.0f), mAreaDistribution(NULL) {
+    mSumArea(0.0f), mAreaDistribution(nullptr) {
     if (geometry->intersectable()) {
         mGeometries.push_back(geometry);
     } else {
@@ -308,9 +308,9 @@ GeometrySet::GeometrySet(const Geometry* geometry):
 }
 
 GeometrySet::~GeometrySet() {
-    if (mAreaDistribution != NULL ) {
+    if (mAreaDistribution != nullptr ) {
         delete mAreaDistribution;
-        mAreaDistribution = NULL;
+        mAreaDistribution = nullptr;
     }
 }
 
@@ -356,16 +356,16 @@ AreaLight::AreaLight(const Color& Le, const Geometry* geometry,
     if (!isEqual(scale.x, scale.y) ||
         !isEqual(scale.y, scale.z) ||
         !isEqual(scale.z, scale.x)) {
-        cerr << "Area light only support uniform scaling. "
-            "Non uniform scaling result to undefined behavior. " <<endl;
+		std::cerr << "Area light only support uniform scaling. "
+            "Non uniform scaling result to undefined behavior. " << std::endl;
     }
     mGeometrySet = new GeometrySet(geometry);
 }
 
 AreaLight::~AreaLight() {
-    if (mGeometrySet != NULL) {
+    if (mGeometrySet != nullptr) {
         delete mGeometrySet;
-        mGeometrySet = NULL;
+        mGeometrySet = nullptr;
     }
 }
 
@@ -465,10 +465,10 @@ float AreaLight::pdf(const Vector3& p, const Vector3& wi) const {
 }
 
 
-ImageBasedLight::ImageBasedLight(const string& radianceMap,
+ImageBasedLight::ImageBasedLight(const std::string& radianceMap,
     const Color& filter, const Quaternion& orientation,
     uint32_t samplesNum):
-    mRadiance(NULL), mDistribution(NULL),
+    mRadiance(nullptr), mDistribution(nullptr),
     mSamplesNum(samplesNum), mSampleMIPLevel(0) {
     // Make default orientation facing the center of
     // environment map since spherical coordinate is z-up
@@ -477,7 +477,7 @@ ImageBasedLight::ImageBasedLight(const string& radianceMap,
     mToWorld.setOrientation(orientation * mToWorld.getOrientation());
     int width, height;
     Color* buffer = loadImage(radianceMap, &width, &height);
-    if (buffer == NULL) {
+    if (buffer == nullptr) {
         std::cerr << "errror loading image " << radianceMap << std::endl;
         width = 1;
         height = 1;
@@ -492,7 +492,7 @@ ImageBasedLight::ImageBasedLight(const string& radianceMap,
     int maxLevel = mRadiance->getLevelsNum() - 1;
     mAverageRadiance = mRadiance->lookup(maxLevel, 0.0f, 0.0f);
 
-    int buildDistLevel = max(0, maxLevel - 8);
+    int buildDistLevel = std::max(0, maxLevel - 8);
     const ImageBuffer<Color>* distBuffer =
         mRadiance->getImageBuffer(buildDistLevel);
     Color* distImage = distBuffer->image;
@@ -511,13 +511,13 @@ ImageBasedLight::ImageBasedLight(const string& radianceMap,
 }
 
 ImageBasedLight::~ImageBasedLight() {
-    if (mRadiance != NULL) {
+    if (mRadiance != nullptr) {
         delete mRadiance;
-        mRadiance = NULL;
+        mRadiance = nullptr;
     }
-    if (mDistribution != NULL) {
+    if (mDistribution != nullptr) {
         delete mDistribution;
-        mDistribution = NULL;
+        mDistribution = nullptr;
     }
 }
 
@@ -633,26 +633,24 @@ float ImageBasedLight::pdf(const Vector3& p, const Vector3& wi) const {
 }
 
     
-Light* PointLightCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Light* createPointLight(const ParamSet& params,
+	const SceneCache& sceneCache) {
     Vector3 intensity = params.getVector3("intensity");
     Vector3 position = params.getVector3("position");
     return new PointLight(
 		Color(intensity[0], intensity[1], intensity[2]), position);
 }
 
-
-Light* DirectionalLightCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Light* createDirectionalLight(const ParamSet& params,
+	const SceneCache& sceneCache) {
     Vector3 radiance = params.getVector3("radiance");
     Vector3 direction = params.getVector3("direction");
     return new DirectionalLight(
 		Color(radiance[0], radiance[1], radiance[2]), direction);
 }
 
-
-Light* SpotLightCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Light* createSpotLight(const ParamSet& params,
+	const SceneCache& sceneCache) {
     Vector3 intensity = params.getVector3("intensity");
     Vector3 position = params.getVector3("position");
     Vector3 direction;
@@ -668,11 +666,10 @@ Light* SpotLightCreator::create(const ParamSet& params,
 		position, direction, cosThetaMax, cosFalloffStart);
 }
 
-
-Light* AreaLightCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
+Light* createAreaLight(const ParamSet& params,
+	const SceneCache& sceneCache) {
 	Vector3 radiance = params.getVector3("radiance");
-    string geoName = params.getString("geometry");
+	std::string geoName = params.getString("geometry");
     const Geometry* geometry = sceneCache.getGeometry(geoName);
     // TODO: this cause a problem that we can't run time modify
     // the transform for area light since it's not tied in between
@@ -685,11 +682,10 @@ Light* AreaLightCreator::create(const ParamSet& params,
 		geometry, toWorld, sampleNum);
 }
 
-
-Light* ImageBasedLightCreator::create(const ParamSet& params,
-    const SceneCache& sceneCache) const {
-    string filename = params.getString("file");
-    string filePath = sceneCache.resolvePath(filename);
+Light* createImageBasedLight(const ParamSet& params,
+	const SceneCache& sceneCache) {
+	std::string filename = params.getString("file");
+	std::string filePath = sceneCache.resolvePath(filename);
     Vector3 filter = params.getVector3("filter");
     Quaternion orientation = getQuaternion(params);
     int sampleNum = params.getInt("sample_num", 1);

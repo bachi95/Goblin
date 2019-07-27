@@ -27,7 +27,7 @@ public:
 
 class RenderingTLS : public ThreadLocalStorage {
 public:
-    RenderingTLS(const Film& film): mTile(NULL), mSampleCount(0) {
+    RenderingTLS(const Film& film): mTile(nullptr), mSampleCount(0) {
         ImageRect r;
         film.getImageRect(r);
         const FilterTable& filterTable = film.getFilterTable();
@@ -37,7 +37,7 @@ public:
     ~RenderingTLS() {
         if (mTile) {
             delete mTile;
-            mTile = NULL;
+            mTile = nullptr;
         }
     }
 
@@ -75,12 +75,12 @@ public:
             mTotalSampleCount += renderingTLS->getSampleCount();
 
             const DebugData& debugData = renderingTLS->getDebugData();
-            const vector<pair<Ray, Color> >& debugRays =
+            const std::vector<std::pair<Ray, Color> >& debugRays =
                 debugData.getRays();
             for (size_t i = 0; i < debugRays.size(); ++i) {
                 mDebugData.addRay(debugRays[i].first, debugRays[i].second);
             }
-            const vector<pair<Vector3, Color> >& debugPoints =
+            const std::vector<std::pair<Vector3, Color> >& debugPoints =
                 debugData.getPoints();
             for (size_t i = 0; i < debugPoints.size(); ++i) {
                 mDebugData.addPoint(debugPoints[i].first,
