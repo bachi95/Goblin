@@ -631,7 +631,7 @@ void SPPM::querySampleQuota(const ScenePtr& scene,
 Renderer* createSPPM(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
-    int maxPathLength = params.getInt("max_path_length", 5);
+	int maxPathLength = std::max(1, params.getInt("max_ray_depth", 5));
     float initialRadius = params.getFloat("initial_radius",
         PixelData::sInvalidRadius);
     return new SPPM(samplePerPixel, threadNum, maxPathLength,

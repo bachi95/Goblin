@@ -1,6 +1,8 @@
 #ifndef GOBLIN_UTILS_H
 #define GOBLIN_UTILS_H
 
+#include "GoblinVector.h"
+
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -11,11 +13,8 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <stdint.h>
 #include <thread>
-
-#include "GoblinVector.h"
-
-#include <stdint.h> 
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <float.h>

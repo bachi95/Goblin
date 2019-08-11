@@ -200,7 +200,7 @@ void Film::addDebugPoint(const Vector2& p, const Color& c) {
 }
 
 Film* createImageFilm(const ParamSet& params, Filter* filter) {
-	Vector2 res = params.getVector2("resolution", Vector2(640, 480));
+	Vector2 res = params.getVector2("resolution", Vector2(512, 512));
 	int xRes = static_cast<int>(res.x);
 	int yRes = static_cast<int>(res.y);
 
