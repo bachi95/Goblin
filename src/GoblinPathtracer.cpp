@@ -73,7 +73,7 @@ Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
     std::vector<Ray> debugRays;
     Color throughput(1.0f);
     bool firstBounce = true;
-    for (int bounces = 0; bounces < mMaxRayDepth; ++bounces) {
+    for (int bounces = 0; bounces < mMaxRayDepth - 1; ++bounces) {
         intersection.computeUVDifferential(currentRay);
         LightSample ls(sample, mLightSampleIndexes[bounces], 0);
         BSDFSample bs(sample, mBSDFSampleIndexes[bounces], 0);
@@ -210,7 +210,7 @@ void PathTracer::querySampleQuota(const ScenePtr& scene,
 Renderer* createPathTracer(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
-    int maxRayDepth = params.getInt("max_ray_depth", 5);
+    int maxRayDepth = std::max(1, params.getInt("max_ray_depth", 5));
     int bssrdfSampleNum = params.getInt("bssrdf_sample_num", 4);
     return new PathTracer(samplePerPixel, threadNum, 
         maxRayDepth, bssrdfSampleNum);

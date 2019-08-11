@@ -621,7 +621,7 @@ void BDPT::querySampleQuota(const ScenePtr& scene,
 Renderer* createBDPT(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
-    int maxPathLength = params.getInt("max_path_length", 5);
+    int maxPathLength = std::max(1, params.getInt("max_ray_depth", 5));
     int debugS = params.getInt("debug_s", -1);
     int debugT = params.getInt("debug_t", -1);
     bool debugNoMIS = params.getBool("debug_no_mis", false);

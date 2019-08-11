@@ -394,7 +394,7 @@ void LightTracer::querySampleQuota(const ScenePtr& scene,
 Renderer* createLightTracer(const ParamSet& params) {
     int samplePerPixel = params.getInt("sample_per_pixel", 1);
     int threadNum = params.getInt("thread_num", getMaxThreadNum());
-    int maxPathLength = params.getInt("max_path_length", 5);
+	int maxPathLength = std::max(1, params.getInt("max_ray_depth", 5));
     return new LightTracer(samplePerPixel, threadNum, maxPathLength);
 }
 }

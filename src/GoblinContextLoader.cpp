@@ -135,9 +135,11 @@ static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
 	std::cout << "camera" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	ParamSet cameraParams;
+	json cameraContext;
 	json::const_iterator it = jsonContext.find("camera");
 	if (it != jsonContext.end()) {
-		parseParamSet(it.value(), &cameraParams);
+		cameraContext = it.value();
+		parseParamSet(cameraContext, &cameraParams);
 	}
 	std::string type = cameraParams.getString("type");
 	// need to add lens into scene so that it can be intersected by
@@ -169,13 +171,13 @@ static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	if (type == "perspective") {
 		return CameraPtr(createPerspectiveCamera(cameraParams,
-			createFilm(jsonContext, defaultOutputPath)));
+			createFilm(cameraContext, defaultOutputPath)));
 	} else if (type == "orthographic") {
 		return CameraPtr(createOrthographicCamera(cameraParams,
-			createFilm(jsonContext, defaultOutputPath)));
+			createFilm(cameraContext, defaultOutputPath)));
 	} else {
 		return CameraPtr(createPerspectiveCamera(cameraParams,
-			createFilm(jsonContext, defaultOutputPath)));
+			createFilm(cameraContext, defaultOutputPath)));
 	}
 }
 
