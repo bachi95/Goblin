@@ -11,26 +11,40 @@ std::vector<Model*> Model::refinedModels;
 Model::Model(const Geometry* geometry, const MaterialPtr& material,
     const AreaLight* areaLight, bool isCameraLens):
     mGeometry(geometry), mMaterial(material), mAreaLight(areaLight),
-    mIsCameraLens(isCameraLens) {}
+    mIsCameraLens(isCameraLens) {
+	if (!mGeometry->intersectable()) {
+		PrimitiveList primitives;
+		primitives.push_back(this);
+		mBVH.reset(new BVH(primitives, 1, "equal_count"));
+	}
+}
 
 bool Model::intersect(const Ray& ray, IntersectFilter f) const {
-    if (f != nullptr && !f(this, ray)) {
-        return false;
-    }
-    return mGeometry->intersect(ray);
+	if (mBVH) {
+		return mBVH->intersect(ray, f);
+	} else {
+		if (f != nullptr && !f(this, ray)) {
+			return false;
+		}
+		return mGeometry->intersect(ray);
+	}
 }
 
 bool Model::intersect(const Ray& ray, float* epsilon, 
     Intersection* intersection, IntersectFilter f) const {
-    if (f != nullptr && !f(this, ray)) {
-        return false;
-    }
-    bool hit = mGeometry->intersect(ray, epsilon, 
-        &intersection->fragment);
-    if (hit) {
-        intersection->primitive = this;
-    }
-    return hit;
+	if (mBVH) {
+		return mBVH->intersect(ray, epsilon, intersection, f);
+	} else {
+		if (f != nullptr && !f(this, ray)) {
+			return false;
+		}
+		bool hit = mGeometry->intersect(ray, epsilon,
+			&intersection->fragment);
+		if (hit) {
+			intersection->primitive = this;
+		}
+		return hit;
+	}
 }
 
 BBox Model::getAABB() const {
@@ -52,12 +66,6 @@ void Model::refine(PrimitiveList& refinedPrimitives) const {
     }
 }
 
-void Model::collectRenderList(RenderList& rList, 
-    const Matrix4& m) const {
-    rList.push_back(Renderable(m, mGeometry));
-}
-
-
 Primitive* createModel(const ParamSet& params,
     const SceneCache& sceneCache) {
 
@@ -75,16 +83,7 @@ Primitive* createModel(const ParamSet& params,
     Primitive* model = new Model(geometry, material, areaLight,
         isCameraLens);
     Primitive::allocatedPrimitives.push_back(model);
-
-    if (!model->intersectable()) {
-        PrimitiveList primitives;
-        primitives.push_back(model);
-        Primitive* aggregate = new BVH(primitives, 1, "equal_count");
-        Primitive::allocatedPrimitives.push_back(aggregate);
-        return aggregate;
-    } else {
-        return model;
-    }
+	return model;
 }
 
 }

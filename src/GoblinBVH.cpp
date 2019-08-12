@@ -33,8 +33,22 @@ struct PointsComparator {
 
 BVH::BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
     const std::string& splitMethod):
-    Aggregate(primitives),
+	mSplitMethod(EqualCount),
     mMaxPrimitivesNum(maxPrimitivesNum) {
+
+	for (size_t i = 0; i < primitives.size(); ++i) {
+		const Primitive* primitive = primitives[i];
+		if (primitive->intersectable()) {
+			mRefinedPrimitives.push_back(primitives[i]);
+		} else {
+			primitive->refine(mRefinedPrimitives);
+		}
+	}
+
+	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+		mAABB.expand(mRefinedPrimitives[i]->getAABB());
+	}
+
     if (mRefinedPrimitives.size() == 0) {
         return;
     }

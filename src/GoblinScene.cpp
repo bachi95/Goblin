@@ -8,9 +8,10 @@
 
 namespace Goblin {
 
-Scene::Scene(const PrimitivePtr& root, const CameraPtr& camera,
+Scene::Scene(const PrimitiveList& inputPrimitives, const CameraPtr& camera,
     const std::vector<Light*>& lights, VolumeRegion* volumeRegion):
-    mAggregate(root), mCamera(camera), mLights(lights), 
+    mBVH(inputPrimitives, 1, "equal_count"),
+	mCamera(camera), mLights(lights),
     mVolumeRegion(volumeRegion), mPowerDistribution(nullptr) {
     std::vector<float> lightPowers;
     for (size_t i = 0; i < lights.size(); ++i) {
@@ -45,7 +46,7 @@ const CameraPtr Scene::getCamera() const {
 }
 
 void Scene::getBoundingSphere(Vector3* center, float* radius) const {
-    mAggregate->getAABB().getBoundingSphere(center, radius);
+    mBVH.getAABB().getBoundingSphere(center, radius);
 }
 
 const std::vector<Light*>& Scene::getLights() const {
@@ -57,12 +58,12 @@ const VolumeRegion* Scene::getVolumeRegion() const {
 }
 
 bool Scene::intersect(const Ray& ray, IntersectFilter f) const {
-    return mAggregate->intersect(ray, f);
+    return mBVH.intersect(ray, f);
 }
 
 bool Scene::intersect(const Ray& ray, float* epsilon, 
     Intersection* intersection, IntersectFilter f) const {
-    bool isIntersect = mAggregate->intersect(ray, epsilon, intersection, f);
+    bool isIntersect = mBVH.intersect(ray, epsilon, intersection, f);
     if (isIntersect) {
         const MaterialPtr& material = intersection->getMaterial();
         material->perturb(&intersection->fragment);
@@ -76,10 +77,6 @@ Color Scene::evalEnvironmentLight(const Ray& ray) const {
         Lenv += mLights[i]->Le(ray);
     }
     return Lenv;
-}
-
-void Scene::collectRenderList(RenderList& rList) {
-    mAggregate->collectRenderList(rList);
 }
 
 const Light* Scene::sampleLight(float u, float* pdf) const {

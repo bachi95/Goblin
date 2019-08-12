@@ -487,9 +487,7 @@ RenderContext* ContextLoader::load(const std::string& filename) {
 	createPrimitives(jsonContext, &sceneCache);
 	createLights(jsonContext, &sceneCache);
 
-    PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
-        1, "equal_count"));
-    ScenePtr scene(new Scene(aggregate, camera,
+    ScenePtr scene(new Scene(sceneCache.getInstances(), camera,
         sceneCache.getLights(), volume));
 
     RenderContext* ctx = new RenderContext(renderer, scene);

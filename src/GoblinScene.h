@@ -1,6 +1,7 @@
 #ifndef GOBLIN_SCENE_H
 #define GOBLIN_SCENE_H
 
+#include "GoblinBVH.h"
 #include "GoblinLight.h"
 #include "GoblinMaterial.h"
 #include "GoblinPrimitive.h"
@@ -16,7 +17,7 @@ class VolumeRegion;
 
 class Scene {
 public:
-    Scene(const PrimitivePtr& root, const CameraPtr& camera,
+    Scene(const PrimitiveList& inputPrimitives, const CameraPtr& camera,
         const std::vector<Light*>& lights, VolumeRegion* volumeRegion);
 
     ~Scene();
@@ -26,8 +27,6 @@ public:
     const std::vector<Light*>& getLights() const;
 
     const VolumeRegion* getVolumeRegion() const;
-
-    void collectRenderList(RenderList& rList);
 
     bool intersect(const Ray& ray, IntersectFilter f = nullptr) const;
 
@@ -41,7 +40,7 @@ public:
     const Light* sampleLight(float u, float* pdf) const;
 
 private:
-    PrimitivePtr mAggregate;
+    BVH mBVH;
     CameraPtr mCamera;
     std::vector<Light*> mLights;
     VolumeRegion* mVolumeRegion;
