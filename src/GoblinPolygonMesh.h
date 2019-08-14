@@ -1,5 +1,5 @@
-#ifndef GOBLIN_OBJ_MESH
-#define GOBLIN_OBJ_MESH
+#ifndef GOBLIN_POLYGON_MESH
+#define GOBLIN_POLYGON_MESH
 
 #include "GoblinGeometry.h"
 #include "GoblinBBox.h"
@@ -9,11 +9,11 @@
 
 namespace Goblin {
 
-class ObjMesh : public Geometry {
+class PolygonMesh : public Geometry {
 public:
-    ObjMesh(const std::string& filename);
+	PolygonMesh(const std::string& filename);
 
-    ~ObjMesh();
+    ~PolygonMesh() = default;
 
 	bool intersectable() const override {
 		return false;
@@ -32,9 +32,13 @@ public:
 
     void refine(GeometryList& refinedGeometries) const override;
 
-    const Vertex* getVertexPtr(size_t index) const;
+	const Vertex* getVertexPtr(size_t index) const {
+		return &mVertices[index];
+	}
 
-    const TriangleIndex* getFacePtr(size_t index) const;
+	const TriangleIndex* getFacePtr(size_t index) const {
+		return &mTriangles[index];
+	}
 
 	bool hasNormal() const {
 		return mHasNormal;
@@ -45,7 +49,7 @@ public:
 	}
 
 private:
-	bool load();
+	bool loadObjMesh();
 
     void recalculateArea();
 
@@ -60,14 +64,6 @@ private:
 	std::vector<TriangleIndex> mTriangles;
 };
 
-inline const Vertex* ObjMesh::getVertexPtr(size_t index) const {
-    return &mVertices[index];
-}
-
-inline const TriangleIndex* ObjMesh::getFacePtr(size_t index) const {
-    return &mTriangles[index];
-}
-
 class ParamSet;
 class SceneCache;
 
@@ -75,4 +71,4 @@ Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache
 
 }
 
-#endif //GOBLIN_OBJ_MESH
+#endif //GOBLIN_POLYGON_MESH

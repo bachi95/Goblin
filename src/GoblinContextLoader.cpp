@@ -8,7 +8,7 @@
 #include "GoblinFilm.h"
 #include "GoblinLightTracer.h"
 #include "GoblinModel.h"
-#include "GoblinObjMesh.h"
+#include "GoblinPolygonMesh.h"
 #include "GoblinAO.h"
 #include "GoblinPathtracer.h"
 #include "GoblinPrimitive.h"

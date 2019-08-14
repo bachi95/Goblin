@@ -1,11 +1,11 @@
 #include "GoblinTriangle.h"
-#include "GoblinObjMesh.h"
+#include "GoblinPolygonMesh.h"
 #include "GoblinRay.h"
 #include "GoblinBBox.h"
 #include "GoblinSampler.h"
 
 namespace Goblin {
-Triangle::Triangle(const ObjMesh* parentMesh, size_t index):
+Triangle::Triangle(const PolygonMesh* parentMesh, size_t index):
     mParentMesh(parentMesh), mIndex(index) {}
 
 /*

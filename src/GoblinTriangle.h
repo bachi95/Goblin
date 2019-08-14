@@ -4,12 +4,13 @@
 #include "GoblinGeometry.h"
 
 namespace Goblin {
-class ObjMesh;
+class PolygonMesh;
 class Triangle : public Geometry {
 public:
-    Triangle(const ObjMesh* parentMesh): mParentMesh(parentMesh), mIndex(0) {}
+    Triangle(const PolygonMesh* parentMesh) :
+		mParentMesh(parentMesh), mIndex(0) {}
 
-    Triangle(const ObjMesh* parentMesh, size_t index);
+    Triangle(const PolygonMesh* parentMesh, size_t index);
 
     void setIndex(size_t index);
 
@@ -25,7 +26,7 @@ public:
     BBox getObjectBound() const override;
 
 private:
-    const ObjMesh* mParentMesh;
+    const PolygonMesh* mParentMesh;
     size_t mIndex;
 };
 

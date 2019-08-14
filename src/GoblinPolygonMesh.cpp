@@ -1,4 +1,4 @@
-#include "GoblinObjMesh.h"
+#include "GoblinPolygonMesh.h"
 #include "GoblinTriangle.h"
 #include "GoblinScene.h"
 #include "GoblinParamSet.h"
@@ -44,17 +44,14 @@ enum ObjFormat {
     VERTEX_UV_NORMAL = 1 << 3
 };
 
-ObjMesh::ObjMesh(const std::string& filename) :
+PolygonMesh::PolygonMesh(const std::string& filename) :
     mFilename(filename), mArea(0.0f), 
     mHasNormal(false), mHasTexCoord(false) {
 	geometryCache[getId()] = this;
-	load();
+	loadObjMesh();
 }
 
-ObjMesh::~ObjMesh() {
-}
-
-bool ObjMesh::load() {
+bool PolygonMesh::loadObjMesh() {
     std::ifstream file(mFilename.c_str());
     if (!file.is_open()) {
         std::cerr << "Error can't open obj file: " 
@@ -261,20 +258,20 @@ bool ObjMesh::load() {
     return true;
 }
 
-bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
+bool PolygonMesh::intersect(const Ray& ray, float* epsilon,
     Fragment* fragment) const {
     return false;
 }
 
-bool ObjMesh::occluded(const Ray& ray) const {
+bool PolygonMesh::occluded(const Ray& ray) const {
 	return false;
 }
 
-BBox ObjMesh::getObjectBound() const {
+BBox PolygonMesh::getObjectBound() const {
     return mBBox;
 }
 
-void ObjMesh::refine(GeometryList& refinedGeometries) const {
+void PolygonMesh::refine(GeometryList& refinedGeometries) const {
     size_t faceNum = mTriangles.size();
     if (mRefinedMeshes.size() != faceNum) {
         mRefinedMeshes.clear();
@@ -288,7 +285,7 @@ void ObjMesh::refine(GeometryList& refinedGeometries) const {
     }
 }
 
-void ObjMesh::recalculateArea() {
+void PolygonMesh::recalculateArea() {
     mArea = 0.0f;
     for (size_t i = 0; i < mTriangles.size(); ++i) {
         size_t i0 = mTriangles[i].v[0];
@@ -304,7 +301,7 @@ void ObjMesh::recalculateArea() {
 Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache) {
 	std::string filename = params.getString("file");
 	std::string filePath = sceneCache.resolvePath(filename);
-    return new ObjMesh(filePath);
+    return new PolygonMesh(filePath);
 }
 
 }
