@@ -226,4 +226,5 @@ std::string SceneCache::resolvePath(const std::string& filename) const {
         return mSceneRoot + "/" + filename;
     }
 }
+
 }

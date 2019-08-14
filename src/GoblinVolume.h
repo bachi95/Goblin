@@ -68,10 +68,11 @@ public:
 		const BBox& b, const Transform& toWorld):
 		VolumeRegion(g, 0.0f, sampleNum, b, toWorld, true),
 		mAttenuation(attenuation), mScatter(attenuation * albedo),
-		mEmission(emission) {}
+		mEmission(emission)
+	{}
 
 	void eval(const Vector3& p, Color& attenuation, Color& scatter,
-		Color& emission) const {
+		Color& emission) const override {
 		bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
 		if (inside) {
 			attenuation = mAttenuation;
@@ -84,12 +85,12 @@ public:
 		}
 	}
 
-	Color getAttenuation(const Vector3& p) const {
+	Color getAttenuation(const Vector3& p) const override {
 		bool inside = mLocalRegion.contain(mToWorld.invertPoint(p));
 		return inside ? mAttenuation : Color(0.0f);
 	}
 
-	Color transmittance(const Ray& ray, const RNG& rng) const;
+	Color transmittance(const Ray& ray, const RNG& rng) const override;
 
 private:
 	// the extinction coefficient (sigmaT)
@@ -110,11 +111,11 @@ public:
 	~HeterogeneousVolumeRegion();
 
 	void eval(const Vector3& p, Color& attenuation, Color& scatter,
-		Color& emission) const;
+		Color& emission) const override;
 
-	Color getAttenuation(const Vector3& p) const;
+	Color getAttenuation(const Vector3& p) const override;
 
-	Color transmittance(const Ray& ray, const RNG& rng) const;
+	Color transmittance(const Ray& ray, const RNG& rng) const override;
 
 private:
 	VolumeGrid* mDensity;
@@ -144,4 +145,3 @@ VolumeRegion* createHeterogeneousVolume(const ParamSet& params,
 }
 
 #endif //GOBLIN_VOLUME_H
-

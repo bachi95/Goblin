@@ -8,13 +8,17 @@ class AORenderer : public Renderer {
 public:
     AORenderer(int samplePerPixel, int threadNum,
         int aoSample);
-    ~AORenderer();
-    Color Li(const ScenePtr& scene, const RayDifferential& ray,
-        const Sample& sample, const RNG& rng,
-        RenderingTLS* tls) const;
+
+	~AORenderer() = default;
+
+	Color Li(const ScenePtr& scene, const RayDifferential& ray,
+		const Sample& sample, const RNG& rng,
+		RenderingTLS* tls) const override;
+
 private:
     void querySampleQuota(const ScenePtr& scene,
-        SampleQuota* sampleQuota);
+        SampleQuota* sampleQuota) override;
+
 private:
     int mAOSampleNum;
     SampleIndex mAOSampleIndex;

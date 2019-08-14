@@ -16,30 +16,25 @@ typedef std::uniform_int<uint32_t> UInt32Dist;
 
 class RNGImp {
 public:
-    RNGImp();
-    float randomFloat() const;
-    uint32_t randomUInt() const;
+    RNGImp() :
+		mEngine(new RNGType(static_cast<uint32_t>(rand()))),
+		mRealDist(new std::uniform_real<float>(0.0f, 1.0f)),
+		mUInt32Dist(new std::uniform_int<uint32_t>(
+			0, std::numeric_limits<uint32_t>::max()))
+	{}
+
+	float randomFloat() const {
+		return (*mRealDist)(*mEngine);
+	}
+
+	uint32_t randomUInt() const {
+		return (*mUInt32Dist)(*mEngine);
+	}
 private:
     std::unique_ptr<RNGType> mEngine;
     std::unique_ptr<RealDist> mRealDist;
     std::unique_ptr<UInt32Dist> mUInt32Dist;
 };
-
-RNGImp::RNGImp():
-    mEngine(new RNGType(static_cast<uint32_t>(rand()))),
-    mRealDist(new std::uniform_real<float>(0.0f, 1.0f)),
-    mUInt32Dist(new std::uniform_int<uint32_t>(
-		0, std::numeric_limits<uint32_t>::max()))
-{
-}
-
-float RNGImp::randomFloat() const {
-    return (*mRealDist)(*mEngine);
-}
-
-uint32_t RNGImp::randomUInt() const {
-    return (*mUInt32Dist)(*mEngine);
-}
 
 RNG::RNG() {
     mRNGImp = new RNGImp();
@@ -229,4 +224,3 @@ void getPrimes(size_t N, std::vector<uint32_t>& primes) {
 }
 
 }
-

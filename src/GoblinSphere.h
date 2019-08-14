@@ -3,6 +3,7 @@
 #include "GoblinGeometry.h"
 
 namespace Goblin {
+
 class Sphere : public Geometry {
 public:
     Sphere(float r);

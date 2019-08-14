@@ -4,17 +4,22 @@
 #include "GoblinRenderer.h"
 
 namespace Goblin {
+
 class WhittedRenderer : public Renderer {
 public:
-    WhittedRenderer(int samplePerPixel = 1, int threadNum = 1, 
-        int maxRayDepth = 5, int bssrdfSampleNum = 4);
-    ~WhittedRenderer();
+    WhittedRenderer(int samplePerPixel, int threadNum, 
+        int maxRayDepth, int bssrdfSampleNum);
+
+    ~WhittedRenderer() = default;
+
     Color Li(const ScenePtr& scene, const RayDifferential& ray, 
         const Sample& sample, const RNG& rng,
-        RenderingTLS* tls) const;
+        RenderingTLS* tls) const override;
+
 private:
     void querySampleQuota(const ScenePtr& scene, 
-        SampleQuota* sampleQuota);
+        SampleQuota* sampleQuota) override;
+
 private:
     int mMaxRayDepth;
     int mBssrdfSampleNum;
@@ -24,4 +29,4 @@ Renderer* createWhitted(const ParamSet& params);
 
 }
 
-#endif //GOBLIN_WHITTED_H
+#endif // GOBLIN_WHITTED_H

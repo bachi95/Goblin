@@ -21,9 +21,11 @@ public:
     void enqueue(const std::vector<Task*>& tasks);
     void waitForAll();
     void cleanup();
+
 private:
     void initWorkers();
     void taskEntry();
+
 private:
     std::vector<std::thread*> mWorkers;
     unsigned int mCoreNum;

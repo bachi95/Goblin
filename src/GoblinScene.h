@@ -8,8 +8,6 @@
 #include "GoblinTexture.h"
 #include "GoblinUtils.h"
 
-#include <vector>
-
 namespace Goblin {
 class CDF1D;
 class Ray;

@@ -7,9 +7,8 @@ WhittedRenderer::WhittedRenderer(int samplePerPixel, int threadNum,
     int maxRayDepth, int bssrdfSampleNum): 
     Renderer(samplePerPixel, threadNum),
     mMaxRayDepth(maxRayDepth),
-    mBssrdfSampleNum(bssrdfSampleNum) {}
-
-WhittedRenderer::~WhittedRenderer() {}
+    mBssrdfSampleNum(bssrdfSampleNum)
+{}
 
 Color WhittedRenderer::Li(const ScenePtr& scene, 
     const RayDifferential& ray, 
@@ -79,4 +78,5 @@ Renderer* createWhitted(const ParamSet& params) {
     return new WhittedRenderer(samplePerPixel, threadNum, 
         maxRayDepth, bssrdfSampleNum);
 }
+
 }

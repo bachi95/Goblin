@@ -89,21 +89,21 @@ inline float log2(float n) {
 inline float clamp(float f, float low, float high) {
     if (f < low) {
         return low;
-    }
-    else if (f > high) {
+    } else if (f > high) {
         return high;
-    }
-    else return f;
+	} else {
+		return f;
+	}
 }
 
 inline int clamp(int f, int low, int high) {
     if (f < low) {
         return low;
-    }
-    else if (f > high) {
+    } else if (f > high) {
         return high;
-    }
-    else return f;
+	} else {
+		return f;
+	}
 }
 
 template <typename T>

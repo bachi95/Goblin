@@ -67,7 +67,8 @@ private:
 class ParamSet;
 class SceneCache;
 
-Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache);
+Geometry* createPolygonMesh(const ParamSet& params,
+	const SceneCache& sceneCache);
 
 }
 

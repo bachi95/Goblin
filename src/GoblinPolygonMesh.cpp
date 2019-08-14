@@ -54,8 +54,8 @@ PolygonMesh::PolygonMesh(const std::string& filename) :
 bool PolygonMesh::loadObjMesh() {
     std::ifstream file(mFilename.c_str());
     if (!file.is_open()) {
-        std::cerr << "Error can't open obj file: " 
-            << mFilename << " for mesh loading" << std::endl;
+        std::cerr << "Error can't open obj file: " << mFilename <<
+			" for mesh loading" << std::endl;
         return false;
     }
 
@@ -219,8 +219,7 @@ bool PolygonMesh::loadObjMesh() {
             if (vIndex < 0 || vIndex >= verticesNum ||
                 nIndex < -1 || nIndex >= normalNum ||
                 tIndex < -1 || tIndex >= texCoordNum) {
-                    std::cerr << "invalid index in face " << i 
-                        << std::endl;
+                    std::cerr << "invalid index in face " << i << std::endl;
                     return false;
             }
         }
@@ -254,7 +253,7 @@ bool PolygonMesh::loadObjMesh() {
         mTriangles.push_back(triangle);
     }
     recalculateArea();
-    std::cout << "Successfully loaded mesh '" << mFilename << "'.\n";
+    std::cout << "Successfully loaded mesh '" << mFilename << std::endl;
     return true;
 }
 
@@ -298,7 +297,8 @@ void PolygonMesh::recalculateArea() {
     }
 }
 
-Geometry* createPolygonMesh(const ParamSet& params, const SceneCache& sceneCache) {
+Geometry* createPolygonMesh(const ParamSet& params,
+	const SceneCache& sceneCache) {
 	std::string filename = params.getString("file");
 	std::string filePath = sceneCache.resolvePath(filename);
     return new PolygonMesh(filePath);

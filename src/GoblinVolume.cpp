@@ -219,7 +219,9 @@ private:
     std::vector<float> mVoxelData;
 };
 
-VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = nullptr) {
+VolumeGrid* loadVolFile(const std::string& filePath,
+	std::string* error = nullptr) {
+
     VolumeGrid* result = nullptr;
     std::ifstream stream(filePath.c_str(), std::ios::in | std::ios::binary);
     if (stream.is_open()) {
@@ -248,7 +250,7 @@ VolumeGrid* loadVolFile(const std::string& filePath, std::string* error = nullpt
             std::cerr << msg << std::endl;
         }
     } else {
-        std::cout << "fail to open vol file " << filePath <<std::endl;
+        std::cout << "fail to open vol file " << filePath << std::endl;
     }
     stream.close();
     return result;
@@ -381,4 +383,5 @@ VolumeRegion* createHeterogeneousVolume(
 		Color(albedo[0], albedo[1], albedo[2]), g,
         stepSize, sampleNum, b, toWorld);
 }
+
 }
