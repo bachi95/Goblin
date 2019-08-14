@@ -32,10 +32,13 @@ class BVH {
 public:
     BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
         const std::string& splitMethod);
+
     ~BVH();
-    bool intersect(const Ray& ray, IntersectFilter f) const;
+
 	bool intersect(const Ray& ray, float* epsilon,
 		Intersection* intersection, IntersectFilter f) const;
+
+	bool occluded(const Ray& ray, IntersectFilter f) const;
 
 	BBox getAABB() const {
 		return mAABB;

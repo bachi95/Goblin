@@ -101,12 +101,6 @@ InstancedPrimitive::InstancedPrimitive(const Transform& toWorld,
 	const Primitive* primitive):
 	mToWorld(toWorld), mPrimitive(primitive) {}
 
-bool InstancedPrimitive::intersect(const Ray& ray, 
-	IntersectFilter f) const {
-	Ray r = mToWorld.invertRay(ray);
-	return mPrimitive->intersect(r, f);
-}
-
 bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon, 
 	Intersection* intersection, IntersectFilter f) const {
 	Ray r = mToWorld.invertRay(ray);
@@ -116,6 +110,12 @@ bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon,
 		ray.maxt = r.maxt;
 	}
 	return hit;
+}
+
+bool InstancedPrimitive::occluded(const Ray& ray,
+	IntersectFilter f) const {
+	Ray r = mToWorld.invertRay(ray);
+	return mPrimitive->occluded(r, f);
 }
 
 BBox InstancedPrimitive::getAABB() const {

@@ -28,10 +28,10 @@ public:
 
     const VolumeRegion* getVolumeRegion() const;
 
-    bool intersect(const Ray& ray, IntersectFilter f = nullptr) const;
-
     bool intersect(const Ray& ray, float* epsilon, 
         Intersection* intersection, IntersectFilter f = nullptr) const;
+
+	bool occluded(const Ray& ray, IntersectFilter f = nullptr) const;
 
     Color evalEnvironmentLight(const Ray& ray) const;
 

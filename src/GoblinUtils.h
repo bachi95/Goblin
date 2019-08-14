@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdio>
+#include <exception>
 #include <iostream>
 #include <list>
 #include <string>

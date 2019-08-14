@@ -19,14 +19,14 @@ Model::Model(const Geometry* geometry, const MaterialPtr& material,
 	}
 }
 
-bool Model::intersect(const Ray& ray, IntersectFilter f) const {
+bool Model::occluded(const Ray& ray, IntersectFilter f) const {
 	if (mBVH) {
-		return mBVH->intersect(ray, f);
+		return mBVH->occluded(ray, f);
 	} else {
 		if (f != nullptr && !f(this, ray)) {
 			return false;
 		}
-		return mGeometry->intersect(ray);
+		return mGeometry->occluded(ray);
 	}
 }
 

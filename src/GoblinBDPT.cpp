@@ -351,7 +351,7 @@ Color BDPT::evalUnweightedContribution(
         float epsilon = 1e-3f * occludeDistance;
         Ray occludeRay(sEndV.getPosition(), connectDir,
             epsilon, occludeDistance - epsilon);
-        if (scene->intersect(occludeRay)) {
+        if (scene->occluded(occludeRay)) {
             return Color::Black;
         }
         cst = fsL * G * fsE;

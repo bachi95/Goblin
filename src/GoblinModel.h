@@ -9,32 +9,35 @@ class BVH;
 
 class Model : public Primitive {
 public:
-    bool intersectable() const;
+	Model(const Geometry* geometry, const MaterialPtr& material,
+		const AreaLight* areaLight = nullptr, bool isCameraLens = false);
 
-    bool intersect(const Ray& ray, IntersectFilter f) const;
+	// For chunk allocation refined models,
+	// allocate first then set geometry
+	Model() : mGeometry(nullptr), mAreaLight(nullptr), mIsCameraLens(false) {}
+
+    bool intersectable() const override;
 
     bool intersect(const Ray& ray, float* epsilon, 
-        Intersection* intersection, IntersectFilter f) const;
+        Intersection* intersection, IntersectFilter f) const override;
 
-    bool isCameraLens() const;
+	bool occluded(const Ray& ray, IntersectFilter f) const override;
 
-    BBox getAABB() const;
+    bool isCameraLens() const override;
 
-    const MaterialPtr& getMaterial() const;
+    BBox getAABB() const override;
 
-    const AreaLight* getAreaLight() const;
+    const MaterialPtr& getMaterial() const override;
 
-    void refine(PrimitiveList& refinedPrimitives) const;
+    const AreaLight* getAreaLight() const override;
+
+    void refine(PrimitiveList& refinedPrimitives) const override;
 
     static void clearRefinedModels();
 
-    Model(const Geometry* geometry, const MaterialPtr& material,
-        const AreaLight* areaLight = nullptr, bool isCameraLens = false);
-    // For chunk allocation refined models, 
-    // allocate first then set geometry
-    Model(): mGeometry(nullptr), mAreaLight(nullptr), mIsCameraLens(false) {}
     void init(const Geometry* geometry, const MaterialPtr& material,
         const AreaLight* areaLight);
+
 private:
     const Geometry* mGeometry;
     MaterialPtr mMaterial;

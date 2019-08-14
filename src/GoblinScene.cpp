@@ -57,10 +57,6 @@ const VolumeRegion* Scene::getVolumeRegion() const {
     return mVolumeRegion;
 }
 
-bool Scene::intersect(const Ray& ray, IntersectFilter f) const {
-    return mBVH.intersect(ray, f);
-}
-
 bool Scene::intersect(const Ray& ray, float* epsilon, 
     Intersection* intersection, IntersectFilter f) const {
     bool isIntersect = mBVH.intersect(ray, epsilon, intersection, f);
@@ -69,6 +65,10 @@ bool Scene::intersect(const Ray& ray, float* epsilon,
         material->perturb(&intersection->fragment);
     }
     return isIntersect;
+}
+
+bool Scene::occluded(const Ray& ray, IntersectFilter f) const {
+	return mBVH.occluded(ray, f);
 }
 
 Color Scene::evalEnvironmentLight(const Ray& ray) const {
@@ -103,7 +103,6 @@ void SceneCache::initDefault() {
     MaterialPtr errorMaterial(new LambertMaterial(errorCTexture));
     addMaterial(mErrorCode, errorMaterial);
     Geometry* errorGeometry = new Sphere(1.0f);
-    errorGeometry->init();
     addGeometry(mErrorCode, errorGeometry);
     ParamSet modelParams;
     modelParams.setString("geometry", mErrorCode);

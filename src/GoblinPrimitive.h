@@ -60,11 +60,11 @@ public:
 
 	virtual void refine(PrimitiveList& refinedPrimitives) const;
 
-	virtual bool intersect(const Ray& ray,
-		IntersectFilter f = nullptr) const = 0;
-
 	virtual bool intersect(const Ray& ray, float* epsilon,
 		Intersection* intersection, IntersectFilter f = nullptr) const = 0;
+
+	virtual bool occluded(const Ray& ray,
+		IntersectFilter f = nullptr) const = 0;
 
 	virtual BBox getAABB() const = 0;
 
@@ -114,14 +114,15 @@ inline void Primitive::clearAllocatedPrimitives() {
 
 class InstancedPrimitive : public Primitive {
 public:
-	bool intersect(const Ray& ray, IntersectFilter f) const;
-	bool intersect(const Ray& ray, float* epsilon,
-		Intersection* intersection, IntersectFilter f) const;
-
-	BBox getAABB() const;
-
 	InstancedPrimitive(const Transform& toWorld,
 		const Primitive* primitive);
+
+	bool intersect(const Ray& ray, float* epsilon,
+		Intersection* intersection, IntersectFilter f) const override;
+
+	bool occluded(const Ray& ray, IntersectFilter f) const override;
+
+	BBox getAABB() const override;
 
 private:
 	Transform mToWorld;

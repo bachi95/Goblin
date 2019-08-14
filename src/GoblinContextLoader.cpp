@@ -226,9 +226,6 @@ static void createGeometries(const json& jsonContext, SceneCache* sceneCache) {
 			} else {
 				geometry = createSphere(geometryParams, *sceneCache);
 			}
-			geometry->init();
-			std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
-			std::cout << "face num: " << geometry->getFaceNum() << std::endl;
 			BBox bbox = geometry->getObjectBound();
 			std::cout << "BBox min: " << bbox.pMin << std::endl;
 			std::cout << "BBox max: " << bbox.pMax << std::endl;
