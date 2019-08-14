@@ -226,9 +226,6 @@ static void createGeometries(const json& jsonContext, SceneCache* sceneCache) {
 			} else {
 				geometry = createSphere(geometryParams, *sceneCache);
 			}
-			geometry->init();
-			std::cout << "vertex num: " << geometry->getVertexNum() << std::endl;
-			std::cout << "face num: " << geometry->getFaceNum() << std::endl;
 			BBox bbox = geometry->getObjectBound();
 			std::cout << "BBox min: " << bbox.pMin << std::endl;
 			std::cout << "BBox max: " << bbox.pMax << std::endl;
@@ -487,9 +484,7 @@ RenderContext* ContextLoader::load(const std::string& filename) {
 	createPrimitives(jsonContext, &sceneCache);
 	createLights(jsonContext, &sceneCache);
 
-    PrimitivePtr aggregate(new BVH(sceneCache.getInstances(),
-        1, "equal_count"));
-    ScenePtr scene(new Scene(aggregate, camera,
+    ScenePtr scene(new Scene(sceneCache.getInstances(), camera,
         sceneCache.getLights(), volume));
 
     RenderContext* ctx = new RenderContext(renderer, scene);

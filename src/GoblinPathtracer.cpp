@@ -97,7 +97,7 @@ Color PathTracer::Li(const ScenePtr& scene, const RayDifferential& ray,
         if (L != Color::Black && lightPdf > 0.0f) {
             Color f = material->bsdf(fragment, wo, wi);
             if (f != Color::Black && 
-                !scene->intersect(shadowRay, &isOpaque)) {
+                !scene->occluded(shadowRay, &isOpaque)) {
                 // calculate the transmittance alone index-matched material
                 Color tr = evalAttenuation(scene, shadowRay,
                     BSDFSample(rng)); 

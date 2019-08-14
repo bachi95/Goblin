@@ -179,7 +179,7 @@ Color Renderer::LbssrdfSingle(const ScenePtr& scene,
                 const Vector3& ni = fwi.getNormal();
                 shadowRay.mint = shadowRay.maxt + epsilon;
                 shadowRay.maxt = maxt;
-                if (!scene->intersect(shadowRay)) {
+                if (!scene->occluded(shadowRay)) {
                     float p = bssrdf->phase(wi, woRefract); 
                     float cosi = absdot(ni, wi);
                     float Fti = 1.0f - 
@@ -252,7 +252,7 @@ Color Renderer::LbssrdfDiffusion(const ScenePtr& scene,
                 Color L = light->sampleL(pProbe, epsilon, bssrdfSample.ls, 
                     &wi, &lightPdf, &shadowRay);
                 if (L == Color::Black || lightPdf == 0.0f ||
-                    scene->intersect(shadowRay)) {
+                    scene->occluded(shadowRay)) {
                     continue;
                 }
                 float cosi = absdot(ni, wi);
@@ -342,7 +342,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
                 Color Lequi = light->sampleL(pCurrentEqui, 0.0f, lsEqui,
                     &wiEqui, &lightPdfEqui, &shadowRayEqui);
                 if (Lequi != Color::Black && lightPdfEqui > 0.0f) {
-                    if (!scene->intersect(shadowRayEqui)) {
+                    if (!scene->occluded(shadowRayEqui)) {
                         Color trToLight = volume->transmittance(
                             shadowRayEqui, rng);
                         Color Ld = trToLight * Lequi /
@@ -378,7 +378,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
                 Color Ldistance = light->sampleL(pCurrentDistance, 0.0f,
                     lsDistance, &wi, &lightPdf, &shadowRayDistance);
                 if (Ldistance != Color::Black && lightPdf > 0.0f) {
-                    if (!scene->intersect(shadowRayDistance)) {
+                    if (!scene->occluded(shadowRayDistance)) {
                         Color trToLight = volume->transmittance(
                             shadowRayDistance, rng);
                         Color Ld = trToLight * Ldistance /
@@ -420,7 +420,7 @@ Color Renderer::Lv(const ScenePtr& scene, const Ray& ray,
                 Color L = light->sampleL(pCurrent, 0.0f, ls,
                     &wi, &lightPdf, &shadowRay);
                 if (L != Color::Black && lightPdf > 0.0f) {
-                    if (!scene->intersect(shadowRay)) {
+                    if (!scene->occluded(shadowRay)) {
                         Color trToLight = volume->transmittance(
                             shadowRay, rng);
                         Color Ld = trToLight * L /
@@ -516,7 +516,7 @@ Color Renderer::estimateLd(const ScenePtr& scene, const Vector3& wo,
     Color L = light->sampleL(p, epsilon, ls, &wi, &lightPdf, &shadowRay);
     if (L != Color::Black && lightPdf > 0.0f) {
         Color f = material->bsdf(fragment, wo, wi);
-        if (f != Color::Black && !scene->intersect(shadowRay)) {
+        if (f != Color::Black && !scene->occluded(shadowRay)) {
             // we don't do MIS for delta distribution light
             // since there is only one sample need for it
             if (light->isDelta()) {
@@ -588,7 +588,7 @@ Color Renderer::estimateIrradiance(const ScenePtr& scene,
     Ray shadowRay;
     Color L = light->sampleL(p, epsilon, ls, &wi, &pdf, &shadowRay);
     if (L != Color::Black && pdf > 0.0f) {
-        if (!scene->intersect(shadowRay)) {
+        if (!scene->occluded(shadowRay)) {
             irradiance += L * absdot(n, wi) / pdf;
         }
     }

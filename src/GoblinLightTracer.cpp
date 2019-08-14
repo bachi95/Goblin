@@ -142,7 +142,7 @@ void LightTracer::splatFilmT1(const ScenePtr& scene, const Sample& sample,
         float epsilon = 1e-3f * occludeDistance;
         Ray occludeRay(pvPos, normalize(pv2Cam),
             epsilon, occludeDistance - epsilon);
-        if (scene->intersect(occludeRay)) {
+        if (scene->occluded(occludeRay)) {
             continue;
         }
         Color fsL;
@@ -302,7 +302,7 @@ void LightTracer::splatFilmS1(const ScenePtr& scene, const Sample& sample,
         float epsilon = 1e-3f * occludeDistance;
         Ray occludeRay(pvPos, normalize(pv2Light),
             epsilon, occludeDistance - epsilon);
-        if (scene->intersect(occludeRay)) {
+        if (scene->occluded(occludeRay)) {
             continue;
         }
         Color fsE;

@@ -16,31 +16,15 @@ namespace Goblin {
 class Ray;
 class RayDifferential;
 /* temp notes:
-three kinds of primitive: instance, model, aggregate
 model = geometry + material
 instance = transform + any kind of primitive
-aggregate = a collection of primitive
 
 they all implement:
 intersect
 model::intersect -> return geometry.intersect + material
 instance::intersect -> transform the ray to object space
 	then mPrimitive.intersect
-aggregate::intersect -> whatever kind of the space travesel
-	ex: kd tree/ BVH or simply naive loop through
 */
-
-// temporary workaround for hardware rendering sigh
-// collect a list of renderable from the scene by
-// another temp virtual method collectRenderable
-struct Renderable {
-	Renderable(const Matrix4& m, const Geometry* g) :
-		worldMatrix(m), geometry(g) {}
-	Matrix4 worldMatrix;
-	const Geometry* geometry;
-};
-
-typedef std::vector<Renderable> RenderList;
 
 class Primitive;
 typedef std::shared_ptr<Primitive> PrimitivePtr;
@@ -76,11 +60,11 @@ public:
 
 	virtual void refine(PrimitiveList& refinedPrimitives) const;
 
-	virtual bool intersect(const Ray& ray,
-		IntersectFilter f = nullptr) const = 0;
-
 	virtual bool intersect(const Ray& ray, float* epsilon,
 		Intersection* intersection, IntersectFilter f = nullptr) const = 0;
+
+	virtual bool occluded(const Ray& ray,
+		IntersectFilter f = nullptr) const = 0;
 
 	virtual BBox getAABB() const = 0;
 
@@ -89,9 +73,6 @@ public:
 	virtual const AreaLight* getAreaLight() const;
 
 	virtual bool isCameraLens() const;
-
-	virtual void collectRenderList(RenderList& rList,
-		const Matrix4& m = Matrix4::Identity) const = 0;
 
 	static void clearAllocatedPrimitives();
 
@@ -133,45 +114,20 @@ inline void Primitive::clearAllocatedPrimitives() {
 
 class InstancedPrimitive : public Primitive {
 public:
-	bool intersect(const Ray& ray, IntersectFilter f) const;
-	bool intersect(const Ray& ray, float* epsilon,
-		Intersection* intersection, IntersectFilter f) const;
-
-	BBox getAABB() const;
-	const Vector3& getPosition() const;
-	const Quaternion& getOrientation() const;
-	const Vector3& getScale() const;
-	const Matrix4& getWorldMatrix();
-	void collectRenderList(RenderList& rList,
-		const Matrix4& m = Matrix4::Identity) const;
-
 	InstancedPrimitive(const Transform& toWorld,
 		const Primitive* primitive);
-	InstancedPrimitive(const Vector3& position,
-		const Quaternion& orientation,
-		const Vector3& scale, const Primitive* primitive);
+
+	bool intersect(const Ray& ray, float* epsilon,
+		Intersection* intersection, IntersectFilter f) const override;
+
+	bool occluded(const Ray& ray, IntersectFilter f) const override;
+
+	BBox getAABB() const override;
 
 private:
 	Transform mToWorld;
 	const Primitive* mPrimitive;
 };
-
-class Aggregate : public Primitive {
-public:
-	Aggregate(const PrimitiveList& primitives);
-	bool intersect(const Ray& ray, IntersectFilter f) const;
-	bool intersect(const Ray& ray, float* epsilon,
-		Intersection* intersection, IntersectFilter f) const;
-
-	void collectRenderList(RenderList& rList,
-		const Matrix4& m = Matrix4::Identity) const;
-	BBox getAABB() const;
-protected:
-	PrimitiveList mInputPrimitives;
-	PrimitiveList mRefinedPrimitives;
-	BBox mAABB;
-};
-
 
 class ParamSet;
 class SceneCache;

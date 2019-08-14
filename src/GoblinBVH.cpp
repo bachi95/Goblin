@@ -33,8 +33,22 @@ struct PointsComparator {
 
 BVH::BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
     const std::string& splitMethod):
-    Aggregate(primitives),
+	mSplitMethod(EqualCount),
     mMaxPrimitivesNum(maxPrimitivesNum) {
+
+	for (size_t i = 0; i < primitives.size(); ++i) {
+		const Primitive* primitive = primitives[i];
+		if (primitive->intersectable()) {
+			mRefinedPrimitives.push_back(primitives[i]);
+		} else {
+			primitive->refine(mRefinedPrimitives);
+		}
+	}
+
+	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
+		mAABB.expand(mRefinedPrimitives[i]->getAABB());
+	}
+
     if (mRefinedPrimitives.size() == 0) {
         return;
     }
@@ -174,7 +188,7 @@ static inline bool intersect(const BBox& bbox, const Ray& ray,
     return (tMin < ray.maxt) && (tMax > ray.mint);
 }
 
-bool BVH::intersect(const Ray& ray, IntersectFilter f) const {
+bool BVH::occluded(const Ray& ray, IntersectFilter f) const {
     if (mBVHNodes.size() == 0) {
         return false;
     }
@@ -192,7 +206,7 @@ bool BVH::intersect(const Ray& ray, IntersectFilter f) const {
             if (node.primitivesNum > 0) {
                 for (uint32_t i = 0; i < node.primitivesNum; ++i) {
                     uint32_t index = node.firstPrimIndex + i;
-                    if (mRefinedPrimitives[index]->intersect(ray, f)) {
+                    if (mRefinedPrimitives[index]->occluded(ray, f)) {
                         return true;
                     }
                 }

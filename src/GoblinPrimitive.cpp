@@ -101,17 +101,6 @@ InstancedPrimitive::InstancedPrimitive(const Transform& toWorld,
 	const Primitive* primitive):
 	mToWorld(toWorld), mPrimitive(primitive) {}
 
-InstancedPrimitive::InstancedPrimitive(const Vector3& position, 
-	const Quaternion& orientation,
-	const Vector3& scale, const Primitive* primitive):
-	mToWorld(position, orientation, scale), mPrimitive(primitive) {}
-
-bool InstancedPrimitive::intersect(const Ray& ray, 
-	IntersectFilter f) const {
-	Ray r = mToWorld.invertRay(ray);
-	return mPrimitive->intersect(r, f);
-}
-
 bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon, 
 	Intersection* intersection, IntersectFilter f) const {
 	Ray r = mToWorld.invertRay(ray);
@@ -123,84 +112,14 @@ bool InstancedPrimitive::intersect(const Ray& ray, float* epsilon,
 	return hit;
 }
 
+bool InstancedPrimitive::occluded(const Ray& ray,
+	IntersectFilter f) const {
+	Ray r = mToWorld.invertRay(ray);
+	return mPrimitive->occluded(r, f);
+}
 
 BBox InstancedPrimitive::getAABB() const {
 	return mToWorld.onBBox(mPrimitive->getAABB());
-}
-
-const Vector3& InstancedPrimitive::getPosition() const {
-	return mToWorld.getPosition();
-}
-
-const Quaternion& InstancedPrimitive::getOrientation() const {
-	return mToWorld.getOrientation();
-}
-
-const Vector3& InstancedPrimitive::getScale() const {
-	return mToWorld.getScale();
-}
-
-const Matrix4& InstancedPrimitive::getWorldMatrix() {
-	return mToWorld.getMatrix();
-}
-
-void InstancedPrimitive::collectRenderList(RenderList& rList, 
-	const Matrix4& m) const {
-	mPrimitive->collectRenderList(rList, m * mToWorld.getMatrix());
-}
-
-Aggregate::Aggregate(const PrimitiveList& primitives):
-	mInputPrimitives(primitives) {
-	for (size_t i = 0; i < mInputPrimitives.size(); ++i) {
-		const Primitive* primitive = mInputPrimitives[i];
-		if (primitive->intersectable()) {
-			mRefinedPrimitives.push_back(mInputPrimitives[i]);
-		} else {
-			primitive->refine(mRefinedPrimitives);
-		}
-	}
-
-	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-		mAABB.expand(mRefinedPrimitives[i]->getAABB());
-	}
-}
-    
-void Aggregate::collectRenderList(RenderList& rList, 
-	const Matrix4& m) const {
-	for (size_t i = 0; i < mInputPrimitives.size(); ++i) {
-		mInputPrimitives[i]->collectRenderList(rList, m);
-	}
-}
-
-bool Aggregate::intersect(const Ray& ray, IntersectFilter f) const {
-	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-		if (f != nullptr && !f(mRefinedPrimitives[i], ray)) {
-			return false;
-		}
-		if (mRefinedPrimitives[i]->intersect(ray, f)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-bool Aggregate::intersect(const Ray& ray, float* epsilon, 
-	Intersection* intersection, IntersectFilter f) const {
-	bool hit = false;
-	for (size_t i = 0; i < mRefinedPrimitives.size(); ++i) {
-		if (f != nullptr && !f(mRefinedPrimitives[i], ray)) {
-			return false;
-		}
-		if (mRefinedPrimitives[i]->intersect(ray, epsilon, 
-			intersection, f)) {
-			hit = true;
-		}
-	}
-	return hit;
-}
-
-BBox Aggregate::getAABB() const {
-	return mAABB;
 }
 
 Primitive* createInstance(const ParamSet& params,

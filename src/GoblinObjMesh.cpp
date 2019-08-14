@@ -46,14 +46,12 @@ enum ObjFormat {
 
 ObjMesh::ObjMesh(const std::string& filename) :
     mFilename(filename), mArea(0.0f), 
-    mHasNormal(false), mHasTexCoord(false) {}
-
-ObjMesh::~ObjMesh() {
+    mHasNormal(false), mHasTexCoord(false) {
+	geometryCache[getId()] = this;
+	load();
 }
 
-void ObjMesh::init() {
-    geometryCache[getId()] = this;
-    load();
+ObjMesh::~ObjMesh() {
 }
 
 bool ObjMesh::load() {
@@ -64,17 +62,13 @@ bool ObjMesh::load() {
         return false;
     }
 
-    typedef std::vector<Vector3> VertexList;
-    typedef std::vector<Vector3> NormalList;
-    typedef std::vector<Vector2> UVList;
-    typedef std::vector<Face> FaceList;
     typedef std::map<TriIndex, unsigned int> VertexMap;
     VertexMap vMap;
 
-    VertexList vertexList;
-    NormalList normalList;
-    UVList uvList;
-    FaceList faceList;
+	std::vector<Vector3> vertexList;
+	std::vector<Vector3> normalList;
+	std::vector<Vector2> uvList;
+	std::vector<Face> faceList;
 
     ObjFormat format = VERTEX_ONLY;
     mHasNormal = false;
@@ -267,13 +261,13 @@ bool ObjMesh::load() {
     return true;
 }
 
-bool ObjMesh::intersect(const Ray& ray) const {
-    return false;
-}
-
 bool ObjMesh::intersect(const Ray& ray, float* epsilon, 
     Fragment* fragment) const {
     return false;
+}
+
+bool ObjMesh::occluded(const Ray& ray) const {
+	return false;
 }
 
 BBox ObjMesh::getObjectBound() const {

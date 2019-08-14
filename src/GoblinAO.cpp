@@ -28,7 +28,7 @@ Color AORenderer::Li(const ScenePtr& scene,
             Matrix3 shadeToWorld = fragment.getWorldToShade().transpose();
             Vector3 occludeRayDir = shadeToWorld * sampleDir;
             Ray occludeRay(fragment.getPosition(), occludeRayDir, epsilon);
-            if (scene->intersect(occludeRay)) {
+            if (scene->occluded(occludeRay)) {
                 occludedNum++;
             }
         }
