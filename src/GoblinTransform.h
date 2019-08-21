@@ -8,6 +8,7 @@
 namespace Goblin {
 class Ray;
 class BBox;
+
 class Transform {
 public:
     Transform();

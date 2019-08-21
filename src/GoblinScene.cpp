@@ -9,9 +9,14 @@
 namespace Goblin {
 
 Scene::Scene(const PrimitiveList& inputPrimitives, const CameraPtr& camera,
+	std::vector<Geometry*>&& geometries,
+	std::vector<Primitive*>&& primitives,
     const std::vector<Light*>& lights, VolumeRegion* volumeRegion):
     mBVH(inputPrimitives, 1, "equal_count"),
-	mCamera(camera), mLights(lights),
+	mCamera(camera),
+	mGeometries(std::move(geometries)),
+	mPrimitives(std::move(primitives)),
+	mLights(lights),
     mVolumeRegion(volumeRegion), mPowerDistribution(nullptr) {
     std::vector<float> lightPowers;
     for (size_t i = 0; i < lights.size(); ++i) {
@@ -34,9 +39,19 @@ Scene::~Scene() {
         delete mPowerDistribution;
         mPowerDistribution = nullptr;
     }
-    Geometry::clearGeometryCache();
-    Primitive::clearAllocatedPrimitives();
-    Model::clearRefinedModels();
+	// clean up geometries
+	for (size_t i = 0; i < mGeometries.size(); ++i) {
+		delete mGeometries[i];
+		mGeometries[i] = nullptr;
+	}
+	mGeometries.clear();
+	// clean up primitives
+	for (size_t i = 0; i < mPrimitives.size(); ++i) {
+		delete mPrimitives[i];
+		mPrimitives[i] = nullptr;
+	}
+	mPrimitives.clear();
+
     ImageTexture<float>::clearImageCache();
     ImageTexture<Color>::clearImageCache();
 }
@@ -226,4 +241,5 @@ std::string SceneCache::resolvePath(const std::string& filename) const {
         return mSceneRoot + "/" + filename;
     }
 }
+
 }

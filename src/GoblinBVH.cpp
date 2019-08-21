@@ -77,8 +77,6 @@ BVH::BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
     //compactSummary();
 }
 
-BVH::~BVH() {}
-
 uint32_t BVH::buildLinearBVH(std::vector<BVHPrimitiveInfo> &buildData,
     uint32_t start, uint32_t end, uint32_t* offset,
     PrimitiveList& orderedPrims) {

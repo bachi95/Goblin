@@ -6,13 +6,19 @@
 #include "GoblinLight.h"
 
 namespace Goblin {
-std::vector<Model*> Model::refinedModels;
 
 Model::Model(const Geometry* geometry, const MaterialPtr& material,
     const AreaLight* areaLight, bool isCameraLens):
     mGeometry(geometry), mMaterial(material), mAreaLight(areaLight),
     mIsCameraLens(isCameraLens) {
 	if (!mGeometry->intersectable()) {
+		GeometryList refinedGeometries;
+		mGeometry->refine(refinedGeometries);
+		mRefinedModels.reserve(refinedGeometries.size());
+		for (size_t i = 0; i < refinedGeometries.size(); ++i) {
+			mRefinedModels.emplace_back(
+				refinedGeometries[i], mMaterial, getAreaLight(), mIsCameraLens);
+		}
 		PrimitiveList primitives;
 		primitives.push_back(this);
 		mBVH.reset(new BVH(primitives, 1, "equal_count"));
@@ -52,17 +58,8 @@ BBox Model::getAABB() const {
 }
 
 void Model::refine(PrimitiveList& refinedPrimitives) const {
-    GeometryList refinedGeometries;
-    mGeometry->refine(refinedGeometries);
-        
-    Model* refined = new Model[refinedGeometries.size()];
-    for (size_t i = 0; i < refinedGeometries.size(); ++i) {
-        refined[i].init(refinedGeometries[i], mMaterial, getAreaLight());
-    }
-    refinedModels.push_back(refined);
-
-    for (size_t i = 0; i < refinedGeometries.size(); ++i) {
-        refinedPrimitives.push_back(&refined[i]);
+    for (size_t i = 0; i < mRefinedModels.size(); ++i) {
+		refinedPrimitives.push_back(&mRefinedModels[i]);
     }
 }
 
@@ -80,10 +77,8 @@ Primitive* createModel(const ParamSet& params,
         areaLight = sceneCache.getAreaLight(params.getString("area_light"));
     }
     bool isCameraLens = params.getBool("is_camera_lens");
-    Primitive* model = new Model(geometry, material, areaLight,
-        isCameraLens);
-    Primitive::allocatedPrimitives.push_back(model);
-	return model;
+	return new Model(geometry, material, areaLight,
+		isCameraLens);
 }
 
 }

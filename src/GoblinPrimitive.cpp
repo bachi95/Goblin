@@ -4,7 +4,6 @@
 #include "GoblinScene.h"
 
 namespace Goblin {
-std::vector<Primitive*> Primitive::allocatedPrimitives;
 
 Color Intersection::Le(const Vector3& outDirection) {
 	Vector3 ps = fragment.getPosition();
@@ -127,9 +126,7 @@ Primitive* createInstance(const ParamSet& params,
 	std::string primitiveName = params.getString("model");
 	const Primitive* primitive = sceneCache.getPrimitive(primitiveName);
 	Transform toWorld = getTransform(params);
-	Primitive* instance = new InstancedPrimitive(toWorld, primitive);
-	Primitive::allocatedPrimitives.push_back(instance);
-	return instance;
+	return new InstancedPrimitive(toWorld, primitive);
 }
 
 }

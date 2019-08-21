@@ -8,7 +8,7 @@
 #include "GoblinFilm.h"
 #include "GoblinLightTracer.h"
 #include "GoblinModel.h"
-#include "GoblinObjMesh.h"
+#include "GoblinPolygonMesh.h"
 #include "GoblinAO.h"
 #include "GoblinPathtracer.h"
 #include "GoblinPrimitive.h"
@@ -131,6 +131,7 @@ static Film* createFilm(const json& jsonContext,
 }
 
 static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
+	std::vector<Geometry*>& geometries, std::vector<Primitive*>& primitives,
 	const std::string& defaultOutputPath) {
 	std::cout << "camera" << std::endl;
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
@@ -151,9 +152,11 @@ static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
 		// creation is pretty awkward at this moment...definitly should
 		// be improved....
 		ParamSet modelParams;
-		Geometry* lensGeom = new Disk(lensRadius);
+		modelParams.setFloat("radius", lensRadius);
+		Geometry* lensGeom = createDisk(modelParams, *sceneCache);
 		std::string lensGeomName = type + "_lens_geom";
 		sceneCache->addGeometry(lensGeomName, lensGeom);
+		geometries.push_back(lensGeom);
 		modelParams.setString("geometry", lensGeomName);
 		modelParams.setBool("is_camera_lens", true);
 		ColorTexturePtr black(new ConstantTexture<Color>(Color::Black));
@@ -161,12 +164,14 @@ static CameraPtr createCamera(const json& jsonContext, SceneCache* sceneCache,
 		std::string materialName = type + "_lens_material";
 		sceneCache->addMaterial(materialName, mtl);
 		modelParams.setString("material", materialName);
-		const Primitive* model(createModel(modelParams, *sceneCache));
+		Primitive* model(createModel(modelParams, *sceneCache));
 		std::string modelName = type + "_lens_model";
 		sceneCache->addPrimitive(modelName, model);
+		primitives.push_back(model);
 		cameraParams.setString("model", modelName);
-		const Primitive* instance(createInstance(cameraParams, *sceneCache));
+		Primitive* instance(createInstance(cameraParams, *sceneCache));
 		sceneCache->addInstance(instance);
+		primitives.push_back(instance);
 	}
 	std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 	if (type == "perspective") {
@@ -202,7 +207,8 @@ static VolumeRegion* createVolume(const json& jsonContext,
 	}
 }
 
-static void createGeometries(const json& jsonContext, SceneCache* sceneCache) {
+static void createGeometries(const json& jsonContext, SceneCache* sceneCache,
+	std::vector<Geometry*>& geometries) {
 	json::const_iterator it = jsonContext.find("geometries");
 	if (it != jsonContext.end()) {
 		const json& geometriesList = it.value();
@@ -232,6 +238,7 @@ static void createGeometries(const json& jsonContext, SceneCache* sceneCache) {
 			std::cout << "BBox center: " << bbox.center() << std::endl;
 			std::cout << std::string(sDelimiterWidth, '-') << std::endl;
 			sceneCache->addGeometry(name, geometry);
+			geometries.push_back(geometry);
 		}
 	}
 }
@@ -342,7 +349,8 @@ static void createMaterials(const json& jsonContext, SceneCache* sceneCache) {
 	}
 }
 
-static void createPrimitives(const json& jsonContext, SceneCache* sceneCache) {
+static void createPrimitives(const json& jsonContext, SceneCache* sceneCache,
+	std::vector<Primitive*>& primitives) {
 	json::const_iterator it = jsonContext.find("primitives");
 	if (it != jsonContext.end()) {
 		const json& primitivesList = it.value();
@@ -365,6 +373,7 @@ static void createPrimitives(const json& jsonContext, SceneCache* sceneCache) {
 				primitive = createModel(primitiveParams, *sceneCache);
 			}
 			sceneCache->addPrimitive(name, primitive);
+			primitives.push_back(primitive);
 			BBox bbox = primitive->getAABB();
 			std::cout << "BBox min: " << bbox.pMin << std::endl;
 			std::cout << "BBox max: " << bbox.pMax << std::endl;
@@ -475,17 +484,20 @@ RenderContext* ContextLoader::load(const std::string& filename) {
 	}
 
 	RendererPtr renderer = createRenderer(jsonContext);
+	std::vector<Geometry*> geometries;
+	std::vector<Primitive*> primitives;
 	CameraPtr camera = createCamera(
-		jsonContext, &sceneCache, defaultOutputPath);
+		jsonContext, &sceneCache, geometries, primitives, defaultOutputPath);
 	VolumeRegion* volume = createVolume(jsonContext, &sceneCache);
-	createGeometries(jsonContext, &sceneCache);
+	createGeometries(jsonContext, &sceneCache, geometries);
 	createTextures(jsonContext, &sceneCache);
 	createMaterials(jsonContext, &sceneCache);
-	createPrimitives(jsonContext, &sceneCache);
+	createPrimitives(jsonContext, &sceneCache, primitives);
 	createLights(jsonContext, &sceneCache);
 
     ScenePtr scene(new Scene(sceneCache.getInstances(), camera,
-        sceneCache.getLights(), volume));
+		std::move(geometries), std::move(primitives),
+		sceneCache.getLights(), volume));
 
     RenderContext* ctx = new RenderContext(renderer, scene);
     return ctx;

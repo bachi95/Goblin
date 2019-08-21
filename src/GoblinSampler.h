@@ -108,18 +108,16 @@ private:
     RNG* mRNG;
 };
 
-/*
-    * Cumulative Distribution Function 1D
-    * feed in a 1d function in vector form
-    * construct its CDF range from 0 to 1
-    * and offer interface for sampling based on 
-    * the CDF( ie. higher function value, higher pdf )
-    * this will be used for sampling light sources
-    * based on their power distribution and smapling 
-    * geometry from geometries based on their area distribution
-    * f(1)=1 f(2)=3 -> dx=1/2 integral=(1+3)*dx=2
-    * CDF(0)=0 CDF(1)=1*dx/integral=0.25 CDF(2)=(1+3)*dx/integral=1
-    */
+// Cumulative Distribution Function 1D
+// feed in a 1d function in vector form
+// construct its CDF range from 0 to 1
+// and offer interface for sampling based on 
+// the CDF( ie. higher function value, higher pdf )
+// this will be used for sampling light sources
+// based on their power distribution and smapling 
+// geometry from geometries based on their area distribution
+// f(1)=1 f(2)=3 -> dx=1/2 integral=(1+3)*dx=2
+// CDF(0)=0 CDF(1)=1*dx/integral=0.25 CDF(2)=(1+3)*dx/integral=1
 class CDF1D {
 public:
     CDF1D(const std::vector<float>& f1D);
@@ -158,10 +156,8 @@ void shuffle(T* buffer, uint32_t num, uint32_t dim, RNG* rng) {
     }
 }
 
-/*
-    * u1, u2 are 2 [0, 1) sample value in uniform distribution
-    * u, v are barycentric coordinates for two vertices in triangle 
-    */
+// u1, u2 are 2 [0, 1) sample value in uniform distribution
+// u, v are barycentric coordinates for two vertices in triangle 
 void uniformSampleTriangle(float u1, float u2, float* u, float* v);
 
 Vector3 uniformSampleCone(float u1, float u2, float cosThetaMax);
@@ -215,13 +211,11 @@ float gaussianSample2DPdf(const Vector3& pCenter,
 float gaussianSample2DPdf(const Vector3& pCenter, 
     const Vector3& pSample, const Vector3& N, float falloff, float Rmax);
 
-/*
-    * integrate c * exp(-falloff * x) from 0 to inf = 1 ->
-    * c = falloff -> pdf(x) = falloff * exp(-falloff * x)
-    * cdf(x) = 1 - exp(-falloff * x) -> u = 1 - exp(-falloff * x) ->
-    * x = -ln(1 - u) / falloff -> simplified to x = -ln(u) / falloff
-    * since u are [0, 1) uniform distribution
-    */
+// integrate c * exp(-falloff * x) from 0 to inf = 1 ->
+// c = falloff -> pdf(x) = falloff * exp(-falloff * x)
+// cdf(x) = 1 - exp(-falloff * x) -> u = 1 - exp(-falloff * x) ->
+// x = -ln(1 - u) / falloff -> simplified to x = -ln(u) / falloff
+// since u are [0, 1) uniform distribution
 inline float exponentialSample(float u, float falloff) {
     return -log(u) / falloff;
 }
@@ -230,24 +224,22 @@ inline float exponentialPdf(float x, float falloff) {
     return falloff * exp(-falloff * x);
 }
 
-/*
-    * similar to above exponentialSample but instead of drawing a sample
-    * range between 0 to infinite, this one draw a sample t between a and b
-    * that its pdf is propotional to exp(-sigma * (t - a))
-    * integrate c * exp(-sigma *(t - 1) from a to b = 1->
-    * c * exp(sigma * a) * (exp(-sigma * b) - exp(-sigma * a) / (-sigma) = 1
-    * c = -sigma / (exp(sigma * (a - b)) - 1)
-    * pdf(t) = -sigma * exp(sigma * a) * exp(-sigma * t) /
-    *          (exp(sigma * (a - b) - 1) =
-    *          sigma / (exp(sigma * (t - a)) - exp(sigma * (t - b)))
-    * cdf(t) = integrate pdf from a to t =
-    *          (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
-    * inverse method:
-    * u = (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
-    * u * (exp(sigma * (a - b)) - 1) + 1 = exp(sigma * (a - t))
-    * sigma * (a - t) = log(u * (exp(sigma * (a - b)) - 1) + 1)
-    * t = a - log(1 - u * (1 - exp(sigma * (a - b)))) / sigma
-    */
+// similar to above exponentialSample but instead of drawing a sample
+// range between 0 to infinite, this one draw a sample t between a and b
+// that its pdf is propotional to exp(-sigma * (t - a))
+// integrate c * exp(-sigma *(t - 1) from a to b = 1->
+// c * exp(sigma * a) * (exp(-sigma * b) - exp(-sigma * a) / (-sigma) = 1
+// c = -sigma / (exp(sigma * (a - b)) - 1)
+// pdf(t) = -sigma * exp(sigma * a) * exp(-sigma * t) /
+//          (exp(sigma * (a - b) - 1) =
+//          sigma / (exp(sigma * (t - a)) - exp(sigma * (t - b)))
+// cdf(t) = integrate pdf from a to t =
+//          (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
+// inverse method:
+// u = (exp(sigma * (a - t)) - 1) / (exp(sigma * (a - b)) - 1)
+// u * (exp(sigma * (a - b)) - 1) + 1 = exp(sigma * (a - t))
+// sigma * (a - t) = log(u * (exp(sigma * (a - b)) - 1) + 1)
+// t = a - log(1 - u * (1 - exp(sigma * (a - b)))) / sigma
 inline float exponentialSample(float u, float sigma, float a, float b) {
     return a - log(1.0f - u * (1.0f - exp(sigma * (a - b)))) / sigma;
 }
@@ -256,32 +248,31 @@ inline float exponentialPdf(float t, float sigma, float a , float b) {
     return sigma / (exp(sigma * (t - a)) - exp(sigma * (t - b)));
 }
 
-/*
-    * see Kulla. C, Farjardo. M 2012
-    * "Importance Sampling Techniques for Path Tracing in Participating Media"
-    * for detail reference
-    * The basic idea is we try to sample a 1d t value alone the ray that
-    * the point distribution is proportional to its inverse square distance
-    * to light:
-    *                        *
-    *                       /|\
-    *                      / |  \
-    *                     /  |    \
-    *                    /   |D     \
-    *                   /    |        \
-    * -----------------|-----|---|-----|---------
-    *                  a         t     b
-    * pdf(t) = c / (D^2 + t^2)
-    * cdf(t) = integrate pdf from a to b =
-    *          (c / D) * (arctan(a / D) - arctan(b / D)) =
-    *          (c / D) * (thetaA - thetaB) = 1 ->
-    * c = D / (thetaA - thetaB) ->
-    * pdf(t) = D / ((thetaB - thetaA) * (D^2 + t^2))
-    * inverse method:
-    * cdf(t) = (1 / (thetaB - thetaA)) * (arctan(t / D) - thetaA) = u
-    * D * tan((thetaB - thetaA) * u + thetaA) = t ->
-    * t = D *tan((1 - u) * thetaA + u * thetaB)
-    */
+
+// see Kulla. C, Farjardo. M 2012
+// "Importance Sampling Techniques for Path Tracing in Participating Media"
+// for detail reference
+// The basic idea is we try to sample a 1d t value alone the ray that
+// the point distribution is proportional to its inverse square distance
+// to light:
+//                        *
+//                       /|\
+//                      / |  \
+//                     /  |    \
+//                    /   |D     \
+//                   /    |        \
+//-----------------|-----|---|-----|---------
+//                  a         t     b
+// pdf(t) = c / (D^2 + t^2)
+// cdf(t) = integrate pdf from a to b =
+//          (c / D) * (arctan(a / D) - arctan(b / D)) =
+//          (c / D) * (thetaA - thetaB) = 1 ->
+// c = D / (thetaA - thetaB) ->
+// pdf(t) = D / ((thetaB - thetaA) * (D^2 + t^2))
+// inverse method:
+// cdf(t) = (1 / (thetaB - thetaA)) * (arctan(t / D) - thetaA) = u
+// D * tan((thetaB - thetaA) * u + thetaA) = t ->
+// t = D *tan((1 - u) * thetaA + u * thetaB)
 inline float equiAngularSample(float u, float D,
     float thetaA, float thetaB) {
     return D * tan((1 - u) * thetaA + u * thetaB);
@@ -351,8 +342,7 @@ private:
 	std::vector<uint32_t> mPrimes;
     std::vector<size_t> mTableIndexes;
 };
+
 }
 
 #endif //GOBLIN_SAMPLER_H
-
-

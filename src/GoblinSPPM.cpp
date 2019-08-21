@@ -637,4 +637,5 @@ Renderer* createSPPM(const ParamSet& params) {
     return new SPPM(samplePerPixel, threadNum, maxPathLength,
         initialRadius);
 }
+
 }

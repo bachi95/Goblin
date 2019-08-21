@@ -6,9 +6,8 @@ namespace Goblin {
 AORenderer::AORenderer(int samplePerPixel, int threadNum,
     int aoSampleNum):
     Renderer(samplePerPixel, threadNum),
-    mAOSampleNum(aoSampleNum) {}
-
-AORenderer::~AORenderer() {}
+    mAOSampleNum(aoSampleNum)
+{}
 
 Color AORenderer::Li(const ScenePtr& scene,
     const RayDifferential& ray,

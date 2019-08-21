@@ -2,6 +2,7 @@
 #include "GoblinRay.h"
 
 namespace Goblin {
+
 BBox BBox::expand(const Vector3& p) {
     pMin = Vector3(std::min(pMin.x, p.x), std::min(pMin.y, p.y), std::min(pMin.z, p.z));
     pMax = Vector3(std::max(pMax.x, p.x), std::max(pMax.y, p.y), std::max(pMax.z, p.z));

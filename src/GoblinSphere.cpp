@@ -7,9 +7,7 @@
 
 namespace Goblin {
 
-Sphere::Sphere(float r) : mRadius(r) {
-	geometryCache[getId()] = this;
-}
+Sphere::Sphere(float r) : mRadius(r) {}
 
 bool Sphere::intersect(const Ray& ray, float* epsilon, 
         Fragment* fragment) const {

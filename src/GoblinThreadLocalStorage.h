@@ -99,6 +99,7 @@ private:
     uint64_t mTotalSampleCount;
     DebugData mDebugData;
 };
+
 }
 
 #endif //GOBLIN_THREAD_LOCAL_STORAGE_H

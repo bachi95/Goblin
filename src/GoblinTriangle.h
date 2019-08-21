@@ -4,14 +4,10 @@
 #include "GoblinGeometry.h"
 
 namespace Goblin {
-class ObjMesh;
+class PolygonMesh;
 class Triangle : public Geometry {
 public:
-    Triangle(const ObjMesh* parentMesh): mParentMesh(parentMesh), mIndex(0) {}
-
-    Triangle(const ObjMesh* parentMesh, size_t index);
-
-    void setIndex(size_t index);
+    Triangle(const PolygonMesh* parentMesh, size_t index);
 
     bool intersect(const Ray& ray, float* epsilon,
         Fragment* fragment) const override;
@@ -25,11 +21,9 @@ public:
     BBox getObjectBound() const override;
 
 private:
-    const ObjMesh* mParentMesh;
+    const PolygonMesh* mParentMesh;
     size_t mIndex;
 };
-
-inline void Triangle::setIndex(size_t index) { mIndex = index; }
 
 }
 

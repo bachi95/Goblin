@@ -1,41 +1,40 @@
 #include "GoblinTriangle.h"
-#include "GoblinObjMesh.h"
+#include "GoblinPolygonMesh.h"
 #include "GoblinRay.h"
 #include "GoblinBBox.h"
 #include "GoblinSampler.h"
 
 namespace Goblin {
-Triangle::Triangle(const ObjMesh* parentMesh, size_t index):
+Triangle::Triangle(const PolygonMesh* parentMesh, size_t index):
     mParentMesh(parentMesh), mIndex(index) {}
 
-/*
- * solve ray.o + ray.d * t = some point in triangle
- * p(b1, b2) = (1 - b1 - b2) * p0 + b1 * p1 + b2 * p2
- * (barycentric coordinate b1 + b2 <=1 b1 >=0 b2 >= 0)
- * let e1 = p1 -p0, e2 = p2 - p0, s = ray.o - p0
- *                  |t |
- * |-ray.d e1 e2| * |b1| = s
- *                  |b2|
- * try to solve the above linear equation =>
- * according to Cramer's rule:
- * |t |                                | det|     s e1 e2| |
- * |b1| = (1.0f / det|-ray.d e1 e2|) * | det|-ray.d  s e2| |
- * |b2|                                | det|-ray.d e1  s| |
- * 
- * make use of the property:
- * det|a b c| = dot(a, cross(b, c)) = 
- *              dot(b, cross(c, a)) = 
- *              dot(c, cross(a, b))
- * let s1 = cross(ray.d, e2), s2 = cross(s, e1)
- * |t |                          | dot(s2,    e2) |
- * |b1| = (1.0f / dot(s1, e1)) * | dot(s1,     s) |
- * |b2|                          | dot(s2, ray.d) |
- * 
- * There is a more intuitive version of the above equation
- * basic idea first get intersection of ray and triangle plane, get t
- * then calculate b1, b2 with 2 2X2 linear equation, but the above 
- * one is cheaper to implement
- */
+
+// solve ray.o + ray.d * t = some point in triangle
+// p(b1, b2) = (1 - b1 - b2) * p0 + b1 * p1 + b2 * p2
+// (barycentric coordinate b1 + b2 <=1 b1 >=0 b2 >= 0)
+// let e1 = p1 -p0, e2 = p2 - p0, s = ray.o - p0
+//                  |t |
+// |-ray.d e1 e2| * |b1| = s
+//                  |b2|
+// try to solve the above linear equation =>
+// according to Cramer's rule:
+// |t |                                | det|     s e1 e2| |
+// |b1| = (1.0f / det|-ray.d e1 e2|) * | det|-ray.d  s e2| |
+// |b2|                                | det|-ray.d e1  s| |
+// 
+// make use of the property:
+// det|a b c| = dot(a, cross(b, c)) = 
+//             dot(b, cross(c, a)) = 
+//             dot(c, cross(a, b))
+// let s1 = cross(ray.d, e2), s2 = cross(s, e1)
+// |t |                          | dot(s2,    e2) |
+// |b1| = (1.0f / dot(s1, e1)) * | dot(s1,     s) |
+// |b2|                          | dot(s2, ray.d) |
+// 
+// There is a more intuitive version of the above equation
+// basic idea first get intersection of ray and triangle plane, get t
+// then calculate b1, b2 with 2 2X2 linear equation, but the above 
+// one is cheaper to implement
 bool Triangle::intersect(const Ray& ray, float* epsilon, 
     Fragment* fragment) const {
     TriangleIndex* ti = (TriangleIndex*)mParentMesh->getFacePtr(mIndex);
