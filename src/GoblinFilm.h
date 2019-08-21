@@ -16,13 +16,15 @@ class Filter;
 class Pixel {
 public:
     Pixel(): color(Color::Black), weight(0.0f) {}
+
     Color color;
     float weight;
     float pad[3];
 };
 
 struct ImageRect {
-    ImageRect() {}
+	ImageRect() = default;
+
     ImageRect(int x, int y, int w, int h):
         xStart(x), yStart(y), xCount(w), yCount(h) {}
 
@@ -64,7 +66,9 @@ public:
     void getTileRange(int* xStart, int *xEnd,
         int* yStart, int* yEnd) const;
 
-    const Pixel* getTileBuffer() const;
+	const Pixel* getTileBuffer() const {
+		return mPixels;
+	}
 
     void addSample(float imageX, float imageY, const Color& L);
 
@@ -73,10 +77,6 @@ private:
     Pixel* mPixels;
     const FilterTable& mCachedFilter;
 };
-
-inline const Pixel* ImageTile::getTileBuffer() const {
-    return mPixels;
-}
 
 class Film {
 public:
@@ -87,13 +87,13 @@ public:
 
     ~Film();
 
-    int getXResolution() const;
+    int getXResolution() const { return mXRes; }
 
-    int getYResolution() const;
+    int getYResolution() const { return mYRes; }
 
-    float getInvXResolution() const;
+    float getInvXResolution() const { return mInvXRes; }
 
-    float getInvYResolution() const;
+    float getInvYResolution() const { return mInvYRes; }
 
     void getImageRect(ImageRect& imageRect) const;
 
@@ -128,14 +128,6 @@ private:
     std::vector<std::pair<DebugLine, Color> > mDebugLines;
     std::vector<std::pair<Vector2, Color> > mDebugPoints;
 };
-
-inline int Film::getXResolution() const { return mXRes; }
-
-inline int Film::getYResolution() const { return mYRes; }
-
-inline float Film::getInvXResolution() const { return mInvXRes; }
-    
-inline float Film::getInvYResolution() const { return mInvYRes; }
 
 Film* createImageFilm(const ParamSet& params, Filter* filter);
 

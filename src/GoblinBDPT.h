@@ -10,10 +10,10 @@ namespace Goblin {
 class BDPT : public Renderer {
 public:
     BDPT(int samplePerPixel, int threadNum,
-        int maxPathLength = 5, int debugS = -1, int debugT = -1,
+        int maxPathLength, int debugS = -1, int debugT = -1,
         bool debugNoMIS = false);
 
-    ~BDPT();
+	~BDPT();
 
     Color Li(const ScenePtr& scene, const RayDifferential& ray,
         const Sample& sample, const RNG& rng,

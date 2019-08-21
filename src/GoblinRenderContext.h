@@ -8,6 +8,7 @@ class RenderContext {
 public:
     RenderContext(RendererPtr renderer, ScenePtr scene):
         mRenderer(renderer), mScene(scene) {}
+
     void render();
 
 public:

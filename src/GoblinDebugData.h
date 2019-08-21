@@ -11,30 +11,26 @@ typedef std::pair<Vector2, Vector2> DebugLine;
 
 class DebugData {
 public:
-    void addRay(const Ray& ray, Color c = Color::White);
-    void addPoint(const Vector3& point, Color c = Color::White);
-    const std::vector<std::pair<Ray, Color> >& getRays() const;
-    const std::vector<std::pair<Vector3, Color> >& getPoints() const;
+	void addRay(const Ray& ray, Color c = Color::White) {
+		mRays.push_back(std::pair<Ray, Color>(ray, c));
+	}
+
+	void addPoint(const Vector3& point, Color c = Color::White) {
+		mPoints.push_back(std::pair<Vector3, Color>(point, c));
+	}
+
+	const std::vector<std::pair<Ray, Color> >& getRays() const {
+		return mRays;
+	}
+
+	const std::vector<std::pair<Vector3, Color> >& getPoints() const {
+		return mPoints;
+	}
+
 private:
     std::vector<std::pair<Ray, Color> > mRays;
     std::vector<std::pair<Vector3, Color> > mPoints;
 };
-
-inline void DebugData::addRay(const Ray& line, Color c) {
-    mRays.push_back(std::pair<Ray, Color>(line, c));
-}
-
-inline void DebugData::addPoint(const Vector3& point, Color c) {
-    mPoints.push_back(std::pair<Vector3, Color>(point, c));
-}
-
-inline const std::vector<std::pair<Ray, Color> >& DebugData::getRays() const {
-    return mRays;
-}
-
-inline const std::vector<std::pair<Vector3, Color> >& DebugData::getPoints() const {
-    return mPoints;
-}
 
 }
 

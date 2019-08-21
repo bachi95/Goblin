@@ -375,4 +375,5 @@ Light* createImageBasedLight(const ParamSet& params,
     const SceneCache& sceneCache);
 
 }
+
 #endif //GOBLIN_LIGHT_H

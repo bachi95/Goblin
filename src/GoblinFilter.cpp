@@ -67,11 +67,6 @@ float GaussianFilter::gaussian(float v, float expbase) const {
     return std::max(0.0f, expf(-mAlpha * v * v) - expbase);
 }
 
-MitchellFilter::MitchellFilter(float xWidth, float yWidth,
-    float b, float c): Filter(xWidth, yWidth),
-    mInvWidthX(1.0f / xWidth), mInvWidthY(1.0f / yWidth),
-    mB(b), mC(c) {}
-
 float MitchellFilter::evaluate(float x, float y) const {
     return Mitchell(x * mInvWidthX) * Mitchell(y * mInvWidthY);
 }
