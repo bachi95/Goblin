@@ -153,13 +153,11 @@ Color DirectionalLight::sampleL(const Vector3& p, float epsilon,
     return mRadiance;
 }
 
-/*
-    * approximation of sample directional light by sampling among
-    * the world bounding sphere, first sample a point from disk
-    * with world radius that perpendicular to light direction,
-    * then offset it back world radius distance as ray origin
-    * ray dir is simply light dir
-    */
+// approximation of sample directional light by sampling among
+// the world bounding sphere, first sample a point from disk
+// with world radius that perpendicular to light direction,
+// then offset it back world radius distance as ray origin
+// ray dir is simply light dir
 Vector3 DirectionalLight::samplePosition(const ScenePtr& scene,
     const LightSample& ls, Vector3* surfaceNormal, float* pdfArea) const {
     Vector3 worldCenter;
@@ -269,11 +267,9 @@ Color SpotLight::eval(const Vector3& p, const Vector3& n,
 }
 
 Color SpotLight::power(const Scene& scene) const {
-    /*
-     * integrate the solid angle =
-     * integrate sinTheta over 0->thetaMax over 0->2PI =
-     * 2PI * (1 - cosThetaMax)
-     */
+    // integrate the solid angle =
+	// integrate sinTheta over 0->thetaMax over 0->2PI =
+	// 2PI * (1 - cosThetaMax)
     return mIntensity * TWO_PI *
         (1.0f - 0.5f * (mCosThetaMax + mCosFalloffStart));
 }

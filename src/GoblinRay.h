@@ -32,9 +32,11 @@ inline Vector3 Ray::operator()(float t) const {
 
 class RayDifferential : public Ray {
 public:
-    RayDifferential();
+    RayDifferential() : hasDifferential(false) {}
+
     RayDifferential(const Vector3& origin, const Vector3& dir, 
         float start, float end = INFINITY, int depth = 0);
+
 public:
     Vector3 dxOrigin;
     Vector3 dxDir;
@@ -42,8 +44,6 @@ public:
     Vector3 dyDir;
     bool hasDifferential;
 };
-
-inline RayDifferential::RayDifferential(): hasDifferential(false) {}
 
 inline RayDifferential::RayDifferential(const Vector3& origin, 
     const Vector3& dir, float start, float end, int depth):
