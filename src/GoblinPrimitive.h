@@ -27,7 +27,6 @@ instance::intersect -> transform the ray to object space
 */
 
 class Primitive;
-typedef std::shared_ptr<Primitive> PrimitivePtr;
 typedef std::vector<const Primitive*> PrimitiveList;
 
 struct Intersection {
@@ -54,11 +53,16 @@ typedef bool (*IntersectFilter)(const Primitive* p, const Ray& ray);
 
 class Primitive {
 public:
-	virtual ~Primitive() {}
+	virtual ~Primitive() = default;
 
-	virtual bool intersectable() const;
+	virtual bool intersectable() const {
+		return true;
+	}
 
-	virtual void refine(PrimitiveList& refinedPrimitives) const;
+	virtual void refine(PrimitiveList& refinedPrimitives) const {
+		std::cerr << "unimplemented Primitive::refine" << std::endl;
+		throw std::exception();
+	}
 
 	virtual bool intersect(const Ray& ray, float* epsilon,
 		Intersection* intersection, IntersectFilter f = nullptr) const = 0;
@@ -68,49 +72,23 @@ public:
 
 	virtual BBox getAABB() const = 0;
 
-	virtual const MaterialPtr& getMaterial() const;
+	virtual const MaterialPtr& getMaterial() const {
+		std::cerr << "unimplemented Primitive::getMaterial" << std::endl;
+		throw std::exception();
+	}
 
-	virtual const AreaLight* getAreaLight() const;
+	virtual const AreaLight* getAreaLight() const {
+		std::cerr << "unimplemented Primitive::getAreaLight" << std::endl;
+		throw std::exception();
+	}
 
-	virtual bool isCameraLens() const;
-
-	static void clearAllocatedPrimitives();
-
-	static std::vector<Primitive*> allocatedPrimitives;
+	virtual bool isCameraLens() const {
+		std::cerr << "unimplemented Primitive::isCameraLens" << std::endl;
+		throw std::exception();
+	}
 
 	Primitive() {}
 };
-
-inline bool Primitive::intersectable() const { return true; }
-
-inline void Primitive::refine(PrimitiveList& refinedPrimitives) const {
-	std::cerr << "unimplemented Primitive::refine" << std::endl;
-	throw std::exception();
-}
-
-// TODO meh......instance should have the right to do 
-//material override, add it in later...
-inline const MaterialPtr& Primitive::getMaterial() const {
-	std::cerr << "unimplemented Primitive::getMaterial" << std::endl;
-	throw std::exception();
-}
-
-inline const AreaLight* Primitive::getAreaLight() const {
-	std::cerr << "unimplemented Primitive::getAreaLight" << std::endl;
-	throw std::exception();
-}
-
-inline bool Primitive::isCameraLens() const {
-	std::cerr << "unimplemented Primitive::isCameraLens" << std::endl;
-	throw std::exception();
-}
-
-inline void Primitive::clearAllocatedPrimitives() {
-	for (size_t i = 0; i < allocatedPrimitives.size(); ++i) {
-		delete allocatedPrimitives[i];
-		allocatedPrimitives[i] = nullptr;
-	}
-}
 
 class InstancedPrimitive : public Primitive {
 public:

@@ -3,7 +3,6 @@
 #include "GoblinRay.h"
 
 namespace Goblin {
-std::map<size_t, Geometry*> Geometry::geometryCache;
 
 Fragment::Fragment(const Vector3& p, const Vector3& n, const Vector2& uv,
     const Vector3& dpdu, const Vector3& dpdv):
@@ -37,10 +36,6 @@ void Fragment::transform(const Transform& t) {
     mIsUpdated = false;
 }
 
-size_t Geometry::nextGeometryId = 0;
-    
-Geometry::Geometry(): mGeometryId(nextGeometryId++) {}
-
 Vector3 Geometry::sample(const Vector3& p, float u1, float u2,
     Vector3* normal) const {
     return sample(u1, u2, normal);
@@ -66,6 +61,4 @@ float Geometry::pdf(const Vector3& p, const Vector3& wi) const {
     return pdf;
 }
 
-
-const size_t Geometry::getId() const { return mGeometryId; }
 }

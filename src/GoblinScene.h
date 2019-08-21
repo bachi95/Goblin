@@ -16,6 +16,8 @@ class VolumeRegion;
 class Scene {
 public:
     Scene(const PrimitiveList& inputPrimitives, const CameraPtr& camera,
+		std::vector<Geometry*>&& geometries,
+		std::vector<Primitive*>&& primitives,
         const std::vector<Light*>& lights, VolumeRegion* volumeRegion);
 
     ~Scene();
@@ -40,6 +42,8 @@ public:
 private:
     BVH mBVH;
     CameraPtr mCamera;
+	std::vector<Geometry*> mGeometries;
+	std::vector<Primitive*> mPrimitives;
     std::vector<Light*> mLights;
     VolumeRegion* mVolumeRegion;
     CDF1D* mPowerDistribution;

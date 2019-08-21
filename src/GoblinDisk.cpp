@@ -7,9 +7,7 @@
 
 namespace Goblin {
 
-Disk::Disk(float r) : mRadius(r) {
-	geometryCache[getId()] = this;
-}
+Disk::Disk(float r) : mRadius(r) {}
 
 bool Disk::intersect(const Ray& ray, float* epsilon,
 	Fragment* fragment) const {

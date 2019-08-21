@@ -7,12 +7,7 @@ namespace Goblin {
 class PolygonMesh;
 class Triangle : public Geometry {
 public:
-    Triangle(const PolygonMesh* parentMesh) :
-		mParentMesh(parentMesh), mIndex(0) {}
-
     Triangle(const PolygonMesh* parentMesh, size_t index);
-
-    void setIndex(size_t index);
 
     bool intersect(const Ray& ray, float* epsilon,
         Fragment* fragment) const override;
@@ -29,8 +24,6 @@ private:
     const PolygonMesh* mParentMesh;
     size_t mIndex;
 };
-
-inline void Triangle::setIndex(size_t index) { mIndex = index; }
 
 }
 

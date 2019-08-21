@@ -47,8 +47,12 @@ enum ObjFormat {
 PolygonMesh::PolygonMesh(const std::string& filename) :
     mFilename(filename), mArea(0.0f), 
     mHasNormal(false), mHasTexCoord(false) {
-	geometryCache[getId()] = this;
 	loadObjMesh();
+	size_t faceNum = mTriangles.size();
+	mTriangleGeometries.reserve(faceNum);
+	for (size_t i = 0; i < faceNum; ++i) {
+		mTriangleGeometries.emplace_back(this, i);
+	}
 }
 
 bool PolygonMesh::loadObjMesh() {
@@ -272,15 +276,8 @@ BBox PolygonMesh::getObjectBound() const {
 
 void PolygonMesh::refine(GeometryList& refinedGeometries) const {
     size_t faceNum = mTriangles.size();
-    if (mRefinedMeshes.size() != faceNum) {
-        mRefinedMeshes.clear();
-        mRefinedMeshes.resize(faceNum, Triangle(this));
-        for (size_t i = 0; i < faceNum; ++i) {
-            mRefinedMeshes[i].setIndex(i);
-        }
-    }
     for (size_t i = 0; i < faceNum; ++i) {
-        refinedGeometries.push_back(&mRefinedMeshes[i]);
+        refinedGeometries.push_back(&mTriangleGeometries[i]);
     }
 }
 

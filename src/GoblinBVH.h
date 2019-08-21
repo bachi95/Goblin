@@ -33,7 +33,7 @@ public:
     BVH(const PrimitiveList& primitives, int maxPrimitivesNum,
         const std::string& splitMethod);
 
-    ~BVH();
+	~BVH() = default;
 
 	bool intersect(const Ray& ray, float* epsilon,
 		Intersection* intersection, IntersectFilter f) const;

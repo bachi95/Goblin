@@ -59,7 +59,7 @@ private:
     float mArea;
     bool mHasNormal;
     bool mHasTexCoord;
-    mutable std::vector<Triangle> mRefinedMeshes;
+    std::vector<Triangle> mTriangleGeometries;
     std::vector<Vertex> mVertices;
 	std::vector<TriangleIndex> mTriangles;
 };

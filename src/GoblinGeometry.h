@@ -138,8 +138,6 @@ typedef std::vector<const Geometry*> GeometryList;
 
 class Geometry {
 public:
-    Geometry();
-
 	virtual ~Geometry() = default;
 
 	virtual bool intersectable() const { return true; }
@@ -162,15 +160,6 @@ public:
     virtual BBox getObjectBound() const = 0;
 
     virtual void refine(GeometryList& refinedGeometries) const;
-
-    const size_t getId() const;
-
-    static void clearGeometryCache();
-
-protected:
-    static size_t nextGeometryId;
-    static std::map<size_t, Geometry*> geometryCache;
-    size_t mGeometryId;
 };
 
 inline Vector3 Geometry::sample(float u1, float u2,
@@ -183,14 +172,6 @@ inline Vector3 Geometry::sample(float u1, float u2,
 inline void Geometry::refine(GeometryList& refinedGeometries) const {
     std::cerr << "unimplemented Geometry::refine" << std::endl;
     throw std::exception();
-}
-
-inline void Geometry::clearGeometryCache() {
-    std::map<size_t, Geometry*>::iterator it;
-    for (it = geometryCache.begin(); it != geometryCache.end(); ++it) {
-        delete it->second;
-    }
-    geometryCache.clear();
 }
 
 }
