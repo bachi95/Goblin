@@ -1,0 +1,115 @@
+{
+    "render_setting" : {
+        "sample_per_pixel" : 100,
+        "max_ray_depth" : 20,
+		"render_method" : "sppm",
+		"initial_radius" : 0.01
+    },
+
+	"camera" : {
+		"position" : [1.77271, 0.774149, 0.830583],
+		"orientation" : [0.352428, 0.114509, -0.883349, 0.287014],
+        "fov" : 45.0,
+        "near_plane" : 0.1,
+        "far_plane" : 5000.0,
+		"film" : {
+			"resolution" : [512, 384]
+		},
+		"filter" : {
+			"type" : "gaussian",
+			"width" : [2, 2],
+			"falloff" : 2
+		}		
+	},
+
+   	"geometries" : [
+		{
+			"name" : "bunny",
+			"type" : "mesh",
+			"file" : "models/bunny.obj"
+		},
+		{
+			"name" : "plane",
+			"type" : "mesh",
+			"file" : "models/plane.obj"
+		},
+		{
+			"name" : "sphere",
+			"type" : "sphere",
+			"radius" : 0.05
+		}
+	],
+	
+	"lights" : [
+		{
+			"name" : "spot light",
+			"type" : "spot",
+			"intensity" : [200, 200, 200],
+			"position": [-10, 5, 15],
+			"target": [0.323236, -0.44923, 0.0354459],
+			"theta_max" : 10.0,
+			"falloff_start" : 5.0
+		}
+	],
+	
+    "textures" : [
+		{
+			"format" : "color",
+			"name" : "purple",
+			"type" : "constant",
+			"color" : [0.7, 0.7, 1]
+		},
+		{
+			"format" : "color",
+			"name" : "white",
+			"type" : "constant",
+			"color" : [1, 1, 1]
+		}
+	],
+
+	"materials" : [
+		{
+			"name" : "white",
+			"type" : "lambert",
+			"Kd" : "white"
+		},
+		{
+			"name" : "glass",
+			"type" : "transparent",
+			"Kr" : "purple",
+			"Kt" : "purple",
+			"index" : 1.5
+		}
+	],
+
+    "primitives": [
+		{
+			"type" : "model",
+			"name" : "bunny",
+			"geometry": "bunny",
+			"material": "glass"
+		},
+		{
+			"type" : "model",
+			"name" : "plane",
+			"geometry": "plane",
+			"material": "white"
+		},
+		{
+			"type" : "instance",
+			"name" : "bunny",
+			"model": "bunny",
+			"position": [0.4, -1, 0],
+			"orientation": [0.96592582628, 0, 0.2588190451, 0],
+			"scale" : [5, 5, 5]
+		},
+		{
+			"type" : "instance",
+			"name" : "floor",
+			"model": "plane",
+			"position": [0, -0.835065, 0],
+			"orientation": [1, 0, 0, 0],
+			"scale" : [200, 200, 200]
+		}
+	]
+}
