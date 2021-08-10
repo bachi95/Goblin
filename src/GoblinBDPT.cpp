@@ -14,8 +14,6 @@ public:
         const SampleQuota& sampleQuota, int samplePerPixel,
         int maxPathLength, RenderProgress* renderProgress);
 
-    ~BDPTTask();
-
     void run(TLSPtr& tls);
 private:
     const BDPT* mBDPT;
@@ -34,8 +32,6 @@ BDPTTask::BDPTTask(BDPT* bdpt, const CameraPtr& camera,
     mLightPath(maxPathLength + 1),
     mEyePath(maxPathLength + 1),
     mMISNodes(maxPathLength + 1) {}
-
-BDPTTask::~BDPTTask() {}
 
 void BDPTTask::run(TLSPtr& tls) {
     RenderingTLS* renderingTLS =

@@ -14,6 +14,7 @@ struct CompactBVHNode {
     uint8_t primitivesNum;
     uint8_t axis;
     uint8_t pad[2];
+
     void initLeaf(const BBox& b, uint32_t first, uint8_t n) {
         bbox = b;
         firstPrimIndex = first;
@@ -54,10 +55,13 @@ private:
     // these are all just temp debug logging, should find a better verify process
     void buildDataSummary(
         const std::vector<BVHPrimitiveInfo> &buildData) const;
+
     void leafSummary(const std::vector<BVHPrimitiveInfo> &buildData,
         int start, int end, int firstPrimIndex, int primitivesNum) const ;
+
     void splitSummary(const std::vector<BVHPrimitiveInfo> &buildData,
         int start, int end, int mid, int dim) const;
+
     void compactSummary() const;
 
 private:

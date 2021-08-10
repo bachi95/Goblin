@@ -22,7 +22,7 @@ public:
 	float r, g, b, a;
 
 public:
-	Color() {}
+	Color() = default;
 
 	explicit Color(float c) :r(c), g(c), b(c), a(1.0f) {}
 

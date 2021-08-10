@@ -52,25 +52,35 @@ public:
     virtual bool isDelta() const = 0;
 
     bool isUpdated() const;
+
     void update();
 
     const Matrix4& getWorldMatrix();
+
     const Matrix4& getViewMatrix();
+
     const Matrix4& getProjectionMatrix();
 
     const Vector3 getLook() const;
+
     const Vector3 getUp() const;
+
     const Vector3 getRight() const;
 
     void roll(float angle);
+
     void pitch(float angle);
+
     void yaw(float angle);
 
     void rotateX(float angel);
+
     void rotateY(float angle);
+
     void rotateZ(float angle);
 
     void rotate(const Vector3& axis, float angle);
+
     void translate(const Vector3& d);
 
     Vector3 worldToScreen(const Vector3& pWorld) const;

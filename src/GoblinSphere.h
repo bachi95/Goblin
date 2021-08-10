@@ -8,8 +8,6 @@ class Sphere : public Geometry {
 public:
     Sphere(float r);
 
-	~Sphere() = default;
-
     bool intersect(const Ray& ray, float* epsilon, 
         Fragment* fragment) const override;
 

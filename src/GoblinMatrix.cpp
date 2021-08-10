@@ -195,7 +195,6 @@ Vector3 operator*(const Vector3& v, const Matrix3& m) {
 }
 
 bool inverse(Matrix3* inv, const Matrix3& m) {
-    assert(inv);
     (*inv)[0][0] = m[1][1] * m[2][2] - m[1][2] * m[2][1];
     (*inv)[1][0] = m[1][2] * m[2][0] - m[1][0] * m[2][2];
     (*inv)[2][0] = m[1][0] * m[2][1] - m[1][1] * m[2][0];
@@ -418,7 +417,6 @@ Vector4 operator*(const Vector4& v, const Matrix4& m) {
 }
 
 bool inverse(Matrix4* inv, const Matrix4& m) {
-    assert(inv);
     float m00 = m[0][0];
     float m01 = m[0][1];
     float m02 = m[0][2];
